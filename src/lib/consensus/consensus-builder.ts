@@ -87,25 +87,37 @@ export function parseBetType(pick: string): { betType: BetType; line?: string } 
 
 /**
  * Extract team name from pick text
+ * Per MASTER_CONSENSUS_RULES: Team names must be included in output
  */
 export function extractTeam(pick: string, matchup: string): string {
-  // Try to match from matchup (format: "Team1 vs Team2" or "Team1 @ Team2")
-  const teams = matchup.split(/\s+(?:vs\.?|@|at)\s+/i);
+  // Clean the pick text - remove bet types and odds
+  let cleanPick = pick
+    .replace(/\([+-]?\d+\)/g, '')  // Remove odds like (-110)
+    .replace(/[+-]\d+\.?\d*/g, ' ') // Remove spreads/lines
+    .replace(/\bML\b|\bMONEYLINE\b|\bF5\b/gi, '') // Remove bet type keywords
+    .replace(/\bOVER\b|\bUNDER\b/gi, '') // Remove over/under
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  // Clean the pick text
-  const cleanPick = pick.replace(/[+-]\d+\.?\d*/g, '')
-                        .replace(/ML|MONEYLINE|F5|OVER|UNDER/gi, '')
-                        .trim();
-
-  // Try to find which team matches
-  for (const team of teams) {
-    if (cleanPick.toLowerCase().includes(team.toLowerCase().trim())) {
-      return team.trim();
-    }
+  // If pick text has team name, use it
+  if (cleanPick.length > 0) {
+    return cleanPick;
   }
 
-  // Return first word(s) as team name
-  return cleanPick.split(/\s+/).slice(0, 2).join(' ');
+  // Try to match from matchup if provided
+  if (matchup && matchup.trim()) {
+    const teams = matchup.split(/\s+(?:vs\.?|@|at)\s+/i);
+    for (const team of teams) {
+      const trimmedTeam = team.trim();
+      if (trimmedTeam.length > 0) {
+        return trimmedTeam;
+      }
+    }
+    return matchup.trim();
+  }
+
+  // Fallback: return the original pick with minimal cleaning
+  return pick.replace(/\([+-]?\d+\)/g, '').replace(/\s+/g, ' ').trim() || 'Unknown';
 }
 
 /**
