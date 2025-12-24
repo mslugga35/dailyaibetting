@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
+import { EmailCapturePopup } from "@/components/monetization/EmailCapture";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -99,6 +101,7 @@ export default function RootLayout({
       <head>
         <WebsiteJsonLd />
         <FAQJsonLd />
+        <GoogleAnalytics />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
@@ -106,6 +109,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <EmailCapturePopup />
       </body>
     </html>
   );

@@ -29,30 +29,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'hourly',
       priority: 0.85,
     },
-    // Sport-specific pages (when implemented)
+    // SEO Landing Pages
     {
-      url: `${baseUrl}/picks/nfl`,
+      url: `${baseUrl}/nfl-picks-today`,
       lastModified: today,
-      changeFrequency: 'daily',
-      priority: 0.8,
+      changeFrequency: 'hourly',
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/picks/nba`,
+      url: `${baseUrl}/nba-picks-today`,
       lastModified: today,
-      changeFrequency: 'daily',
-      priority: 0.8,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    // Monetization Pages
+    {
+      url: `${baseUrl}/sportsbooks`,
+      lastModified: today,
+      changeFrequency: 'weekly',
+      priority: 0.85,
     },
     {
-      url: `${baseUrl}/picks/mlb`,
+      url: `${baseUrl}/advertise`,
       lastModified: today,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/picks/nhl`,
-      lastModified: today,
-      changeFrequency: 'daily',
-      priority: 0.8,
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
   ];
 }
