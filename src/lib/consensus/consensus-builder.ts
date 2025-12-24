@@ -367,6 +367,36 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
 }
 
 /**
+ * Normalize game name for totals (over/under)
+ * Ensures "Cal/Hawaii", "Hawaii/California", "California vs Hawaii" all become the same
+ */
+function normalizeGameForTotal(team: string): string {
+  // Split by common separators
+  const parts = team.split(/\s*[\/vs@]+\s*/i).map(t => t.trim()).filter(Boolean);
+
+  if (parts.length < 2) {
+    // Single team, just return standardized
+    return team;
+  }
+
+  // Sort alphabetically to ensure "Cal/Hawaii" and "Hawaii/Cal" are the same
+  parts.sort((a, b) => a.localeCompare(b));
+  return parts.join('/');
+}
+
+/**
+ * Round total line to nearest 0.5 to group similar lines
+ * e.g., 51, 51.5 -> 51.5; 50, 50.5 -> 50.5
+ */
+function roundLineForGrouping(line: string): string {
+  const num = parseFloat(line);
+  if (isNaN(num)) return line;
+  // Round to nearest 0.5
+  const rounded = Math.round(num * 2) / 2;
+  return String(rounded);
+}
+
+/**
  * Build consensus from normalized picks
  * One vote per capper per unique bet
  */
@@ -382,10 +412,21 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
   }>();
 
   for (const pick of normalizedPicks) {
+    // For totals, normalize game name and round line
+    let teamForKey = pick.standardizedTeam;
+    let lineForKey = pick.line;
+
+    if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
+      teamForKey = normalizeGameForTotal(pick.standardizedTeam);
+      if (lineForKey) {
+        lineForKey = roundLineForGrouping(lineForKey);
+      }
+    }
+
     // Create unique bet key: Team + BetType + Line (if applicable)
-    let betKey = `${pick.standardizedTeam}_${pick.betType}`;
-    if (pick.line) {
-      betKey += `_${pick.line}`;
+    let betKey = `${teamForKey}_${pick.betType}`;
+    if (lineForKey) {
+      betKey += `_${lineForKey}`;
     }
 
     if (!betGroups.has(betKey)) {
@@ -394,8 +435,8 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
         sport: pick.sport,
         matchup: pick.matchup,
         betType: pick.betType,
-        line: pick.line,
-        team: pick.standardizedTeam,
+        line: lineForKey || pick.line, // Use rounded line for totals
+        team: teamForKey, // Use normalized team for totals
       });
     }
 
