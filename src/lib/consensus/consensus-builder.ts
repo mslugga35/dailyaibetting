@@ -144,11 +144,12 @@ export function normalizeCapper(capper: string): string {
 /**
  * Check if pick is for today's games
  * Based on MASTER_CONSENSUS_RULES Section 1
+ * Only accepts picks with valid dates matching today or yesterday
  */
 export function isTodayPick(pickDate: string): boolean {
-  // Handle empty or missing dates - assume today
+  // Reject empty or missing dates - we need a valid date
   if (!pickDate || pickDate.trim() === '') {
-    return true;
+    return false;
   }
 
   // Handle "TODAY" literal
