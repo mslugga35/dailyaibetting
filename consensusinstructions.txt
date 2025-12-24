@@ -1,0 +1,895 @@
+ BETTING CONSENSUS COMPILER - ULTRA-STRICT RULES
+
+  STEP 1: FILTER FOR TODAY ONLY - STRICT DATE CHECK
+  - ONLY include picks explicitly marked for current date being processed
+  - EXCLUDE: "for Tuesday", "July 1", "tomorrow", or any future date references
+  - EXCLUDE: NFL picks during June-August (off-season)
+  - EXCLUDE: Any pick without clear current-date confirmation
+
+  STEP 2: CAPPER IDENTIFICATION - EXACT RULES
+  - Each unique name = 1 capper (Example: "CBLEZ" mentioned twice = same person, count once per bet)
+  - Numbered cappers 1-99 = separate individuals (Example: "Capper 14" ≠ "Capper 16")
+  - "Consensus Leans" = 1 entity total (not individual cappers)
+  - "Dimers" = 1 entity total
+  - Duplicate prevention: Same capper can only vote once per unique bet
+
+  STEP 3: TEAM NAME STANDARDIZATION - APPLY EXACT MAPPING
+  **MLB:**
+  - Diamondbacks/Arizona/Dbacks/ARI → Diamondbacks
+  - Braves/Atlanta/ATL → Braves
+  - Orioles/Baltimore/BAL → Orioles
+  - Red Sox/Boston/BOS → Red Sox
+  - Cubs/Chicago/CHC → Cubs
+  - White Sox/Chicago/CWS → White Sox
+  - Reds/Cincinnati/CIN → Reds
+  - Guardians/Cleveland/CLE → Guardians
+  - Rockies/Colorado/COL → Rockies
+  - Tigers/Detroit/DET → Tigers
+  - Astros/Houston/HOU → Astros
+  - Royals/Kansas City/KC → Royals
+  - Angels/Los Angeles/LAA → Angels
+  - Dodgers/Los Angeles/LAD → Dodgers
+  - Marlins/Miami/MIA → Marlins
+  - Brewers/Milwaukee/MIL → Brewers
+  - Twins/Minnesota/MIN → Twins
+  - Yankees/New York/NYY → Yankees
+  - Mets/New York/NYM → Mets
+  - Athletics/Oakland/A's → Athletics
+  - Phillies/Philadelphia/PHI → Phillies
+  - Pirates/Pittsburgh/PIT → Pirates
+  - Padres/San Diego/SD → Padres
+  - Giants/San Francisco/SF → Giants
+  - Mariners/Seattle/SEA → Mariners
+  - Cardinals/St Louis/STL → Cardinals
+  - Rays/Tampa Bay/TB → Rays
+  - Rangers/Texas/TEX → Rangers
+  - Blue Jays/Toronto/TOR → Blue Jays
+  - Nationals/Washington/WAS → Nationals
+
+  **NBA:** (during season)
+  - Hawks/Atlanta/ATL → Hawks
+  - Celtics/Boston/BOS → Celtics
+  - Nets/Brooklyn/BKN → Nets
+  - Hornets/Charlotte/CHA → Hornets
+  - Bulls/Chicago/CHI → Bulls
+  - Cavaliers/Cleveland/CLE → Cavaliers
+  - Mavericks/Dallas/DAL → Mavericks
+  - Nuggets/Denver/DEN → Nuggets
+  - Pistons/Detroit/DET → Pistons
+  - Warriors/Golden State/GS → Warriors
+  - Rockets/Houston/HOU → Rockets
+  - Pacers/Indiana/IND → Pacers
+  - Clippers/Los Angeles/LAC → Clippers
+  - Lakers/Los Angeles/LAL → Lakers
+  - Grizzlies/Memphis/MEM → Grizzlies
+  - Heat/Miami/MIA → Heat
+  - Bucks/Milwaukee/MIL → Bucks
+  - Timberwolves/Minnesota/MIN → Timberwolves
+  - Pelicans/New Orleans/NO → Pelicans
+  - Knicks/New York/NY → Knicks
+  - Thunder/Oklahoma City/OKC → Thunder
+  - Magic/Orlando/ORL → Magic
+  - 76ers/Philadelphia/PHI → 76ers
+  - Suns/Phoenix/PHX → Suns
+  - Trail Blazers/Portland/POR → Trail Blazers
+  - Kings/Sacramento/SAC → Kings
+  - Spurs/San Antonio/SA → Spurs
+  - Raptors/Toronto/TOR → Raptors
+  - Jazz/Utah/UTA → Jazz
+  - Wizards/Washington/WAS → Wizards
+
+  **WNBA:**
+  - Dream/Atlanta → Dream
+  - Sky/Chicago → Sky
+  - Fever/Indiana → Fever
+  - Sun/Connecticut → Sun
+  - Wings/Dallas → Wings
+  - Sparks/Los Angeles → Sparks
+  - Aces/Las Vegas → Aces
+  - Lynx/Minnesota → Lynx
+  - Liberty/New York → Liberty
+  - Mercury/Phoenix → Mercury
+  - Storm/Seattle → Storm
+  - Mystics/Washington → Mystics
+
+  **NHL:** (during season)
+  - Ducks/Anaheim/ANA → Ducks
+  - Coyotes/Arizona/ARI → Coyotes
+  - Bruins/Boston/BOS → Bruins
+  - Sabres/Buffalo/BUF → Sabres
+  - Flames/Calgary/CGY → Flames
+  - Hurricanes/Carolina/CAR → Hurricanes
+  - Blackhawks/Chicago/CHI → Blackhawks
+  - Avalanche/Colorado/COL → Avalanche
+  - Blue Jackets/Columbus/CBJ → Blue Jackets
+  - Stars/Dallas/DAL → Stars
+  - Red Wings/Detroit/DET → Red Wings
+  - Oilers/Edmonton/EDM → Oilers
+  - Panthers/Florida/FLA → Panthers
+  - Kings/Los Angeles/LA → Kings
+  - Wild/Minnesota/MIN → Wild
+  - Canadiens/Montreal/MTL → Canadiens
+  - Predators/Nashville/NSH → Predators
+  - Devils/New Jersey/NJ → Devils
+  - Islanders/New York/NYI → Islanders
+  - Rangers/New York/NYR → Rangers
+  - Senators/Ottawa/OTT → Senators
+  - Flyers/Philadelphia/PHI → Flyers
+  - Penguins/Pittsburgh/PIT → Penguins
+  - Sharks/San Jose/SJ → Sharks
+  - Kraken/Seattle/SEA → Kraken
+  - Blues/St Louis/STL → Blues
+  - Lightning/Tampa Bay/TB → Lightning
+  - Maple Leafs/Toronto/TOR → Maple Leafs
+  - Canucks/Vancouver/VAN → Canucks
+  - Golden Knights/Vegas/VGK → Golden Knights
+  - Capitals/Washington/WAS → Capitals
+  - Jets/Winnipeg/WPG → Jets
+
+  **NFL:** (during season)
+  - Cardinals/Arizona/ARI → Cardinals
+  - Falcons/Atlanta/ATL → Falcons
+  - Ravens/Baltimore/BAL → Ravens
+  - Bills/Buffalo/BUF → Bills
+  - Panthers/Carolina/CAR → Panthers
+  - Bears/Chicago/CHI → Bears
+  - Bengals/Cincinnati/CIN → Bengals
+  - Browns/Cleveland/CLE → Browns
+  - Cowboys/Dallas/DAL → Cowboys
+  - Broncos/Denver/DEN → Broncos
+  - Lions/Detroit/DET → Lions
+  - Packers/Green Bay/GB → Packers
+  - Texans/Houston/HOU → Texans
+  - Colts/Indianapolis/IND → Colts
+  - Jaguars/Jacksonville/JAX → Jaguars
+  - Chiefs/Kansas City/KC → Chiefs
+  - Raiders/Las Vegas/LV → Raiders
+  - Chargers/Los Angeles/LAC → Chargers
+  - Rams/Los Angeles/LAR → Rams
+  - Dolphins/Miami/MIA → Dolphins
+  - Vikings/Minnesota/MIN → Vikings
+  - Patriots/New England/NE → Patriots
+  - Saints/New Orleans/NO → Saints
+  - Giants/New York/NYG → Giants
+  - Jets/New York/NYJ → Jets
+  - Eagles/Philadelphia/PHI → Eagles
+  - Steelers/Pittsburgh/PIT → Steelers
+  - 49ers/San Francisco/SF → 49ers
+  - Seahawks/Seattle/SEA → Seahawks
+  - Buccaneers/Tampa Bay/TB → Buccaneers
+  - Titans/Tennessee/TEN → Titans
+  - Commanders/Washington/WAS → Commanders
+
+  STEP 4: BET STANDARDIZATION - NO COMBINING
+  - "Team ML" ≠ "Team F5 ML" ≠ "Team -1.5" (count as completely separate bets)
+  - "Team +1.5" ≠ "Team ML" (different bet types, never combine)
+  - "Diamondbacks ML" ≠ "Diamondbacks +1.5" (separate entries in consensus)
+  - Same bet with different odds = same bet (Example: "Yankees ML -140" = "Yankees ML -134")
+
+  STEP 5: UNIT CONVERSION - STANDARDIZE
+  - (10*) = 10 units
+  - 7u = 7 units
+  - Max bet = assume 10 units unless specified
+  - High unit threshold = 3+ units
+  - Units do NOT add extra votes to consensus count
+
+  STEP 6: COUNTING RULES - ONE VOTE ONLY
+  - 1 vote per capper per unique bet (no exceptions)
+  - High unit plays get 🔥 but NO extra votes in overall consensus
+  - Parlays: each leg = 1 vote for that capper only (never double-count)
+  - If capper lists same bet multiple times = count once only
+
+  STEP 7: 🔥 TAG RULES - AUTOMATIC APPLICATION
+  - Apply 🔥 if bet has 3+ cappers OR single bet is 3+ units
+  - Check every bet for 🔥 qualification
+  - No exceptions or missed applications
+
+  STEP 8: PARLAY COMBO RULES - EXACT MATCHING
+  - Only include parlays where 2+ cappers have IDENTICAL combinations
+  - Single-capper parlays = excluded from parlay section
+  - Partial matches don't count (must be exact same legs)
+
+  STEP 9: PLAYER PROP RULES - EXACT MATCHING
+  - Must be exact same player + exact same prop type + exact same line
+  - "Wheeler Under 5.5 Strikeouts" ≠ "Wheeler Under 5.5 Hits Allowed"
+  - Must be for games happening today
+  - Minimum 2 cappers with identical prop
+
+  STEP 10: OUTPUT FORMAT (5 sections)
+
+  1. TOP 5 OVERALL CONSENSUS
+     Format: [Rank]. [Team] [Bet Type] [Line] – [X cappers] 🔥
+
+  2. TOP 5 HIGH UNIT PLAYS (3+ units)
+     Format: [Rank]. [Team] [Bet Type] [Line] – [X units] by [Capper]
+
+  3. TOP 5 PARLAY COMBOS (if any appear multiple times)
+     Format: [Rank]. [Full Parlay] – [X cappers]
+
+  4. TOP 3 PLAYER PROPS (if 2+ cappers agree on exact same prop)
+     Format: [Player Name] [Prop] [Line] – [X cappers]
+
+  5. TOP 3 BY SPORT (min 2 cappers per pick, only sports playing today)
+     MLB:
+     WNBA:
+     NBA: (during season)
+     NHL: (during season)
+     NFL: (during season)
+     (Only show sports with games today and 2+ capper agreement)
+
+  STEP 11: VERIFICATION CHECKLIST
+  Before finalizing output, verify:
+  □ All dates filtered correctly
+  □ No duplicate capper counting
+  □ All 🔥 tags applied correctly
+  □ No bet types combined inappropriately
+  □ Unit conversions accurate
+  □ Only today's games included
+
+  IMPORTANT NOTES:
+  - Only count picks for games actually happening TODAY
+  - Each capper name/number gets ONE vote per unique bet
+  - Units in parentheses like (10*) = 10 units
+  - "u" after number = units (7u = 7 units)
+  - F5 = First 5 innings
+  - RL = Run Line
+  - TT = Team Total
+  - NRFI = No Run First Inning
+
+  EXAMPLE CLARIFICATIONS:
+  - If "Rangers ML" appears 5 times from same capper = 1 vote
+  - If "Rangers ML" + "Rangers -1.5" both appear = 2 separate bets
+  - If bet has 3+ cappers OR 3+ units = gets 🔥 tag
+  - "Consensus Leans" with 3 picks = 1 capper total, not 3 cappers
+
+NFL:
+  - Cardinals/Arizona/ARI → Cardinals
+  - Falcons/Atlanta/ATL → Falcons
+  - Ravens/Baltimore/BAL → Ravens
+  - Bills/Buffalo/BUF → Bills
+  - Panthers/Carolina/CAR → Panthers
+  - Bears/Chicago/CHI → Bears
+  - Bengals/Cincinnati/CIN → Bengals
+  - Browns/Cleveland/CLE → Browns
+  - Cowboys/Dallas/DAL → Cowboys
+  - Broncos/Denver/DEN → Broncos
+  - Lions/Detroit/DET → Lions
+  - Packers/Green Bay/GB → Packers
+  - Texans/Houston/HOU → Texans
+  - Colts/Indianapolis/IND → Colts
+  - Jaguars/Jacksonville/JAX → Jaguars
+  - Chiefs/Kansas City/KC → Chiefs
+  - Raiders/Las Vegas/LV → Raiders
+  - Chargers/Los Angeles/LAC → Chargers
+  - Rams/Los Angeles/LAR → Rams
+  - Dolphins/Miami/MIA → Dolphins
+  - Vikings/Minnesota/MIN → Vikings
+  - Patriots/New England/NE → Patriots
+  - Saints/New Orleans/NO → Saints
+  - Giants/New York/NYG → Giants
+  - Jets/New York/NYJ → Jets
+  - Eagles/Philadelphia/PHI → Eagles
+  - Steelers/Pittsburgh/PIT → Steelers
+  - 49ers/San Francisco/SF → 49ers
+  - Seahawks/Seattle/SEA → Seahawks
+  - Buccaneers/Tampa Bay/TB → Buccaneers
+  - Titans/Tennessee/TEN → Titans
+  - Commanders/Washington/WAS → Commanders
+
+  NBA:
+  - Hawks/Atlanta/ATL → Hawks
+  - Celtics/Boston/BOS → Celtics
+  - Nets/Brooklyn/BKN → Nets
+  - Hornets/Charlotte/CHA → Hornets
+  - Bulls/Chicago/CHI → Bulls
+  - Cavaliers/Cleveland/CLE → Cavaliers
+  - Mavericks/Dallas/DAL → Mavericks
+  - Nuggets/Denver/DEN → Nuggets
+  - Pistons/Detroit/DET → Pistons
+  - Warriors/Golden State/GS → Warriors
+  - Rockets/Houston/HOU → Rockets
+  - Pacers/Indiana/IND → Pacers
+  - Clippers/Los Angeles/LAC → Clippers
+  - Lakers/Los Angeles/LAL → Lakers
+  - Grizzlies/Memphis/MEM → Grizzlies
+  - Heat/Miami/MIA → Heat
+  - Bucks/Milwaukee/MIL → Bucks
+  - Timberwolves/Minnesota/MIN → Timberwolves
+  - Pelicans/New Orleans/NO → Pelicans
+  - Knicks/New York/NY → Knicks
+  - Thunder/Oklahoma City/OKC → Thunder
+  - Magic/Orlando/ORL → Magic
+  - 76ers/Philadelphia/PHI → 76ers
+  - Suns/Phoenix/PHX → Suns
+  - Trail Blazers/Portland/POR → Trail Blazers
+  - Kings/Sacramento/SAC → Kings
+  - Spurs/San Antonio/SA → Spurs
+  - Raptors/Toronto/TOR → Raptors
+  - Jazz/Utah/UTA → Jazz
+  - Wizards/Washington/WAS → Wizards
+
+  MLB:
+  - Diamondbacks/Arizona/Dbacks/ARI → Diamondbacks
+  - Braves/Atlanta/ATL → Braves
+  - Orioles/Baltimore/BAL → Orioles
+  - Red Sox/Boston/BOS → Red Sox
+  - Cubs/Chicago/CHC → Cubs
+  - White Sox/Chicago/CWS → White Sox
+  - Reds/Cincinnati/CIN → Reds
+  - Guardians/Cleveland/CLE → Guardians
+  - Rockies/Colorado/COL → Rockies
+  - Tigers/Detroit/DET → Tigers
+  - Astros/Houston/HOU → Astros
+  - Royals/Kansas City/KC → Royals
+  - Angels/Los Angeles/LAA → Angels
+  - Dodgers/Los Angeles/LAD → Dodgers
+  - Marlins/Miami/MIA → Marlins
+  - Brewers/Milwaukee/MIL → Brewers
+  - Twins/Minnesota/MIN → Twins
+  - Yankees/New York/NYY → Yankees
+  - Mets/New York/NYM → Mets
+  - Athletics/Oakland/A's → Athletics
+  - Phillies/Philadelphia/PHI → Phillies
+  - Pirates/Pittsburgh/PIT → Pirates
+  - Padres/San Diego/SD → Padres
+  - Giants/San Francisco/SF → Giants
+  - Mariners/Seattle/SEA → Mariners
+  - Cardinals/St Louis/STL → Cardinals
+  - Rays/Tampa Bay/TB → Rays
+  - Rangers/Texas/TEX → Rangers
+  - Blue Jays/Toronto/TOR → Blue Jays
+  - Nationals/Washington/WAS → Nationals
+
+  NHL:
+  - Ducks/Anaheim/ANA → Ducks
+  - Coyotes/Arizona/ARI → Coyotes
+  - Bruins/Boston/BOS → Bruins
+  - Sabres/Buffalo/BUF → Sabres
+  - Flames/Calgary/CGY → Flames
+  - Hurricanes/Carolina/CAR → Hurricanes
+  - Blackhawks/Chicago/CHI → Blackhawks
+  - Avalanche/Colorado/COL → Avalanche
+  - Blue Jackets/Columbus/CBJ → Blue Jackets
+  - Stars/Dallas/DAL → Stars
+  - Red Wings/Detroit/DET → Red Wings
+  - Oilers/Edmonton/EDM → Oilers
+  - Panthers/Florida/FLA → Panthers
+  - Kings/Los Angeles/LA → Kings
+  - Wild/Minnesota/MIN → Wild
+  - Canadiens/Montreal/MTL → Canadiens
+  - Predators/Nashville/NSH → Predators
+  - Devils/New Jersey/NJ → Devils
+  - Islanders/New York/NYI → Islanders
+  - Rangers/New York/NYR → Rangers
+  - Senators/Ottawa/OTT → Senators
+  - Flyers/Philadelphia/PHI → Flyers
+  - Penguins/Pittsburgh/PIT → Penguins
+  - Sharks/San Jose/SJ → Sharks
+  - Kraken/Seattle/SEA → Kraken
+  - Blues/St Louis/STL → Blues
+  - Lightning/Tampa Bay/TB → Lightning
+  - Maple Leafs/Toronto/TOR → Maple Leafs
+  - Canucks/Vancouver/VAN → Canucks
+  - Golden Knights/Vegas/VGK → Golden Knights
+  - Capitals/Washington/WAS → Capitals
+  - Jets/Winnipeg/WPG → Jets
+
+  MLS:
+  - Atlanta United/Atlanta/ATL → Atlanta United
+  - Austin FC/Austin → Austin FC
+  - Charlotte FC/Charlotte → Charlotte FC
+  - Chicago Fire/Chicago → Chicago Fire
+  - FC Cincinnati/Cincinnati → FC Cincinnati
+  - Colorado Rapids/Colorado → Colorado Rapids
+  - Columbus Crew/Columbus → Columbus Crew
+  - FC Dallas/Dallas → FC Dallas
+  - DC United/Washington → DC United
+  - Houston Dynamo/Houston → Houston Dynamo
+  - Sporting KC/Kansas City → Sporting KC
+  - LA Galaxy/Los Angeles → LA Galaxy
+  - LAFC/Los Angeles → LAFC
+  - Inter Miami/Miami → Inter Miami
+  - Minnesota United/Minnesota → Minnesota United
+  - CF Montreal/Montreal → CF Montreal
+  - Nashville SC/Nashville → Nashville SC
+  - New England Revolution/New England → New England Revolution
+  - NYCFC/New York → NYCFC
+  - Red Bulls/New York → Red Bulls
+  - Orlando City/Orlando → Orlando City
+  - Philadelphia Union/Philadelphia → Philadelphia Union
+  - Portland Timbers/Portland → Portland Timbers
+  - Real Salt Lake/Salt Lake → Real Salt Lake
+  - San Jose Earthquakes/San Jose → San Jose Earthquakes
+  - Seattle Sounders/Seattle → Seattle Sounders
+  - St Louis City/St Louis → St Louis City
+  - Toronto FC/Toronto → Toronto FC
+  - Vancouver Whitecaps/Vancouver → Vancouver Whitecaps
+
+  WNBA:
+  - Dream/Atlanta → Dream
+  - Sky/Chicago → Sky
+  - Fever/Indiana → Fever
+  - Sun/Connecticut → Sun
+  - Wings/Dallas → Wings
+  - Sparks/Los Angeles → Sparks
+  - Aces/Las Vegas → Aces
+  - Lynx/Minnesota → Lynx
+  - Liberty/New York → Liberty
+  - Mercury/Phoenix → Mercury
+  - Storm/Seattle → Storm
+  - Mystics/Washington → Mystics
+
+  College Football/Basketball:
+  Use full university name or common abbreviation (e.g., Alabama/Bama → Alabama, LSU → LSU, USC → USC, Michigan/UM
+  → Michigan)
+
+BETTING CONSENSUS COMPILER - ULTRA-STRICT RULES
+STEP 1: FILTER FOR TODAY ONLY - STRICT DATE CHECK
+
+ONLY include picks explicitly marked for current date being processed
+EXCLUDE: "for Tuesday", "July 1", "tomorrow", or any future date references
+EXCLUDE: NFL picks during June-August (off-season)
+EXCLUDE: Any pick without clear current-date confirmation
+
+STEP 2: CAPPER IDENTIFICATION - EXACT RULES
+
+Each unique name = 1 capper (Example: "CBLEZ" mentioned twice = same person, count once per bet)
+Numbered cappers 1-99 = separate individuals (Example: "Capper 14" â‰  "Capper 16")
+"Consensus Leans" = 1 entity total (not individual cappers)
+"Dimers" = 1 entity total
+Duplicate prevention: Same capper can only vote once per unique bet
+
+STEP 3: TEAM NAME STANDARDIZATION - APPLY EXACT MAPPINGMLB:
+
+Diamondbacks/Arizona/Dbacks/ARI â†’ Diamondbacks
+Braves/Atlanta/ATL â†’ Braves
+Orioles/Baltimore/BAL â†’ Orioles
+Red Sox/Boston/BOS â†’ Red Sox
+Cubs/Chicago/CHC â†’ Cubs
+White Sox/Chicago/CWS â†’ White Sox
+Reds/Cincinnati/CIN â†’ Reds
+Guardians/Cleveland/CLE â†’ Guardians
+Rockies/Colorado/COL â†’ Rockies
+Tigers/Detroit/DET â†’ Tigers
+Astros/Houston/HOU â†’ Astros
+Royals/Kansas City/KC â†’ Royals
+Angels/Los Angeles/LAA â†’ Angels
+Dodgers/Los Angeles/LAD â†’ Dodgers
+Marlins/Miami/MIA â†’ Marlins
+Brewers/Milwaukee/MIL â†’ Brewers
+
+Twins/Minnesota/MIN â†’ Twins
+Yankees/New York/NYY â†’ Yankees
+Mets/New York/NYM â†’ Mets
+Athletics/Oakland/A's â†’ Athletics
+Phillies/Philadelphia/PHI â†’ Phillies
+Pirates/Pittsburgh/PIT â†’ Pirates
+Padres/San Diego/SD â†’ Padres
+Giants/San Francisco/SF â†’ Giants
+Mariners/Seattle/SEA â†’ Mariners
+Cardinals/St Louis/STL â†’ Cardinals
+Rays/Tampa Bay/TB â†’ Rays
+Rangers/Texas/TEX â†’ Rangers
+Blue Jays/Toronto/TOR â†’ Blue Jays
+Nationals/Washington/WAS â†’ Nationals
+
+NBA: (during season)
+
+Hawks/Atlanta/ATL â†’ Hawks
+Celtics/Boston/BOS â†’ Celtics
+Nets/Brooklyn/BKN â†’ Nets
+Hornets/Charlotte/CHA â†’ Hornets
+Bulls/Chicago/CHI â†’ Bulls
+Cavaliers/Cleveland/CLE â†’ Cavaliers
+Mavericks/Dallas/DAL â†’ Mavericks
+Nuggets/Denver/DEN â†’ Nuggets
+Pistons/Detroit/DET â†’ Pistons
+Warriors/Golden State/GS â†’ Warriors
+Rockets/Houston/HOU â†’ Rockets
+Pacers/Indiana/IND â†’ Pacers
+Clippers/Los Angeles/LAC â†’ Clippers
+Lakers/Los Angeles/LAL â†’ Lakers
+Grizzlies/Memphis/MEM â†’ Grizzlies
+Heat/Miami/MIA â†’ Heat
+Bucks/Milwaukee/MIL â†’ Bucks
+Timberwolves/Minnesota/MIN â†’ Timberwolves
+Pelicans/New Orleans/NO â†’ Pelicans
+Knicks/New York/NY â†’ Knicks
+Thunder/Oklahoma City/OKC â†’ Thunder
+Magic/Orlando/ORL â†’ Magic
+76ers/Philadelphia/PHI â†’ 76ers
+Suns/Phoenix/PHX â†’ Suns
+Trail Blazers/Portland/POR â†’ Trail Blazers
+Kings/Sacramento/SAC â†’ Kings
+Spurs/San Antonio/SA â†’ Spurs
+Raptors/Toronto/TOR â†’ Raptors
+Jazz/Utah/UTA â†’ Jazz
+Wizards/Washington/WAS â†’ Wizards
+
+WNBA:
+
+Dream/Atlanta â†’ Dream
+Sky/Chicago â†’ Sky
+Fever/Indiana â†’ Fever
+Sun/Connecticut â†’ Sun
+Wings/Dallas â†’ Wings
+Sparks/Los Angeles â†’ Sparks
+Aces/Las Vegas â†’ Aces
+Lynx/Minnesota â†’ Lynx
+Liberty/New York â†’ Liberty
+Mercury/Phoenix â†’ Mercury
+Storm/Seattle â†’ Storm
+Mystics/Washington â†’ Mystics
+
+NHL: (during season)
+
+Ducks/Anaheim/ANA â†’ Ducks
+Coyotes/Arizona/ARI â†’ Coyotes
+Bruins/Boston/BOS â†’ Bruins
+Sabres/Buffalo/BUF â†’ Sabres
+Flames/Calgary/CGY â†’ Flames
+Hurricanes/Carolina/CAR â†’ Hurricanes
+Blackhawks/Chicago/CHI â†’ Blackhawks
+Avalanche/Colorado/COL â†’ Avalanche
+Blue Jackets/Columbus/CBJ â†’ Blue Jackets
+Stars/Dallas/DAL â†’ Stars
+Red Wings/Detroit/DET â†’ Red Wings
+Oilers/Edmonton/EDM â†’ Oilers
+Panthers/Florida/FLA â†’ Panthers
+Kings/Los Angeles/LA â†’ Kings
+Wild/Minnesota/MIN â†’ Wild
+Canadiens/Montreal/MTL â†’ Canadiens
+Predators/Nashville/NSH â†’ Predators
+Devils/New Jersey/NJ â†’ Devils
+Islanders/New York/NYI â†’ Islanders
+Rangers/New York/NYR â†’ Rangers
+Senators/Ottawa/OTT â†’ Senators
+Flyers/Philadelphia/PHI â†’ Flyers
+Penguins/Pittsburgh/PIT â†’ Penguins
+Sharks/San Jose/SJ â†’ Sharks
+Kraken/Seattle/SEA â†’ Kraken
+Blues/St Louis/STL â†’ Blues
+Lightning/Tampa Bay/TB â†’ Lightning
+Maple Leafs/Toronto/TOR â†’ Maple Leafs
+Canucks/Vancouver/VAN â†’ Canucks
+Golden Knights/Vegas/VGK â†’ Golden Knights
+Capitals/Washington/WAS â†’ Capitals
+Jets/Winnipeg/WPG â†’ Jets
+
+NFL: (during season)
+
+Cardinals/Arizona/ARI â†’ Cardinals
+Falcons/Atlanta/ATL â†’ Falcons
+Ravens/Baltimore/BAL â†’ Ravens
+Bills/Buffalo/BUF â†’ Bills
+Panthers/Carolina/CAR â†’ Panthers
+Bears/Chicago/CHI â†’ Bears
+Bengals/Cincinnati/CIN â†’ Bengals
+Browns/Cleveland/CLE â†’ Browns
+Cowboys/Dallas/DAL â†’ Cowboys
+Broncos/Denver/DEN â†’ Broncos
+Lions/Detroit/DET â†’ Lions
+Packers/Green Bay/GB â†’ Packers
+Texans/Houston/HOU â†’ Texans
+Colts/Indianapolis/IND â†’ Colts
+Jaguars/Jacksonville/JAX â†’ Jaguars
+Chiefs/Kansas City/KC â†’ Chiefs
+Raiders/Las Vegas/LV â†’ Raiders
+Chargers/Los Angeles/LAC â†’ Chargers
+Rams/Los Angeles/LAR â†’ Rams
+Dolphins/Miami/MIA â†’ Dolphins
+Vikings/Minnesota/MIN â†’ Vikings
+Patriots/New England/NE â†’ Patriots
+Saints/New Orleans/NO â†’ Saints
+Giants/New York/NYG â†’ Giants
+Jets/New York/NYJ â†’ Jets
+Eagles/Philadelphia/PHI â†’ Eagles
+Steelers/Pittsburgh/PIT â†’ Steelers
+49ers/San Francisco/SF â†’ 49ers
+Seahawks/Seattle/SEA â†’ Seahawks
+Buccaneers/Tampa Bay/TB â†’ Buccaneers
+Titans/Tennessee/TEN â†’ Titans
+Commanders/Washington/WAS â†’ Commanders
+
+STEP 4: BET STANDARDIZATION - NO COMBINING
+
+"Team ML" â‰  "Team F5 ML" â‰  "Team -1.5" (count as completely separate bets)
+"Team +1.5" â‰  "Team ML" (different bet types, never combine)
+"Diamondbacks ML" â‰  "Diamondbacks +1.5" (separate entries in consensus)
+Same bet with different odds = same bet (Example: "Yankees ML -140" = "Yankees ML -134")
+
+STEP 5: UNIT CONVERSION - STANDARDIZE
+
+(10*) = 10 units
+7u = 7 units
+Max bet = assume 10 units unless specified
+Units are tracked for internal standardization but do NOT affect consensus counting or output
+
+STEP 6: COUNTING RULES - ONE VOTE ONLY
+
+1 vote per capper per unique bet (no exceptions)
+Parlays: each leg = 1 vote for that capper only (never double-count)
+If capper lists same bet multiple times = count once only
+
+STEP 7: ðŸ”¥ TAG RULES - AUTOMATIC APPLICATION
+
+Apply ðŸ”¥ if bet has 3+ cappers
+Check every bet for ðŸ”¥ qualification
+No exceptions or missed applications
+
+STEP 8: PARLAY COMBO RULES - EXACT MATCHING
+
+Only include parlays where 2+ cappers have IDENTICAL combinations
+Single-capper parlays = excluded from parlay section
+Partial matches don't count (must be exact same legs)
+
+STEP 9: PLAYER PROP RULES - EXACT MATCHING
+
+Must be exact same player + exact same prop type + exact same line
+"Wheeler Under 5.5 Strikeouts" â‰  "Wheeler Under 5.5 Hits Allowed"
+Must be for games happening today
+Minimum 2 cappers with identical prop
+
+STEP 10: OUTPUT FORMAT (4 sections)
+
+TOP 5 OVERALL CONSENSUSFormat: [Rank]. [Team] [Bet Type] [Line] â€“ [X cappers] ðŸ”¥
+TOP 5 PARLAY COMBOS (if any appear multiple times)Format: [Rank]. [Full Parlay] â€“ [X cappers]
+TOP 3 PLAYER PROPS (if 2+ cappers agree on exact same prop)Format: [Player Name] [Prop] [Line] â€“ [X cappers]
+TOP 3 BY SPORT (min 2 cappers per pick, only sports playing today)MLB:WNBA:NBA: (during season)NHL: (during season)NFL: (during season)All sports are listed in the output, even if no picks meet criteria, with a note like "No picks meet criteria."Capper names are NEVER included in any output section, only capper counts (e.g., "X cappers").
+
+STEP 11: VERIFICATION CHECKLISTBefore finalizing output, verify:
+
+All dates filtered correctly
+No duplicate capper counting
+All ðŸ”¥ tags applied correctly
+No bet types combined inappropriately
+Unit conversions accurate
+Only today's games included
+
+
+BETTING CONSENSUS COMPILER - ULTRA-STRICT RULES
+
+  STEP 1: FILTER FOR TODAY ONLY - STRICT DATE CHECK
+  - ONLY include picks explicitly marked for current date being processed
+  - EXCLUDE: "for Tuesday", "July 1", "tomorrow", or any future date references
+  - EXCLUDE: NFL picks during June-August (off-season)
+  - EXCLUDE: Any pick without clear current-date confirmation
+
+  STEP 2: CAPPER IDENTIFICATION - EXACT RULES
+  - Each unique name = 1 capper (Example: "CBLEZ" mentioned twice = same person, count once per bet)
+  - Numbered cappers 1-99 = separate individuals (Example: "Capper 14" ≠ "Capper 16")
+  - "Consensus Leans" = 1 entity total (not individual cappers)
+  - "Dimers" = 1 entity total
+  - Duplicate prevention: Same capper can only vote once per unique bet
+
+  STEP 3: TEAM NAME STANDARDIZATION - APPLY EXACT MAPPING
+  **MLB:**
+  - Diamondbacks/Arizona/Dbacks/ARI → Diamondbacks
+  - Braves/Atlanta/ATL → Braves
+  - Orioles/Baltimore/BAL → Orioles
+  - Red Sox/Boston/BOS → Red Sox
+  - Cubs/Chicago/CHC → Cubs
+  - White Sox/Chicago/CWS → White Sox
+  - Reds/Cincinnati/CIN → Reds
+  - Guardians/Cleveland/CLE → Guardians
+  - Rockies/Colorado/COL → Rockies
+  - Tigers/Detroit/DET → Tigers
+  - Astros/Houston/HOU → Astros
+  - Royals/Kansas City/KC → Royals
+  - Angels/Los Angeles/LAA → Angels
+  - Dodgers/Los Angeles/LAD → Dodgers
+  - Marlins/Miami/MIA → Marlins
+  - Brewers/Milwaukee/MIL → Brewers
+  - Twins/Minnesota/MIN → Twins
+  - Yankees/New York/NYY → Yankees
+  - Mets/New York/NYM → Mets
+  - Athletics/Oakland/A's → Athletics
+  - Phillies/Philadelphia/PHI → Phillies
+  - Pirates/Pittsburgh/PIT → Pirates
+  - Padres/San Diego/SD → Padres
+  - Giants/San Francisco/SF → Giants
+  - Mariners/Seattle/SEA → Mariners
+  - Cardinals/St Louis/STL → Cardinals
+  - Rays/Tampa Bay/TB → Rays
+  - Rangers/Texas/TEX → Rangers
+  - Blue Jays/Toronto/TOR → Blue Jays
+  - Nationals/Washington/WAS → Nationals
+
+  **NBA:** (during season)
+  - Hawks/Atlanta/ATL → Hawks
+  - Celtics/Boston/BOS → Celtics
+  - Nets/Brooklyn/BKN → Nets
+  - Hornets/Charlotte/CHA → Hornets
+  - Bulls/Chicago/CHI → Bulls
+  - Cavaliers/Cleveland/CLE → Cavaliers
+  - Mavericks/Dallas/DAL → Mavericks
+  - Nuggets/Denver/DEN → Nuggets
+  - Pistons/Detroit/DET → Pistons
+  - Warriors/Golden State/GS → Warriors
+  - Rockets/Houston/HOU → Rockets
+  - Pacers/Indiana/IND → Pacers
+  - Clippers/Los Angeles/LAC → Clippers
+  - Lakers/Los Angeles/LAL → Lakers
+  - Grizzlies/Memphis/MEM → Grizzlies
+  - Heat/Miami/MIA → Heat
+  - Bucks/Milwaukee/MIL → Bucks
+  - Timberwolves/Minnesota/MIN → Timberwolves
+  - Pelicans/New Orleans/NO → Pelicans
+  - Knicks/New York/NY → Knicks
+  - Thunder/Oklahoma City/OKC → Thunder
+  - Magic/Orlando/ORL → Magic
+  - 76ers/Philadelphia/PHI → 76ers
+  - Suns/Phoenix/PHX → Suns
+  - Trail Blazers/Portland/POR → Trail Blazers
+  - Kings/Sacramento/SAC → Kings
+  - Spurs/San Antonio/SA → Spurs
+  - Raptors/Toronto/TOR → Raptors
+  - Jazz/Utah/UTA → Jazz
+  - Wizards/Washington/WAS → Wizards
+
+  **WNBA:**
+  - Dream/Atlanta → Dream
+  - Sky/Chicago → Sky
+  - Fever/Indiana → Fever
+  - Sun/Connecticut → Sun
+  - Wings/Dallas → Wings
+  - Sparks/Los Angeles → Sparks
+  - Aces/Las Vegas → Aces
+  - Lynx/Minnesota → Lynx
+  - Liberty/New York → Liberty
+  - Mercury/Phoenix → Mercury
+  - Storm/Seattle → Storm
+  - Mystics/Washington → Mystics
+
+  **NHL:** (during season)
+  - Ducks/Anaheim/ANA → Ducks
+  - Coyotes/Arizona/ARI → Coyotes
+  - Bruins/Boston/BOS → Bruins
+  - Sabres/Buffalo/BUF → Sabres
+  - Flames/Calgary/CGY → Flames
+  - Hurricanes/Carolina/CAR → Hurricanes
+  - Blackhawks/Chicago/CHI → Blackhawks
+  - Avalanche/Colorado/COL → Avalanche
+  - Blue Jackets/Columbus/CBJ → Blue Jackets
+  - Stars/Dallas/DAL → Stars
+  - Red Wings/Detroit/DET → Red Wings
+  - Oilers/Edmonton/EDM → Oilers
+  - Panthers/Florida/FLA → Panthers
+  - Kings/Los Angeles/LA → Kings
+  - Wild/Minnesota/MIN → Wild
+  - Canadiens/Montreal/MTL → Canadiens
+  - Predators/Nashville/NSH → Predators
+  - Devils/New Jersey/NJ → Devils
+  - Islanders/New York/NYI → Islanders
+  - Rangers/New York/NYR → Rangers
+  - Senators/Ottawa/OTT → Senators
+  - Flyers/Philadelphia/PHI → Flyers
+  - Penguins/Pittsburgh/PIT → Penguins
+  - Sharks/San Jose/SJ → Sharks
+  - Kraken/Seattle/SEA → Kraken
+  - Blues/St Louis/STL → Blues
+  - Lightning/Tampa Bay/TB → Lightning
+  - Maple Leafs/Toronto/TOR → Maple Leafs
+  - Canucks/Vancouver/VAN → Canucks
+  - Golden Knights/Vegas/VGK → Golden Knights
+  - Capitals/Washington/WAS → Capitals
+  - Jets/Winnipeg/WPG → Jets
+
+  **NFL:** (during season)
+  - Cardinals/Arizona/ARI → Cardinals
+  - Falcons/Atlanta/ATL → Falcons
+  - Ravens/Baltimore/BAL → Ravens
+  - Bills/Buffalo/BUF → Bills
+  - Panthers/Carolina/CAR → Panthers
+  - Bears/Chicago/CHI → Bears
+  - Bengals/Cincinnati/CIN → Bengals
+  - Browns/Cleveland/CLE → Browns
+  - Cowboys/Dallas/DAL → Cowboys
+  - Broncos/Denver/DEN → Broncos
+  - Lions/Detroit/DET → Lions
+  - Packers/Green Bay/GB → Packers
+  - Texans/Houston/HOU → Texans
+  - Colts/Indianapolis/IND → Colts
+  - Jaguars/Jacksonville/JAX → Jaguars
+  - Chiefs/Kansas City/KC → Chiefs
+  - Raiders/Las Vegas/LV → Raiders
+  - Chargers/Los Angeles/LAC → Chargers
+  - Rams/Los Angeles/LAR → Rams
+  - Dolphins/Miami/MIA → Dolphins
+  - Vikings/Minnesota/MIN → Vikings
+  - Patriots/New England/NE → Patriots
+  - Saints/New Orleans/NO → Saints
+  - Giants/New York/NYG → Giants
+  - Jets/New York/NYJ → Jets
+  - Eagles/Philadelphia/PHI → Eagles
+  - Steelers/Pittsburgh/PIT → Steelers
+  - 49ers/San Francisco/SF → 49ers
+  - Seahawks/Seattle/SEA → Seahawks
+  - Buccaneers/Tampa Bay/TB → Buccaneers
+  - Titans/Tennessee/TEN → Titans
+  - Commanders/Washington/WAS → Commanders
+
+  STEP 4: BET STANDARDIZATION - NO COMBINING
+  - "Team ML" ≠ "Team F5 ML" ≠ "Team -1.5" (count as completely separate bets)
+  - "Team +1.5" ≠ "Team ML" (different bet types, never combine)
+  - "Diamondbacks ML" ≠ "Diamondbacks +1.5" (separate entries in consensus)
+  - Same bet with different odds = same bet (Example: "Yankees ML -140" = "Yankees ML -134")
+
+  STEP 5: UNIT CONVERSION - STANDARDIZE
+  - (10*) = 10 units
+  - 7u = 7 units
+  - Max bet = assume 10 units unless specified
+  - High unit threshold = 3+ units
+  - Units do NOT add extra votes to consensus count
+
+  STEP 6: COUNTING RULES - ONE VOTE ONLY
+  - 1 vote per capper per unique bet (no exceptions)
+  - High unit plays get 🔥 but NO extra votes in overall consensus
+  - Parlays: each leg = 1 vote for that capper only (never double-count)
+  - If capper lists same bet multiple times = count once only
+
+  STEP 7: 🔥 TAG RULES - AUTOMATIC APPLICATION
+  - Apply 🔥 if bet has 3+ cappers OR single bet is 3+ units
+  - Check every bet for 🔥 qualification
+  - No exceptions or missed applications
+
+  STEP 8: PARLAY COMBO RULES - EXACT MATCHING
+  - Only include parlays where 2+ cappers have IDENTICAL combinations
+  - Single-capper parlays = excluded from parlay section
+  - Partial matches don't count (must be exact same legs)
+
+  STEP 9: PLAYER PROP RULES - EXACT MATCHING
+  - Must be exact same player + exact same prop type + exact same line
+  - "Wheeler Under 5.5 Strikeouts" ≠ "Wheeler Under 5.5 Hits Allowed"
+  - Must be for games happening today
+  - Minimum 2 cappers with identical prop
+
+  STEP 10: OUTPUT FORMAT (5 sections)
+
+  1. TOP 5 OVERALL CONSENSUS
+     Format: [Rank]. [Team] [Bet Type] [Line] – [X cappers] 🔥
+
+  2. TOP 5 HIGH UNIT PLAYS (3+ units)
+     Format: [Rank]. [Team] [Bet Type] [Line] – [X units] by [Capper]
+
+  3. TOP 5 PARLAY COMBOS (if any appear multiple times)
+     Format: [Rank]. [Full Parlay] – [X cappers]
+
+  4. TOP 3 PLAYER PROPS (if 2+ cappers agree on exact same prop)
+     Format: [Player Name] [Prop] [Line] – [X cappers]
+
+  5. TOP 3 BY SPORT (min 2 cappers per pick, only sports playing today)
+     MLB:
+     WNBA:
+     NBA: (during season)
+     NHL: (during season)
+     NFL: (during season)
+     (Only show sports with games today and 2+ capper agreement)
+
+  STEP 11: VERIFICATION CHECKLIST
+  Before finalizing output, verify:
+  □ All dates filtered correctly
+  □ No duplicate capper counting
+  □ All 🔥 tags applied correctly
+  □ No bet types combined inappropriately
+  □ Unit conversions accurate
+  □ Only today's games included
+
+  IMPORTANT NOTES:
+  - Only count picks for games actually happening TODAY
+  - Each capper name/number gets ONE vote per unique bet
+  - Units in parentheses like (10*) = 10 units
+  - "u" after number = units (7u = 7 units)
+  - F5 = First 5 innings
+  - RL = Run Line
+  - TT = Team Total
+  - NRFI = No Run First Inning
+
+  EXAMPLE CLARIFICATIONS:
+  - If "Rangers ML" appears 5 times from same capper = 1 vote
+  - If "Rangers ML" + "Rangers -1.5" both appear = 2 separate bets
+  - If bet has 3+ cappers OR 3+ units = gets 🔥 tag
+  - "Consensus Leans" with 3 picks = 1 capper total, not 3 cappers
+
+
+Make it similar to discord ready leave off capper names also if a section is blank leave it off to save space.
