@@ -282,7 +282,7 @@ export function isInSeason(sport: string): boolean {
     case 'WNBA':
       return month >= 5 && month <= 9;
     case 'NCAAF':
-      return month >= 8 && month <= 1;
+      return month >= 8 || month <= 1; // Aug-Jan (bowl season includes Dec/Jan)
     case 'NCAAB':
       return month >= 11 || month <= 4;
     default:
