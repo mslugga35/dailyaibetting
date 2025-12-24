@@ -162,11 +162,6 @@ export function isTodayPick(pickDate: string): boolean {
   const todayET = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const todayStr = todayET.toISOString().split('T')[0];
 
-  // Also accept yesterday's date (for picks made late at night)
-  const yesterday = new Date(todayET);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
-
   // Parse pick date - handle various formats
   let pickDateClean = pickDate.split('T')[0];
 
@@ -191,7 +186,8 @@ export function isTodayPick(pickDate: string): boolean {
     }
   }
 
-  return pickDateClean === todayStr || pickDateClean === yesterdayStr;
+  // Only accept picks from TODAY - not yesterday
+  return pickDateClean === todayStr;
 }
 
 /**
