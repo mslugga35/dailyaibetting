@@ -8,10 +8,10 @@ import { RawPick } from '../consensus/consensus-builder';
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI';
 
 // Sheet names (tabs) from your n8n workflow
-// The new simple workflow outputs to "AllPicks" tab with today's picks
-// ManualPicks is for freeform text entry (parsed like Google Doc)
-// Legacy tabs removed - they contain historical data without proper dates
-const SHEET_TABS = ['AllPicks', 'ManualPicks'];
+// ManualPicks contains the complete dataset (43 rows vs AllPicks' 33 rows)
+// Using only ManualPicks to avoid duplicate picks
+// Both tabs now have structured columns (Site, League, Date, Matchup, Service, Pick, RunDate)
+const SHEET_TABS = ['ManualPicks'];
 
 /**
  * Fetch picks from Google Sheets (published as CSV)
