@@ -464,12 +464,24 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
   bySport: Record<string, ConsensusPick[]>;
   fadeThePublic: ConsensusPick[];
 } {
-  // Top 5 overall (sorted by capper count)
-  const topOverall = consensus.slice(0, 5);
-
-  // Group by sport - include all picks (frontend will limit to top 3)
-  const bySport: Record<string, ConsensusPick[]> = {};
+  // Find sports with at least one "fire" pick (3+ cappers)
+  // This filters out sports that don't have games today (random 2-capper picks)
+  const sportsWithFire = new Set<string>();
   for (const pick of consensus) {
+    if (pick.isFire) {
+      sportsWithFire.add(pick.sport);
+    }
+  }
+
+  // Filter consensus to only sports with fire picks (indicates active games)
+  const activeConsensus = consensus.filter(p => sportsWithFire.has(p.sport));
+
+  // Top 5 overall from active sports (sorted by capper count)
+  const topOverall = activeConsensus.slice(0, 5);
+
+  // Group by sport - only include sports with fire picks
+  const bySport: Record<string, ConsensusPick[]> = {};
+  for (const pick of activeConsensus) {
     if (!bySport[pick.sport]) {
       bySport[pick.sport] = [];
     }
@@ -477,7 +489,7 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
   }
 
   // Fade the public - highest consensus (10+ cappers may indicate public bet to fade)
-  const fadeThePublic = consensus
+  const fadeThePublic = activeConsensus
     .filter(p => p.capperCount >= 7)
     .slice(0, 5);
 
