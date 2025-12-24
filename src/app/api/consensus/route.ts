@@ -4,7 +4,20 @@ import {
   normalizePicks,
   buildConsensus,
   formatConsensusOutput,
+  NormalizedPick,
 } from '@/lib/consensus/consensus-builder';
+
+// Group picks by capper for the All Picks view
+function groupPicksByCapper(picks: NormalizedPick[]): Record<string, NormalizedPick[]> {
+  const grouped: Record<string, NormalizedPick[]> = {};
+  for (const pick of picks) {
+    if (!grouped[pick.capper]) {
+      grouped[pick.capper] = [];
+    }
+    grouped[pick.capper].push(pick);
+  }
+  return grouped;
+}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Disable static generation
@@ -33,6 +46,9 @@ export async function GET(request: Request) {
     // Format output
     const formatted = formatConsensusOutput(consensus);
 
+    // Group picks by capper for All Picks view
+    const picksByCapper = groupPicksByCapper(normalizedPicks);
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -42,6 +58,8 @@ export async function GET(request: Request) {
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
+      picksByCapper: picksByCapper,
+      allPicks: normalizedPicks,
     });
   } catch (error) {
     console.error('Consensus API error:', error);

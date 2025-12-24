@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ConsensusAPIResponse, ConsensusPick } from '@/types';
+import { ConsensusAPIResponse, ConsensusPick, NormalizedPick } from '@/types';
 
 interface UseConsensusOptions {
   sport?: string;
@@ -15,6 +15,8 @@ interface UseConsensusResult {
   topOverall: ConsensusPick[];
   bySport: Record<string, ConsensusPick[]>;
   fadeThePublic: ConsensusPick[];
+  picksByCapper: Record<string, NormalizedPick[]>;
+  allPicks: NormalizedPick[];
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -67,6 +69,8 @@ export function useConsensus(options: UseConsensusOptions = {}): UseConsensusRes
     topOverall: data?.topOverall || [],
     bySport: data?.bySport || {},
     fadeThePublic: data?.fadeThePublic || [],
+    picksByCapper: data?.picksByCapper || {},
+    allPicks: data?.allPicks || [],
     isLoading,
     error,
     refetch: fetchConsensus,

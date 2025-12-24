@@ -124,6 +124,8 @@ export interface ConsensusAPIResponse {
   topOverall: ConsensusPick[];
   bySport: Record<string, ConsensusPick[]>;
   fadeThePublic: ConsensusPick[];
+  picksByCapper?: Record<string, NormalizedPick[]>;
+  allPicks?: NormalizedPick[];
 }
 
 export interface NormalizedPick {
