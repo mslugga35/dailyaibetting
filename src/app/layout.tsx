@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,42 +17,57 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "DailyAI Betting - AI-Powered Sports Betting Picks & Consensus",
+    default: "DailyAI Betting - Free AI Sports Betting Picks & Expert Consensus",
     template: "%s | DailyAI Betting",
   },
   description:
-    "Get daily AI-analyzed sports betting picks with consensus from top cappers. Track performance, find value bets, and make smarter betting decisions with real-time AI insights.",
+    "Free daily AI-powered sports betting picks with consensus from 10+ expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Updated every 5 minutes.",
   keywords: [
-    "sports betting picks",
+    "free sports betting picks",
     "AI betting predictions",
-    "consensus picks",
-    "MLB picks",
-    "NFL picks",
-    "NBA picks",
-    "capper rankings",
+    "consensus picks today",
+    "best bets today",
+    "free NFL picks",
+    "free NBA picks",
+    "free MLB picks",
+    "free NHL picks",
+    "expert sports picks",
+    "capper consensus",
     "betting analytics",
+    "fire picks",
+    "parlay picks",
+    "sports betting tips",
+    "daily best bets",
+    "AI sports predictions",
   ],
   authors: [{ name: "DailyAI Betting" }],
+  creator: "DailyAI Betting",
+  publisher: "DailyAI Betting",
+  alternates: {
+    canonical: "https://dailyaibetting.com",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://dailyaibetting.com",
     siteName: "DailyAI Betting",
-    title: "DailyAI Betting - AI-Powered Sports Betting Picks",
-    description: "Daily AI-analyzed consensus picks from top sports cappers.",
+    title: "DailyAI Betting - Free AI Sports Betting Picks Today",
+    description: "Free daily AI-analyzed consensus picks from 10+ expert cappers. NFL, NBA, MLB, NHL picks updated every 5 minutes.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "DailyAI Betting",
+        alt: "DailyAI Betting - Free AI Sports Picks",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "DailyAI Betting - AI Sports Picks",
-    description: "Daily AI-analyzed consensus picks from top sports cappers.",
+    site: "@dailyaibetting",
+    creator: "@dailyaibetting",
+    title: "DailyAI Betting - Free AI Sports Picks Today",
+    description: "Free daily AI-analyzed consensus picks from expert cappers. Updated every 5 minutes.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -65,6 +81,12 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    // Add these when you have them
+    // google: "your-google-verification-code",
+    // yandex: "your-yandex-verification-code",
+  },
+  category: "Sports Betting",
 };
 
 export default function RootLayout({
@@ -74,6 +96,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <WebsiteJsonLd />
+        <FAQJsonLd />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
