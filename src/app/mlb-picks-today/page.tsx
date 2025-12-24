@@ -124,8 +124,8 @@ export default function MLBPicksTodayPage() {
                             <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                           )}
                         </div>
-                        <div className="font-medium">{pick.game}</div>
-                        <div className="text-lg font-bold text-primary">{pick.pick}</div>
+                        <div className="font-medium">{pick.matchup}</div>
+                        <div className="text-lg font-bold text-primary">{pick.bet}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold">{pick.capperCount}</div>

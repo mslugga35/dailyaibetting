@@ -56,7 +56,7 @@ export default function DailyBetsPage() {
     // Pick two uncorrelated bets (different sports or different games)
     const sorted = [...firePicks].sort((a, b) => b.capperCount - a.capperCount);
     const leg1 = sorted[0];
-    const leg2 = sorted.find(p => p.sport !== leg1.sport || p.game !== leg1.game);
+    const leg2 = sorted.find(p => p.sport !== leg1.sport || p.matchup !== leg1.matchup);
     if (!leg1 || !leg2) return null;
     return [leg1, leg2];
   };
@@ -69,7 +69,7 @@ export default function DailyBetsPage() {
     for (const pick of sorted) {
       if (legs.length >= 3) break;
       // Ensure uncorrelated (different game)
-      const isDifferentGame = !legs.some(l => l.game === pick.game);
+      const isDifferentGame = !legs.some(l => l.matchup === pick.matchup);
       if (isDifferentGame) {
         legs.push(pick);
       }
@@ -89,7 +89,7 @@ export default function DailyBetsPage() {
       text += `🔝 **TOP 5 HIGHEST CONFIDENCE**\n`;
       top5Confidence.forEach((pick, i) => {
         const fire = pick.capperCount >= 10 ? '🔥🔥🔥' : pick.capperCount >= 3 ? '🔥' : '';
-        text += `${i + 1}. **${pick.sport}** | ${pick.game} | ${pick.pick} (${pick.capperCount} cappers) ${fire}\n`;
+        text += `${i + 1}. **${pick.sport}** | ${pick.matchup} | ${pick.bet} (${pick.capperCount} cappers) ${fire}\n`;
       });
       text += `\n`;
     }
@@ -97,7 +97,7 @@ export default function DailyBetsPage() {
     if (parlay2) {
       text += `🎲 **2-LEG PARLAY**\n`;
       parlay2.forEach(pick => {
-        text += `• ${pick.sport} | ${pick.pick} (${pick.capperCount} cappers)\n`;
+        text += `• ${pick.sport} | ${pick.bet} (${pick.capperCount} cappers)\n`;
       });
       text += `\n`;
     }
@@ -105,7 +105,7 @@ export default function DailyBetsPage() {
     if (parlay3) {
       text += `🎲 **3-LEG PARLAY**\n`;
       parlay3.forEach(pick => {
-        text += `• ${pick.sport} | ${pick.pick} (${pick.capperCount} cappers)\n`;
+        text += `• ${pick.sport} | ${pick.bet} (${pick.capperCount} cappers)\n`;
       });
       text += `\n`;
     }
@@ -114,7 +114,7 @@ export default function DailyBetsPage() {
       text += `🏅 **BEST BY SPORT**\n`;
       bestBySport.forEach(pick => {
         const fire = pick.capperCount >= 3 ? '🔥' : '';
-        text += `• **${pick.sport}**: ${pick.pick} (${pick.capperCount}) ${fire}\n`;
+        text += `• **${pick.sport}**: ${pick.bet} (${pick.capperCount}) ${fire}\n`;
       });
     }
 
@@ -126,7 +126,7 @@ export default function DailyBetsPage() {
     if (top5Confidence.length === 0) return '';
     const topPick = top5Confidence[0];
     const fire = topPick.capperCount >= 3 ? '🔥' : '';
-    return `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.pick}\n${topPick.capperCount} cappers agree!\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
+    return `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.bet}\n${topPick.capperCount} cappers agree!\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
   };
 
   const shareToTwitter = () => {
@@ -262,7 +262,7 @@ export default function DailyBetsPage() {
               {top5Confidence.length > 0 ? (
                 <div className="space-y-4">
                   {top5Confidence.map((pick, index) => (
-                    <div key={`${pick.sport}-${pick.pick}-${index}`} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                    <div key={`${pick.sport}-${pick.bet}-${index}`} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                       <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-lg ${
                         index === 0 ? 'bg-yellow-500 text-yellow-950' :
                         index === 1 ? 'bg-gray-400 text-gray-900' :
@@ -278,8 +278,8 @@ export default function DailyBetsPage() {
                             <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                           )}
                         </div>
-                        <div className="font-semibold">{pick.game}</div>
-                        <div className="text-primary font-medium">{pick.pick}</div>
+                        <div className="font-semibold">{pick.matchup}</div>
+                        <div className="text-primary font-medium">{pick.bet}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold">{pick.capperCount}</div>
@@ -313,8 +313,8 @@ export default function DailyBetsPage() {
                           <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
                           <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                         </div>
-                        <div className="text-sm text-muted-foreground">{pick.game}</div>
-                        <div className="font-semibold text-primary">{pick.pick}</div>
+                        <div className="text-sm text-muted-foreground">{pick.matchup}</div>
+                        <div className="font-semibold text-primary">{pick.bet}</div>
                         <div className="text-xs text-muted-foreground mt-1">{pick.capperCount} cappers agree</div>
                       </div>
                     ))}
@@ -348,8 +348,8 @@ export default function DailyBetsPage() {
                           <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
                           <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                         </div>
-                        <div className="text-sm text-muted-foreground">{pick.game}</div>
-                        <div className="font-semibold text-primary">{pick.pick}</div>
+                        <div className="text-sm text-muted-foreground">{pick.matchup}</div>
+                        <div className="font-semibold text-primary">{pick.bet}</div>
                         <div className="text-xs text-muted-foreground mt-1">{pick.capperCount} cappers agree</div>
                       </div>
                     ))}
@@ -384,8 +384,8 @@ export default function DailyBetsPage() {
                         <Badge className="bg-primary">{pick.sport}</Badge>
                         <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                       </div>
-                      <div className="text-sm text-muted-foreground mb-1">{pick.game}</div>
-                      <div className="font-semibold text-primary">{pick.pick}</div>
+                      <div className="text-sm text-muted-foreground mb-1">{pick.matchup}</div>
+                      <div className="font-semibold text-primary">{pick.bet}</div>
                       <div className="text-xs text-muted-foreground mt-2">{pick.capperCount} cappers agree</div>
                     </div>
                   ))}
@@ -412,9 +412,9 @@ export default function DailyBetsPage() {
                       <div className="flex items-center gap-3">
                         <Badge variant="outline">{pick.sport}</Badge>
                         <div>
-                          <span className="font-medium">{pick.game}</span>
+                          <span className="font-medium">{pick.matchup}</span>
                           <span className="mx-2 text-muted-foreground">•</span>
-                          <span className="text-primary font-semibold">{pick.pick}</span>
+                          <span className="text-primary font-semibold">{pick.bet}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
