@@ -319,19 +319,23 @@ function parseGoogleDocContent(content: string): RawPick[] {
   let currentSport = '';
   const today = new Date().toISOString().split('T')[0];
 
-  // Sport name mapping
+  // Sport name mapping - handle various formats
   const sportMap: Record<string, string> = {
     'ncaa': 'NCAAF',
     'ncaa basketball': 'NCAAB',
     'college basketball': 'NCAAB',
     'college football': 'NCAAF',
+    'football': 'NCAAF', // Generic "Football:" usually means college
     'cfb': 'NCAAF',
     'cbb': 'NCAAB',
     'nfl': 'NFL',
+    'nfl football': 'NFL',
     'nba': 'NBA',
     'nhl': 'NHL',
     'mlb': 'MLB',
     'wnba': 'WNBA',
+    'ncaab': 'NCAAB',
+    'ncaaf': 'NCAAF',
   };
 
   for (const line of lines) {
@@ -342,8 +346,13 @@ function parseGoogleDocContent(content: string): RawPick[] {
       continue;
     }
 
-    // Check for sport header (various formats)
-    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|College Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA)\s*:?/i);
+    // Skip [OCR] lines that just repeat the capper name
+    if (line.match(/^\[OCR\]\s*[\w\s]+\s*(Picks)?$/i)) {
+      continue;
+    }
+
+    // Check for sport header (various formats including just "Football:")
+    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|College Football|NFL Football|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?/i);
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:$/, '').toLowerCase().trim();
       currentSport = sportMap[sportText] || sportText.toUpperCase();

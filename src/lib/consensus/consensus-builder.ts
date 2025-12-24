@@ -422,10 +422,12 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
         betDisplay += ` ${group.line}`;
         break;
       case 'OVER':
-        betDisplay = `Over ${group.line}`;
+        // Include team/matchup for totals: "Cal/Hawaii Over 50.5"
+        betDisplay = `${group.team} Over ${group.line}`;
         break;
       case 'UNDER':
-        betDisplay = `Under ${group.line}`;
+        // Include team/matchup for totals: "Cal/Hawaii Under 51.5"
+        betDisplay = `${group.team} Under ${group.line}`;
         break;
       case 'F5_ML':
         betDisplay += ' F5 ML';
