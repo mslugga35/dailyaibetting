@@ -10,7 +10,8 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH43
 // Sheet names (tabs) from your n8n workflow
 // The new simple workflow outputs to "AllPicks" tab
 // Legacy tabs are kept for backward compatibility
-const SHEET_TABS = ['AllPicks', 'BetFirm', 'BoydsBets', 'Dimers', 'Covers', 'SportsLine'];
+// ManualPicks is for freeform text entry (parsed like Google Doc)
+const SHEET_TABS = ['AllPicks', 'ManualPicks', 'BetFirm', 'BoydsBets', 'Dimers', 'Covers', 'SportsLine'];
 
 /**
  * Fetch picks from Google Sheets (published as CSV)
@@ -46,6 +47,11 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     // Get column headers from first row
     const headers = json.table.cols.map((col: { label: string }) => col.label);
 
+    // Special handling for ManualPicks tab - parse freeform text
+    if (sheetName === 'ManualPicks') {
+      return parseManualPicksSheet(json.table.rows, headers);
+    }
+
     // Map rows to RawPick objects
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string } | null)[] }) => {
       const values = row.c.map(cell => cell?.v || '');
@@ -66,6 +72,131 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     console.error(`Error fetching sheet ${sheetName}:`, error);
     return [];
   }
+}
+
+/**
+ * Parse ManualPicks sheet with freeform text
+ * Accepts various formats:
+ * - "NFL: Bills +3" or "NFL Bills +3"
+ * - "Chiefs vs Bills | Bills +3"
+ * - "Bills +3 (-110)"
+ * - Just "Bills +3" (will try to detect sport)
+ */
+function parseManualPicksSheet(rows: { c: ({ v: string } | null)[] }[], headers: string[]): RawPick[] {
+  const picks: RawPick[] = [];
+  const today = new Date().toISOString().split('T')[0];
+
+  // Sport detection patterns
+  const sportTeams: Record<string, string[]> = {
+    NFL: ['chiefs', 'bills', 'eagles', 'cowboys', 'ravens', 'bengals', 'dolphins', 'jets', 'patriots', 'steelers', 'browns', 'titans', 'colts', 'jaguars', 'texans', 'broncos', 'raiders', 'chargers', 'packers', 'vikings', 'bears', 'lions', 'saints', 'falcons', 'panthers', 'buccaneers', '49ers', 'seahawks', 'rams', 'cardinals', 'commanders', 'giants'],
+    NBA: ['lakers', 'celtics', 'warriors', 'nets', 'bucks', 'heat', 'suns', 'mavericks', 'nuggets', 'clippers', 'grizzlies', 'cavaliers', 'knicks', 'sixers', '76ers', 'hawks', 'bulls', 'raptors', 'jazz', 'pelicans', 'timberwolves', 'thunder', 'blazers', 'kings', 'spurs', 'rockets', 'magic', 'pacers', 'hornets', 'pistons', 'wizards'],
+    NHL: ['bruins', 'rangers', 'maple leafs', 'canadiens', 'blackhawks', 'penguins', 'capitals', 'flyers', 'red wings', 'blues', 'avalanche', 'lightning', 'panthers', 'hurricanes', 'devils', 'islanders', 'senators', 'sabres', 'jets', 'wild', 'stars', 'predators', 'flames', 'oilers', 'canucks', 'sharks', 'kings', 'ducks', 'coyotes', 'golden knights', 'kraken'],
+    MLB: ['yankees', 'red sox', 'dodgers', 'giants', 'cubs', 'white sox', 'mets', 'phillies', 'braves', 'marlins', 'nationals', 'cardinals', 'brewers', 'reds', 'pirates', 'astros', 'rangers', 'athletics', 'angels', 'mariners', 'rays', 'blue jays', 'orioles', 'twins', 'royals', 'tigers', 'guardians', 'rockies', 'diamondbacks', 'padres'],
+    NCAAF: ['alabama', 'georgia', 'ohio state', 'michigan', 'clemson', 'texas', 'oklahoma', 'lsu', 'usc', 'notre dame', 'penn state', 'florida', 'oregon', 'tennessee', 'auburn'],
+    NCAAB: ['duke', 'north carolina', 'kentucky', 'kansas', 'ucla', 'villanova', 'gonzaga', 'baylor', 'purdue', 'houston', 'uconn', 'arizona', 'indiana', 'michigan state'],
+  };
+
+  const detectSport = (text: string): string => {
+    const lower = text.toLowerCase();
+    for (const [sport, teams] of Object.entries(sportTeams)) {
+      if (teams.some(team => lower.includes(team))) {
+        return sport;
+      }
+    }
+    return 'ALL';
+  };
+
+  // Check for RawText column (single column with freeform text)
+  const rawTextIdx = headers.findIndex(h => h.toLowerCase() === 'rawtext' || h.toLowerCase() === 'text' || h.toLowerCase() === 'picks');
+
+  for (const row of rows) {
+    const values = row.c.map(cell => cell?.v?.toString() || '');
+
+    let textToParse = '';
+    let capper = 'Manual';
+    let sport = '';
+
+    if (rawTextIdx >= 0) {
+      // Single column format - just the pick text
+      textToParse = values[rawTextIdx];
+    } else {
+      // Try to find text in first non-empty column, or use structured columns
+      const capperIdx = headers.findIndex(h => h.toLowerCase() === 'capper' || h.toLowerCase() === 'service' || h.toLowerCase() === 'source');
+      const sportIdx = headers.findIndex(h => h.toLowerCase() === 'sport' || h.toLowerCase() === 'league');
+      const pickIdx = headers.findIndex(h => h.toLowerCase() === 'pick' || h.toLowerCase() === 'bet');
+      const gameIdx = headers.findIndex(h => h.toLowerCase() === 'game' || h.toLowerCase() === 'matchup');
+
+      if (capperIdx >= 0) capper = values[capperIdx] || 'Manual';
+      if (sportIdx >= 0) sport = values[sportIdx] || '';
+      if (pickIdx >= 0) {
+        textToParse = values[pickIdx];
+        if (gameIdx >= 0 && values[gameIdx]) {
+          textToParse = `${values[gameIdx]} | ${textToParse}`;
+        }
+      } else {
+        // Just grab first non-empty value
+        textToParse = values.find(v => v.trim()) || '';
+      }
+    }
+
+    if (!textToParse.trim()) continue;
+
+    // Parse the text for picks
+    const lines = textToParse.split(/[\n;]/).filter(l => l.trim());
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Try to extract sport prefix: "NFL: Bills +3" or "NFL Bills +3"
+      const sportPrefixMatch = trimmed.match(/^(NFL|NBA|NHL|MLB|NCAAF|NCAAB|CFB|CBB)[:\s]+(.+)/i);
+      if (sportPrefixMatch) {
+        sport = sportPrefixMatch[1].toUpperCase();
+        if (sport === 'CFB') sport = 'NCAAF';
+        if (sport === 'CBB') sport = 'NCAAB';
+      }
+
+      // Extract the pick part
+      // Patterns: "Team +/-spread", "Team ML", "Over/Under X"
+      const pickMatch = trimmed.match(/([A-Za-z\s.]+(?:vs\.?\s+[A-Za-z\s.]+)?)\s*\|?\s*([A-Za-z\s.]+)\s*([+-]?\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+|[OU]\s*[\d.]+)/i);
+
+      if (pickMatch) {
+        const gameOrTeam = pickMatch[1].trim();
+        const team = pickMatch[2].trim();
+        const line = pickMatch[3].trim();
+        const pick = `${team} ${line}`;
+        const matchup = gameOrTeam.includes('vs') ? gameOrTeam : team;
+
+        picks.push({
+          site: 'Manual',
+          league: sport || detectSport(trimmed),
+          date: today,
+          matchup,
+          service: capper,
+          pick,
+        });
+      } else {
+        // Simpler pattern: "Team +spread" or "Team ML"
+        const simpleMatch = trimmed.match(/([A-Za-z\s.]+)\s+([+-]\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+|[OU]\s*[\d.]+)/i);
+        if (simpleMatch) {
+          const team = simpleMatch[1].replace(/^(NFL|NBA|NHL|MLB|NCAAF|NCAAB|CFB|CBB)[:\s]*/i, '').trim();
+          const line = simpleMatch[2].trim();
+          const pick = `${team} ${line}`;
+
+          picks.push({
+            site: 'Manual',
+            league: sport || detectSport(trimmed),
+            date: today,
+            matchup: team,
+            service: capper,
+            pick,
+          });
+        }
+      }
+    }
+  }
+
+  return picks;
 }
 
 /**
