@@ -88,71 +88,103 @@ export function parseBetType(pick: string): { betType: BetType; line?: string } 
 /**
  * Extract team name from pick text
  * Per MASTER_CONSENSUS_RULES: Team names must be included in output
+ *
+ * Handles formats like:
+ * - "Hawaii ML" → Hawaii
+ * - "California +100" → California (odds, not spread)
+ * - "Hawaii -115" → Hawaii (odds)
+ * - "Hawaii -1.5" → Hawaii (spread)
+ * - "Hawaii over 50½" → Hawaii (total)
+ * - "Hawaii PK" → Hawaii (pick'em)
  */
 export function extractTeam(pick: string, matchup: string): string {
-  // For totals (over/under), extract team from matchup instead
+  // For totals (over/under), extract team from matchup or pick prefix
   const isTotal = /\b(over|under|o|u)\s*\d+/i.test(pick);
 
-  if (isTotal && matchup && matchup.trim()) {
-    // For totals, use the matchup field which has the game
-    // Remove any total numbers from matchup too
-    const cleanMatchup = matchup
-      .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
-      .trim();
+  if (isTotal) {
+    // Try to get team from text before "over/under"
+    const totalMatch = pick.match(/^([A-Za-z][A-Za-z\s.'/-]+?)\s+(?:over|under|o|u)\s*\d+/i);
+    if (totalMatch) {
+      return totalMatch[1].trim();
+    }
 
-    if (cleanMatchup.length > 0) {
-      return cleanMatchup;
+    // Try matchup field
+    if (matchup && matchup.trim()) {
+      const cleanMatchup = matchup
+        .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
+        .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
+        .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
+        .trim();
+
+      if (cleanMatchup.length > 0) {
+        return cleanMatchup;
+      }
     }
   }
 
-  // Clean the pick text - remove bet types, odds, and numbers
-  let cleanPick = pick
-    .replace(/\([+-]?\d+\)/g, '')           // Remove odds like (-110)
-    .replace(/[+-]\d+\.?\d*½?/g, ' ')        // Remove spreads/lines including ½
-    .replace(/\b(over|under|o|u)\s*\d+\.?\d*½?/gi, '') // Remove "over 50" etc
-    .replace(/\bML\b|\bMONEYLINE\b|\bF5\b/gi, '') // Remove bet type keywords
-    .replace(/\bOVER\b|\bUNDER\b/gi, '')    // Remove standalone over/under
-    .replace(/\s*\d+\.?\d*½?\s*/g, ' ')      // Remove standalone numbers/lines
-    .replace(/\s+/g, ' ')
-    .trim();
+  // Clean the pick text step by step
+  let cleanPick = pick;
 
-  // If we have a clean team name (not just numbers), use it
-  if (cleanPick.length > 0 && !/^\d+$/.test(cleanPick)) {
+  // Step 1: Remove odds in parentheses (-110), (+150)
+  cleanPick = cleanPick.replace(/\([+-]?\d+\)/g, '');
+
+  // Step 2: Remove American odds at end (values >= 100 or <= -100)
+  // "Hawaii -115" → "Hawaii", "California +100" → "California"
+  cleanPick = cleanPick.replace(/\s+[+-]1\d{2,}$/g, ''); // -100 to -199, +100 to +199
+  cleanPick = cleanPick.replace(/\s+[+-][2-9]\d{2,}$/g, ''); // -200+, +200+
+
+  // Step 3: Remove spreads (small numbers with +/- like -1.5, +3, -7.5)
+  // But keep the team name before it
+  cleanPick = cleanPick.replace(/\s+[+-]?\d{1,2}\.?\d*½?$/g, '');
+
+  // Step 4: Remove PK (pick'em)
+  cleanPick = cleanPick.replace(/\s+PK$/gi, '');
+
+  // Step 5: Remove bet type keywords
+  cleanPick = cleanPick.replace(/\bML\b|\bMONEYLINE\b|\bF5\b/gi, '');
+  cleanPick = cleanPick.replace(/\bOVER\b|\bUNDER\b/gi, '');
+
+  // Step 6: Remove "over/under X" patterns that might remain
+  cleanPick = cleanPick.replace(/\b(over|under|o|u)\s*\d+\.?\d*½?/gi, '');
+
+  // Clean up whitespace
+  cleanPick = cleanPick.replace(/\s+/g, ' ').trim();
+
+  // If we have a clean team name (letters present, not just numbers/symbols), use it
+  if (cleanPick.length > 0 && /[A-Za-z]/.test(cleanPick) && !/^[\d\s.+-]+$/.test(cleanPick)) {
     return cleanPick;
   }
 
   // Try to match from matchup if provided
   if (matchup && matchup.trim()) {
-    // Clean matchup of any numbers/lines
-    const cleanMatchup = matchup
+    // Clean matchup
+    let cleanMatchup = matchup
       .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
       .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
       .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s*\d+\.?\d*½?\s*/g, ' ')
+      .replace(/\s+[+-]?\d+\.?\d*½?\s*/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
 
     const teams = cleanMatchup.split(/\s+(?:vs\.?|@|at|\/)\s*/i);
     for (const team of teams) {
       const trimmedTeam = team.trim();
-      if (trimmedTeam.length > 0 && !/^\d+$/.test(trimmedTeam)) {
+      if (trimmedTeam.length > 0 && /[A-Za-z]/.test(trimmedTeam)) {
         return trimmedTeam;
       }
     }
-    if (cleanMatchup.length > 0) {
+    if (cleanMatchup.length > 0 && /[A-Za-z]/.test(cleanMatchup)) {
       return cleanMatchup;
     }
   }
 
-  // Fallback: return the original pick with minimal cleaning
-  const fallback = pick
-    .replace(/\([+-]?\d+\)/g, '')
-    .replace(/\s*\d+\.?\d*½?\s*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // Last resort: try to find any word-like content in original pick
+  const wordMatch = pick.match(/^([A-Za-z][A-Za-z\s.'/-]+?)(?:\s+[+-]?\d|$|\s+ML|\s+PK)/i);
+  if (wordMatch) {
+    return wordMatch[1].trim();
+  }
 
-  return fallback.length > 0 && !/^\d+$/.test(fallback) ? fallback : 'Unknown';
+  return 'Unknown';
 }
 
 /**
