@@ -90,34 +90,69 @@ export function parseBetType(pick: string): { betType: BetType; line?: string } 
  * Per MASTER_CONSENSUS_RULES: Team names must be included in output
  */
 export function extractTeam(pick: string, matchup: string): string {
-  // Clean the pick text - remove bet types and odds
+  // For totals (over/under), extract team from matchup instead
+  const isTotal = /\b(over|under|o|u)\s*\d+/i.test(pick);
+
+  if (isTotal && matchup && matchup.trim()) {
+    // For totals, use the matchup field which has the game
+    // Remove any total numbers from matchup too
+    const cleanMatchup = matchup
+      .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
+      .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
+      .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
+      .trim();
+
+    if (cleanMatchup.length > 0) {
+      return cleanMatchup;
+    }
+  }
+
+  // Clean the pick text - remove bet types, odds, and numbers
   let cleanPick = pick
-    .replace(/\([+-]?\d+\)/g, '')  // Remove odds like (-110)
-    .replace(/[+-]\d+\.?\d*/g, ' ') // Remove spreads/lines
+    .replace(/\([+-]?\d+\)/g, '')           // Remove odds like (-110)
+    .replace(/[+-]\d+\.?\d*½?/g, ' ')        // Remove spreads/lines including ½
+    .replace(/\b(over|under|o|u)\s*\d+\.?\d*½?/gi, '') // Remove "over 50" etc
     .replace(/\bML\b|\bMONEYLINE\b|\bF5\b/gi, '') // Remove bet type keywords
-    .replace(/\bOVER\b|\bUNDER\b/gi, '') // Remove over/under
+    .replace(/\bOVER\b|\bUNDER\b/gi, '')    // Remove standalone over/under
+    .replace(/\s*\d+\.?\d*½?\s*/g, ' ')      // Remove standalone numbers/lines
     .replace(/\s+/g, ' ')
     .trim();
 
-  // If pick text has team name, use it
-  if (cleanPick.length > 0) {
+  // If we have a clean team name (not just numbers), use it
+  if (cleanPick.length > 0 && !/^\d+$/.test(cleanPick)) {
     return cleanPick;
   }
 
   // Try to match from matchup if provided
   if (matchup && matchup.trim()) {
-    const teams = matchup.split(/\s+(?:vs\.?|@|at)\s+/i);
+    // Clean matchup of any numbers/lines
+    const cleanMatchup = matchup
+      .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
+      .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
+      .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
+      .replace(/\s*\d+\.?\d*½?\s*/g, ' ')
+      .trim();
+
+    const teams = cleanMatchup.split(/\s+(?:vs\.?|@|at|\/)\s*/i);
     for (const team of teams) {
       const trimmedTeam = team.trim();
-      if (trimmedTeam.length > 0) {
+      if (trimmedTeam.length > 0 && !/^\d+$/.test(trimmedTeam)) {
         return trimmedTeam;
       }
     }
-    return matchup.trim();
+    if (cleanMatchup.length > 0) {
+      return cleanMatchup;
+    }
   }
 
   // Fallback: return the original pick with minimal cleaning
-  return pick.replace(/\([+-]?\d+\)/g, '').replace(/\s+/g, ' ').trim() || 'Unknown';
+  const fallback = pick
+    .replace(/\([+-]?\d+\)/g, '')
+    .replace(/\s*\d+\.?\d*½?\s*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return fallback.length > 0 && !/^\d+$/.test(fallback) ? fallback : 'Unknown';
 }
 
 /**
@@ -203,6 +238,32 @@ export function isTodayPick(pickDate: string): boolean {
 }
 
 /**
+ * Normalize sport name to standard format
+ * Handles variations like NCAA-F -> NCAAF, NCAA-B -> NCAAB
+ */
+export function normalizeSport(sport: string): string {
+  const upper = sport.toUpperCase().trim();
+
+  const sportMap: Record<string, string> = {
+    'NCAA-F': 'NCAAF',
+    'NCAAF': 'NCAAF',
+    'CFB': 'NCAAF',
+    'COLLEGE FOOTBALL': 'NCAAF',
+    'NCAA-B': 'NCAAB',
+    'NCAAB': 'NCAAB',
+    'CBB': 'NCAAB',
+    'COLLEGE BASKETBALL': 'NCAAB',
+    'NFL': 'NFL',
+    'NBA': 'NBA',
+    'NHL': 'NHL',
+    'MLB': 'MLB',
+    'WNBA': 'WNBA',
+  };
+
+  return sportMap[upper] || upper;
+}
+
+/**
  * Check if sport is in season
  * Based on MASTER_CONSENSUS_RULES Section 1
  */
@@ -238,14 +299,18 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
       // Filter today's picks only
       if (!isTodayPick(pick.date)) return false;
 
-      // Filter in-season sports
-      const sport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
+      // Normalize and filter in-season sports
+      const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
+      const sport = normalizeSport(rawSport);
       if (!isInSeason(sport)) return false;
 
       return true;
     })
     .map((pick, index) => {
-      const sport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
+      // Normalize sport name (NCAA-F -> NCAAF, etc.)
+      const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
+      const sport = normalizeSport(rawSport);
+
       const team = extractTeam(pick.pick, pick.matchup);
       const standardizedTeam = standardizeTeamName(team, sport);
       const { betType, line } = parseBetType(pick.pick);

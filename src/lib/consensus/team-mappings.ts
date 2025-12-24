@@ -150,8 +150,8 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
   },
   NCAAF: {
     // Bowl Games & Common Teams
-    Hawaii: ['Hawaii', 'Rainbow Warriors', 'HAW'],
-    California: ['California', 'Cal', 'Golden Bears', 'CAL'],
+    Hawaii: ['Hawaii', 'Rainbow Warriors', 'Hawaii Rainbow Warriors', 'HAW'],
+    California: ['California', 'Cal', 'Golden Bears', 'CAL', 'California Golden Bears'],
     Alabama: ['Alabama', 'Crimson Tide', 'Bama', 'ALA'],
     Georgia: ['Georgia', 'Bulldogs', 'UGA'],
     'Ohio State': ['Ohio State', 'Buckeyes', 'OSU'],
