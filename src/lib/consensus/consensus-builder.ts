@@ -146,6 +146,11 @@ export function normalizeCapper(capper: string): string {
  * Based on MASTER_CONSENSUS_RULES Section 1
  */
 export function isTodayPick(pickDate: string): boolean {
+  // Handle empty or missing dates - assume today
+  if (!pickDate || pickDate.trim() === '') {
+    return true;
+  }
+
   // Handle "TODAY" literal
   if (pickDate.toUpperCase() === 'TODAY') {
     return true;
@@ -161,8 +166,29 @@ export function isTodayPick(pickDate: string): boolean {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-  // Parse pick date
-  const pickDateClean = pickDate.split('T')[0];
+  // Parse pick date - handle various formats
+  let pickDateClean = pickDate.split('T')[0];
+
+  // Handle MM/DD/YYYY or M/D/YYYY format
+  const slashMatch = pickDateClean.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  if (slashMatch) {
+    const month = slashMatch[1].padStart(2, '0');
+    const day = slashMatch[2].padStart(2, '0');
+    const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : todayET.getFullYear();
+    pickDateClean = `${year}-${month}-${day}`;
+  }
+
+  // Handle "Dec 24" or "December 24" format
+  const monthNameMatch = pickDateClean.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(\d{1,2})/i);
+  if (monthNameMatch) {
+    const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthAbbr = pickDateClean.slice(0, 3).toLowerCase();
+    const monthNum = monthNames.indexOf(monthAbbr) + 1;
+    if (monthNum > 0) {
+      const day = monthNameMatch[1].padStart(2, '0');
+      pickDateClean = `${todayET.getFullYear()}-${String(monthNum).padStart(2, '0')}-${day}`;
+    }
+  }
 
   return pickDateClean === todayStr || pickDateClean === yesterdayStr;
 }

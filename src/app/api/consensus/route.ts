@@ -48,12 +48,19 @@ export async function GET(request: Request) {
 
     // Group picks by capper for All Picks view
     const picksByCapper = groupPicksByCapper(normalizedPicks);
+    const capperCount = Object.keys(picksByCapper).length;
+
+    // Debug logging
+    console.log(`[Consensus API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}`);
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: rawPicks.length,
+      normalizedCount: normalizedPicks.length,
+      capperCount: capperCount,
+      consensusCount: consensus.length,
       consensus: consensus,
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,

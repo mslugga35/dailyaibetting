@@ -17,6 +17,8 @@ interface UseConsensusResult {
   fadeThePublic: ConsensusPick[];
   picksByCapper: Record<string, NormalizedPick[]>;
   allPicks: NormalizedPick[];
+  normalizedCount: number;
+  capperCount: number;
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
@@ -71,6 +73,8 @@ export function useConsensus(options: UseConsensusOptions = {}): UseConsensusRes
     fadeThePublic: data?.fadeThePublic || [],
     picksByCapper: data?.picksByCapper || {},
     allPicks: data?.allPicks || [],
+    normalizedCount: (data as { normalizedCount?: number })?.normalizedCount || 0,
+    capperCount: (data as { capperCount?: number })?.capperCount || Object.keys(data?.picksByCapper || {}).length,
     isLoading,
     error,
     refetch: fetchConsensus,

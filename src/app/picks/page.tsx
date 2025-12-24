@@ -11,12 +11,13 @@ import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import Link from 'next/link';
 
 export default function PicksPage() {
-  const { topOverall, bySport, picksByCapper, allPicks, isLoading, error, refetch, data } = useConsensus();
+  const { topOverall, bySport, picksByCapper, allPicks, isLoading, error, refetch, data, normalizedCount, capperCount: apiCapperCount } = useConsensus();
 
   const totalPicks = data?.totalPicks || 0;
   const consensusCount = data?.consensus?.length || 0;
-  const capperCount = Object.keys(picksByCapper).length;
+  const capperCount = apiCapperCount || Object.keys(picksByCapper).length;
   const firePicks = (data?.consensus || []).filter(p => p.capperCount >= 3);
+  const allPicksCount = normalizedCount || allPicks.length;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -45,7 +46,7 @@ export default function PicksPage() {
               Today&apos;s Picks
             </h1>
             <p className="text-muted-foreground">
-              {today} &middot; {totalPicks} picks from {capperCount} cappers
+              {today} &middot; {allPicksCount > 0 ? `${allPicksCount} picks from ${capperCount} cappers` : 'Loading picks...'}
             </p>
           </div>
           <Button
@@ -62,12 +63,12 @@ export default function PicksPage() {
       </div>
 
       {/* Stats */}
-      {totalPicks > 0 && (
+      {(totalPicks > 0 || allPicksCount > 0) && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
-              <div className="text-3xl font-bold text-primary">{totalPicks.toLocaleString()}</div>
-              <div className="text-sm text-muted-foreground">Total Picks</div>
+              <div className="text-3xl font-bold text-primary">{allPicksCount.toLocaleString()}</div>
+              <div className="text-sm text-muted-foreground">Today&apos;s Picks</div>
             </CardContent>
           </Card>
           <Card>
@@ -222,8 +223,19 @@ export default function PicksPage() {
             </TabsContent>
 
             {/* All Picks Tab */}
-            <TabsContent value="all-picks">
-              <AllPicksByCapper picksByCapper={picksByCapper} allPicks={allPicks} />
+            <TabsContent value="all-picks" className="space-y-6">
+              {Object.keys(picksByCapper).length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">No individual picks available yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {totalPicks > 0
+                      ? `${totalPicks.toLocaleString()} picks are being processed. Refresh to check for updates.`
+                      : 'Picks update every 5 minutes.'}
+                  </p>
+                </Card>
+              ) : (
+                <AllPicksByCapper picksByCapper={picksByCapper} allPicks={allPicks} />
+              )}
             </TabsContent>
 
             {/* By Sport Tab */}
