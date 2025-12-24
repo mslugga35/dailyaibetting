@@ -22,7 +22,6 @@ import {
   Repeat,
   AlertCircle,
   Activity,
-  Baseball,
   CircleDot,
 } from 'lucide-react';
 import { useDailyBets } from '@/lib/hooks/use-daily-bets';

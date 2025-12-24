@@ -19,7 +19,7 @@ export interface ConfidenceScore {
   reasoning: string;
 }
 
-export interface DailyBet extends ConsensusPick {
+export interface DailyBet extends Omit<ConsensusPick, 'confidence'> {
   confidence: ConfidenceScore;
   expectedValue: number;
   frequency: number; // How many times this bet appears
@@ -356,7 +356,7 @@ export function generateBigMoneyParlays(
 
   // Generate 4-leg parlay (very high risk)
   if (sorted.length >= 4) {
-    const legs4 = [];
+    const legs4: ConsensusPick[] = [];
     for (const pick of sorted) {
       if (legs4.length >= 4) break;
       if (!legs4.some(l => l.matchup === pick.matchup)) {
@@ -376,7 +376,7 @@ export function generateBigMoneyParlays(
 
   // Generate 5-leg parlay (extreme risk)
   if (sorted.length >= 5) {
-    const legs5 = [];
+    const legs5: ConsensusPick[] = [];
     for (const pick of sorted) {
       if (legs5.length >= 5) break;
       if (!legs5.some(l => l.matchup === pick.matchup)) {
