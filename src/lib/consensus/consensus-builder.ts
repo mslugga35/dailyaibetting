@@ -99,11 +99,13 @@ export function parseBetType(pick: string): { betType: BetType; line?: string } 
  */
 export function extractTeam(pick: string, matchup: string): string {
   // For totals (over/under), extract team from matchup or pick prefix
-  const isTotal = /\b(over|under|o|u)\s*\d+/i.test(pick);
+  // Handle ½ (half) character in numbers like "50½"
+  const isTotal = /\b(over|under|o|u)\s*\d+[½]?/i.test(pick);
 
   if (isTotal) {
     // Try to get team from text before "over/under"
-    const totalMatch = pick.match(/^([A-Za-z][A-Za-z\s.'/-]+?)\s+(?:over|under|o|u)\s*\d+/i);
+    // Handle ½ character in totals
+    const totalMatch = pick.match(/^([A-Za-z][A-Za-z\s.'/-]+?)\s+(?:over|under|o|u)\s*\d+[½]?/i);
     if (totalMatch) {
       return totalMatch[1].trim();
     }
@@ -111,9 +113,9 @@ export function extractTeam(pick: string, matchup: string): string {
     // Try matchup field
     if (matchup && matchup.trim()) {
       const cleanMatchup = matchup
-        .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
-        .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
-        .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
+        .replace(/\s*[ou]\s*\d+[½]?\.?\d*[½]?/gi, '')
+        .replace(/\s*over\s*\d+[½]?\.?\d*[½]?/gi, '')
+        .replace(/\s*under\s*\d+[½]?\.?\d*[½]?/gi, '')
         .trim();
 
       if (cleanMatchup.length > 0) {
@@ -144,8 +146,10 @@ export function extractTeam(pick: string, matchup: string): string {
   cleanPick = cleanPick.replace(/\bML\b|\bMONEYLINE\b|\bF5\b/gi, '');
   cleanPick = cleanPick.replace(/\bOVER\b|\bUNDER\b/gi, '');
 
-  // Step 6: Remove "over/under X" patterns that might remain
-  cleanPick = cleanPick.replace(/\b(over|under|o|u)\s*\d+\.?\d*½?/gi, '');
+  // Step 6: Remove "over/under X" patterns that might remain (including ½ fractions)
+  cleanPick = cleanPick.replace(/\b(over|under|o|u)\s*\d+[½]?\.?\d*[½]?/gi, '');
+  // Also remove standalone fraction numbers like "50½"
+  cleanPick = cleanPick.replace(/\s+\d+[½]$/g, '');
 
   // Clean up whitespace
   cleanPick = cleanPick.replace(/\s+/g, ' ').trim();
@@ -157,12 +161,12 @@ export function extractTeam(pick: string, matchup: string): string {
 
   // Try to match from matchup if provided
   if (matchup && matchup.trim()) {
-    // Clean matchup
+    // Clean matchup (handle ½ character in numbers)
     let cleanMatchup = matchup
-      .replace(/\s*[ou]\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s*over\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s*under\s*\d+\.?\d*½?/gi, '')
-      .replace(/\s+[+-]?\d+\.?\d*½?\s*/g, ' ')
+      .replace(/\s*[ou]\s*\d+[½]?\.?\d*[½]?/gi, '')
+      .replace(/\s*over\s*\d+[½]?\.?\d*[½]?/gi, '')
+      .replace(/\s*under\s*\d+[½]?\.?\d*[½]?/gi, '')
+      .replace(/\s+[+-]?\d+[½]?\.?\d*[½]?\s*/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
 

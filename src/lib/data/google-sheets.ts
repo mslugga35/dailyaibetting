@@ -56,9 +56,21 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     const headers = json.table.cols.map((col: { label: string }) => col.label);
     console.log(`[${sheetName}] Headers: ${headers.join(', ')}, Rows: ${json.table.rows.length}`);
 
-    // Special handling for ManualPicks tab - parse freeform text
+    // Check if ManualPicks has structured columns (same as AllPicks)
+    // Only use freeform parsing if it has a RawText/Text column
     if (sheetName === 'ManualPicks') {
-      return parseManualPicksSheet(json.table.rows, headers);
+      const hasRawTextColumn = headers.some((h: string) =>
+        ['rawtext', 'text', 'picks'].includes(h.toLowerCase())
+      );
+      const hasStructuredColumns = headers.includes('Pick') && headers.includes('Service');
+
+      // If it has structured columns (like AllPicks), process it normally
+      // Only use freeform parsing for actual freeform text sheets
+      if (hasRawTextColumn && !hasStructuredColumns) {
+        return parseManualPicksSheet(json.table.rows, headers);
+      }
+      // Otherwise fall through to normal structured processing
+      console.log(`[${sheetName}] Has structured columns, processing as standard sheet`);
     }
 
     // Get current time for 24-hour filter
