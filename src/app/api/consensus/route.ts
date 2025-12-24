@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     // Format output
     const formatted = formatConsensusOutput(consensus);
 
-    // Group picks by capper for All Picks view
+    // Group picks by capper for All Picks view (24-hour filter applied in data source)
     const picksByCapper = groupPicksByCapper(normalizedPicks);
     const capperCount = Object.keys(picksByCapper).length;
 

@@ -52,6 +52,10 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       return parseManualPicksSheet(json.table.rows, headers);
     }
 
+    // Get current time for 24-hour filter
+    const now = new Date();
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
     // Map rows to RawPick objects
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string } | null)[] }) => {
       const values = row.c.map(cell => cell?.v || '');
@@ -70,7 +74,25 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       };
     });
 
-    return picks.filter(p => p.pick && p.matchup);
+    // Filter: must have pick & matchup, and RunDate within last 24 hours
+    return picks.filter(p => {
+      if (!p.pick || !p.matchup) return false;
+
+      // If no RunDate, use date field
+      const dateToCheck = p.runDate || p.date;
+      if (!dateToCheck) return false;
+
+      // Try to parse the date
+      const pickTime = new Date(dateToCheck);
+      if (isNaN(pickTime.getTime())) {
+        // If can't parse, check if it matches today's date string
+        const todayStr = now.toISOString().split('T')[0];
+        return dateToCheck.includes(todayStr) || dateToCheck === 'TODAY';
+      }
+
+      // Check if within last 24 hours
+      return pickTime >= twentyFourHoursAgo;
+    });
   } catch (error) {
     console.error(`Error fetching sheet ${sheetName}:`, error);
     return [];
