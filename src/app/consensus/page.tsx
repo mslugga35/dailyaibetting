@@ -113,7 +113,7 @@ export default function ConsensusPage() {
           <CardContent>
             {topOverall.length > 0 ? (
               <ConsensusReport
-                topOverall={data?.consensus || topOverall}
+                topOverall={topOverall}
                 bySport={bySport}
               />
             ) : (
