@@ -39,9 +39,6 @@ const sports = [
 const navItems = [
   { name: 'Consensus', href: '/consensus', icon: Target },
   { name: 'All Picks', href: '/picks', icon: Calendar },
-  { name: 'Cappers', href: '/cappers', icon: Users },
-  { name: 'Trends', href: '/trends', icon: TrendingUp },
-  { name: 'Best Bets', href: '/best-bets', icon: Zap },
 ];
 
 export function Header() {
@@ -101,14 +98,6 @@ export function Header() {
             <span className="text-xs">Live</span>
           </Badge>
 
-          {/* Stats Button */}
-          <Button variant="outline" size="sm" className="hidden sm:flex gap-2" asChild>
-            <Link href="/stats">
-              <BarChart3 className="h-4 w-4" />
-              Stats
-            </Link>
-          </Button>
-
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
@@ -162,13 +151,6 @@ export function Header() {
                   ))}
                 </div>
 
-                {/* Stats Link */}
-                <Button variant="outline" className="mt-4 gap-2" asChild onClick={() => setIsOpen(false)}>
-                  <Link href="/stats">
-                    <BarChart3 className="h-4 w-4" />
-                    View Stats
-                  </Link>
-                </Button>
               </div>
             </SheetContent>
           </Sheet>
