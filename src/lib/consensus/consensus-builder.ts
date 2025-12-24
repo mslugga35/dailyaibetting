@@ -386,14 +386,14 @@ function normalizeGameForTotal(team: string, sport: string): string {
 }
 
 /**
- * Round total line to nearest 0.5 to group similar lines
- * e.g., 51, 51.5 -> 51.5; 50, 50.5 -> 50.5
+ * For game totals, group all similar lines together
+ * Round to nearest 2 points to group 50.5, 51, 51.5, 52 together
  */
-function roundLineForGrouping(line: string): string {
+function roundTotalLineForGrouping(line: string): string {
   const num = parseFloat(line);
   if (isNaN(num)) return line;
-  // Round to nearest 0.5
-  const rounded = Math.round(num * 2) / 2;
+  // Round to nearest 2 points for aggressive grouping
+  const rounded = Math.round(num / 2) * 2;
   return String(rounded);
 }
 
@@ -418,9 +418,21 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
     let lineForKey = pick.line;
 
     if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
-      teamForKey = normalizeGameForTotal(pick.standardizedTeam, pick.sport);
+      // For totals, try to get both teams from matchup or team field
+      // If only one team mentioned, try to use matchup for the game name
+      let gameTeams = pick.standardizedTeam;
+      if (pick.matchup && pick.matchup.includes('/') || pick.matchup.includes(' vs ') || pick.matchup.includes('@')) {
+        // Matchup has both teams, normalize it
+        gameTeams = normalizeGameForTotal(pick.matchup, pick.sport);
+      } else if (!pick.standardizedTeam.includes('/')) {
+        // Only one team in standardizedTeam, try to get game from matchup
+        gameTeams = normalizeGameForTotal(pick.matchup || pick.standardizedTeam, pick.sport);
+      } else {
+        gameTeams = normalizeGameForTotal(pick.standardizedTeam, pick.sport);
+      }
+      teamForKey = gameTeams;
       if (lineForKey) {
-        lineForKey = roundLineForGrouping(lineForKey);
+        lineForKey = roundTotalLineForGrouping(lineForKey);
       }
     }
 
