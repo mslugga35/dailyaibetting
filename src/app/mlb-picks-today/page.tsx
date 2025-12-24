@@ -8,11 +8,11 @@ import { useConsensus } from '@/lib/hooks/use-consensus';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import Link from 'next/link';
 
-export default function NBAPicksTodayPage() {
+export default function MLBPicksTodayPage() {
   const { topOverall, isLoading, error, refetch, data } = useConsensus();
 
-  const nbaPicks = topOverall.filter(p => p.sport === 'NBA');
-  const firePicks = nbaPicks.filter(p => p.capperCount >= 3);
+  const mlbPicks = topOverall.filter(p => p.sport === 'MLB');
+  const firePicks = mlbPicks.filter(p => p.capperCount >= 3);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -35,13 +35,13 @@ export default function NBAPicksTodayPage() {
           <div>
             <div className="flex items-center gap-2 text-primary mb-2">
               <Target className="h-5 w-5" />
-              <span className="text-sm font-medium">NBA Picks</span>
+              <span className="text-sm font-medium">MLB Picks</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Free NBA Picks Today
+              Free MLB Picks Today
             </h1>
             <p className="text-muted-foreground">
-              {today} &middot; Expert consensus picks for today&apos;s NBA games
+              {today} &middot; Expert consensus picks for today&apos;s MLB games
             </p>
           </div>
           <Button
@@ -58,12 +58,12 @@ export default function NBAPicksTodayPage() {
       </div>
 
       {/* Stats */}
-      {nbaPicks.length > 0 && (
+      {mlbPicks.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
-              <div className="text-3xl font-bold text-primary">{nbaPicks.length}</div>
-              <div className="text-sm text-muted-foreground">NBA Consensus Picks</div>
+              <div className="text-3xl font-bold text-primary">{mlbPicks.length}</div>
+              <div className="text-sm text-muted-foreground">MLB Consensus Picks</div>
             </CardContent>
           </Card>
           <Card>
@@ -75,7 +75,7 @@ export default function NBAPicksTodayPage() {
           <Card>
             <CardContent className="p-4">
               <div className="text-3xl font-bold">
-                {nbaPicks.length > 0 ? Math.max(...nbaPicks.map(p => p.capperCount)) : 0}
+                {mlbPicks.length > 0 ? Math.max(...mlbPicks.map(p => p.capperCount)) : 0}
               </div>
               <div className="text-sm text-muted-foreground">Max Agreement</div>
             </CardContent>
@@ -93,7 +93,7 @@ export default function NBAPicksTodayPage() {
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading NBA picks...</span>
+          <span className="ml-2">Loading MLB picks...</span>
         </div>
       )}
 
@@ -110,8 +110,8 @@ export default function NBAPicksTodayPage() {
       {/* Picks */}
       {!isLoading && !error && (
         <div className="space-y-4 mb-8">
-          {nbaPicks.length > 0 ? (
-            nbaPicks
+          {mlbPicks.length > 0 ? (
+            mlbPicks
               .sort((a, b) => b.capperCount - a.capperCount)
               .map((pick, index) => (
                 <Card key={index} className={pick.capperCount >= 3 ? 'border-orange-500/50 bg-orange-500/5' : ''}>
@@ -119,7 +119,7 @@ export default function NBAPicksTodayPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline">NBA</Badge>
+                          <Badge variant="outline">MLB</Badge>
                           {pick.capperCount >= 3 && (
                             <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                           )}
@@ -138,7 +138,7 @@ export default function NBAPicksTodayPage() {
           ) : (
             <Card className="p-8 text-center">
               <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No NBA picks available today.</p>
+              <p className="text-muted-foreground">No MLB picks available today.</p>
               <p className="text-sm text-muted-foreground mt-2">Check back closer to game time!</p>
             </Card>
           )}
@@ -158,22 +158,19 @@ export default function NBAPicksTodayPage() {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/nfl-picks-today">NFL Picks</Link>
+              <Link href="/nfl-picks-today">NFL Picks Today</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/mlb-picks-today">MLB Picks</Link>
+              <Link href="/nba-picks-today">NBA Picks Today</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/nhl-picks-today">NHL Picks</Link>
+              <Link href="/nhl-picks-today">NHL Picks Today</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/cbb-picks-today">College Basketball</Link>
+              <Link href="/daily-bets">All Daily Bets</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/daily-bets">Daily Bets</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/sportsbooks">Sportsbooks</Link>
+              <Link href="/sportsbooks">Best Sportsbooks</Link>
             </Button>
           </div>
         </CardContent>

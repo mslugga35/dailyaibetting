@@ -29,7 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'hourly',
       priority: 0.85,
     },
-    // SEO Landing Pages
+    // SEO Landing Pages - Pro Sports
     {
       url: `${baseUrl}/nfl-picks-today`,
       lastModified: today,
@@ -41,6 +41,31 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: today,
       changeFrequency: 'hourly',
       priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/mlb-picks-today`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/nhl-picks-today`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    // SEO Landing Pages - College Sports
+    {
+      url: `${baseUrl}/cfb-picks-today`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/cbb-picks-today`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.85,
     },
     // Monetization Pages
     {

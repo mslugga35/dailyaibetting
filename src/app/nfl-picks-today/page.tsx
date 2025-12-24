@@ -158,16 +158,22 @@ export default function NFLPicksTodayPage() {
         <CardContent>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href="/nba-picks-today">NBA Picks Today</Link>
+              <Link href="/nba-picks-today">NBA Picks</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/daily-bets">All Daily Bets</Link>
+              <Link href="/mlb-picks-today">MLB Picks</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/consensus">Full Consensus</Link>
+              <Link href="/nhl-picks-today">NHL Picks</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/sportsbooks">Best Sportsbooks</Link>
+              <Link href="/cfb-picks-today">College Football</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/daily-bets">Daily Bets</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/sportsbooks">Sportsbooks</Link>
             </Button>
           </div>
         </CardContent>

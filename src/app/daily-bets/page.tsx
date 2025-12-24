@@ -15,6 +15,7 @@ import {
   Layers,
   Copy,
   Check,
+  Twitter,
 } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { useState } from 'react';
@@ -121,6 +122,19 @@ export default function DailyBetsPage() {
     return text;
   };
 
+  const formatForTwitter = () => {
+    if (top5Confidence.length === 0) return '';
+    const topPick = top5Confidence[0];
+    const fire = topPick.capperCount >= 3 ? '🔥' : '';
+    return `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.pick}\n${topPick.capperCount} cappers agree!\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
+  };
+
+  const shareToTwitter = () => {
+    const text = formatForTwitter();
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'width=550,height=435');
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(formatForDiscord());
     setCopied(true);
@@ -150,7 +164,17 @@ export default function DailyBetsPage() {
               {today} &middot; AI-analyzed picks from {data?.totalPicks || 0} total picks
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={shareToTwitter}
+              disabled={isLoading || allPicks.length === 0}
+            >
+              <Twitter className="h-4 w-4" />
+              Share
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -159,7 +183,7 @@ export default function DailyBetsPage() {
               disabled={isLoading || allPicks.length === 0}
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy for Discord'}
+              {copied ? 'Copied!' : 'Discord'}
             </Button>
             <Button
               variant="outline"
