@@ -38,14 +38,23 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     const text = await response.text();
 
     // Google returns JSONP-like response, need to parse it
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+    // Format: google.visualization.Query.setResponse({...});
+    const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);?$/);
+    if (!jsonMatch) {
+      console.error(`[${sheetName}] Could not parse Google response`);
+      return [];
+    }
+
+    const json = JSON.parse(jsonMatch[1]);
 
     if (!json.table?.rows) {
+      console.log(`[${sheetName}] No rows found`);
       return [];
     }
 
     // Get column headers from first row
     const headers = json.table.cols.map((col: { label: string }) => col.label);
+    console.log(`[${sheetName}] Headers: ${headers.join(', ')}, Rows: ${json.table.rows.length}`);
 
     // Special handling for ManualPicks tab - parse freeform text
     if (sheetName === 'ManualPicks') {
@@ -57,8 +66,15 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     // Map rows to RawPick objects
-    const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string } | null)[] }) => {
-      const values = row.c.map(cell => cell?.v || '');
+    const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string | number | null; f?: string } | null)[] }) => {
+      // Extract values, handling formatted values for dates
+      const values = row.c.map(cell => {
+        if (!cell) return '';
+        // Use formatted value (f) if available (for dates), otherwise use raw value (v)
+        if (cell.f) return cell.f;
+        if (cell.v === null || cell.v === undefined) return '';
+        return String(cell.v);
+      });
 
       // Use Date column first, then RunDate, otherwise empty (will be filtered out)
       const dateValue = values[headers.indexOf('Date')] || values[headers.indexOf('RunDate')] || '';
