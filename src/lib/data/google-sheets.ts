@@ -8,10 +8,10 @@ import { RawPick } from '../consensus/consensus-builder';
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI';
 
 // Sheet names (tabs) from your n8n workflow
-// The new simple workflow outputs to "AllPicks" tab
-// Legacy tabs are kept for backward compatibility
+// The new simple workflow outputs to "AllPicks" tab with today's picks
 // ManualPicks is for freeform text entry (parsed like Google Doc)
-const SHEET_TABS = ['AllPicks', 'ManualPicks', 'BetFirm', 'BoydsBets', 'Dimers', 'Covers', 'SportsLine'];
+// Legacy tabs removed - they contain historical data without proper dates
+const SHEET_TABS = ['AllPicks', 'ManualPicks'];
 
 /**
  * Fetch picks from Google Sheets (published as CSV)
@@ -56,10 +56,13 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string } | null)[] }) => {
       const values = row.c.map(cell => cell?.v || '');
 
+      // Use Date column first, then RunDate, otherwise empty (will be filtered out)
+      const dateValue = values[headers.indexOf('Date')] || values[headers.indexOf('RunDate')] || '';
+
       return {
         site: values[headers.indexOf('Site')] || sheetName,
         league: values[headers.indexOf('League')] || '',
-        date: values[headers.indexOf('Date')] || new Date().toISOString().split('T')[0],
+        date: dateValue,
         matchup: values[headers.indexOf('Matchup')] || '',
         service: values[headers.indexOf('Service')] || sheetName,
         pick: values[headers.indexOf('Pick')] || '',
