@@ -370,18 +370,19 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
  * Normalize game name for totals (over/under)
  * Ensures "Cal/Hawaii", "Hawaii/California", "California vs Hawaii" all become the same
  */
-function normalizeGameForTotal(team: string): string {
+function normalizeGameForTotal(team: string, sport: string): string {
   // Split by common separators
   const parts = team.split(/\s*[\/vs@]+\s*/i).map(t => t.trim()).filter(Boolean);
 
   if (parts.length < 2) {
     // Single team, just return standardized
-    return team;
+    return standardizeTeamName(team, sport);
   }
 
-  // Sort alphabetically to ensure "Cal/Hawaii" and "Hawaii/Cal" are the same
-  parts.sort((a, b) => a.localeCompare(b));
-  return parts.join('/');
+  // Standardize each team name, then sort alphabetically
+  const standardizedParts = parts.map(t => standardizeTeamName(t, sport));
+  standardizedParts.sort((a, b) => a.localeCompare(b));
+  return standardizedParts.join('/');
 }
 
 /**
@@ -417,7 +418,7 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
     let lineForKey = pick.line;
 
     if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
-      teamForKey = normalizeGameForTotal(pick.standardizedTeam);
+      teamForKey = normalizeGameForTotal(pick.standardizedTeam, pick.sport);
       if (lineForKey) {
         lineForKey = roundLineForGrouping(lineForKey);
       }
