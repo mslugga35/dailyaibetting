@@ -74,9 +74,10 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       };
     });
 
-    // Filter: must have pick & matchup, and RunDate within last 24 hours
+    // Filter: must have pick (matchup can be empty - team extracted from pick text)
+    // RunDate within last 24 hours
     return picks.filter(p => {
-      if (!p.pick || !p.matchup) return false;
+      if (!p.pick) return false;
 
       // If no RunDate, use date field
       const dateToCheck = p.runDate || p.date;
