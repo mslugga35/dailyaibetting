@@ -1,0 +1,240 @@
+Here’s a **cleaned-up, tighter, and more professional version** of your prompt that keeps your intent intact, removes the Hard Rock section, simplifies wording, and clearly instructs the AI to **omit entire sections when a sport is not active** (instead of calling it out repeatedly).
+
+This version is optimized for **daily reuse**, **copy/paste**, and **consistent output quality**.
+
+---
+
+# 🧠 Daily Best Bets – AI Analysis Instructions (All Active Sports)
+
+## 🎯 Objective
+
+Using **expert sources** (SportsLine, Covers, WagerTalk, Boyd’s Bets, SportsCapping, BetFirm) and **current market odds** (DraftKings, FanDuel, ESPN, etc.), generate a **data-driven betting analysis for the current day only**.
+
+All selections must be based on **quantitative evidence**, including:
+
+* Market odds & implied probability
+* Expert historical win rates
+* Relevant statistical support
+
+❌ Avoid promotional language, hype, or speculation
+✅ Use objective, concise, evidence-backed insights only
+
+If a sport is **not currently active**, **omit the entire section** (do not mention it).
+
+---
+
+## 🔝 Top 5 Highest Confidence Single Bets
+
+**Excludes College Baseball**
+
+**Confidence Score Formula (0–100%)**
+
+* 40% Implied Probability
+* 40% Expert Win Rate
+* 20% Statistical Support
+
+**Format**
+
+* Sport
+* Event
+* Pick
+* Odds
+* Confidence Score
+* Source(s)
+* Justification (1 concise sentence)
+
+---
+
+## 📈 Top 5 Most Common Bets
+
+### 🅰️ Most Frequently Mentioned
+
+* Count **each expert once**, regardless of platform
+
+| Sport | Event | Pick | Odds | Unique Mentions | Source | Justification |
+
+### 🅱️ Strongest Consensus Picks
+
+Rank using:
+
+* Frequency
+* Expert win rate
+* Statistical support
+
+| Sport | Event | Pick | Odds | Source | Justification (2–3 sentences) |
+
+---
+
+## 🧩 Best Parlays
+
+### ✅ 2-Leg Parlay
+
+| Sport | Event | Pick | Odds | Justification |
+
+**Summary**
+
+* Combined decimal odds → American odds
+* 1–2 sentences explaining low correlation & strength
+
+---
+
+### ✅ 3-Leg Parlay
+
+(Same format as above with one additional leg)
+
+---
+
+## 🎯 Most Promising Player Prop Parlay
+
+* 2–4 uncorrelated props only
+
+| Sport | Event | Player (Team) | Prop | Odds | Justification |
+
+**Parlay Summary**
+
+* Combined decimal → American odds
+* Short rationale explaining prop independence
+
+---
+
+## 🏅 Best Picks by Sport
+
+*(Only include sports active today)*
+
+| Rank | Sport | Event | Pick | Odds | Confidence Score | Source |
+
+---
+
+## ⚾ MLB Strikeout Over/Under Analysis
+
+### 📊 Best Value K Bets
+
+| Pitcher | Prop | Odds | Justification | Source |
+
+Include:
+
+* K/9
+* Opponent K%
+* Last 3 starts
+
+### ⚾ Game Factors
+
+* Ballpark
+* Weather
+* Umpire trends (if applicable)
+
+### ⏱️ First 5 Innings Outlook
+
+* Run environment
+* Strikeout impact
+
+### 🔑 Key Takeaways
+
+* 2–3 bullet insights
+
+---
+
+## ⚾ MLB Strikeout & YRFI / NRFI Projections
+
+| Game | Bet | Odds | Justification | Source |
+
+### Player Props
+
+* Top 5 HR candidates
+* Top 5 hit probability
+* Top 3 total bases overs
+
+### Pitcher Props
+
+* Top 3 NRFI starters
+* Top 3 for 8+ Ks
+* Top 3 for quality starts
+
+---
+
+## ⚾ College Baseball – Highest Confidence Pick
+
+*(Only if games are scheduled)*
+
+| Sport | Event | Pick | Odds | Confidence Score | Source | Justification |
+
+---
+
+## 💰 Big Money Parlays
+
+### 🎯 $2 Long-Shot Builds
+
+#### 🔹 5-Leg Long-Shot Parlay
+
+(Target: +150 to +400)
+
+| Sport | Event | Pick | Odds | Justification |
+
+#### 🔹 10–15 Leg High-Probability Parlay
+
+(Target: -150 to -110)
+
+| Sport | Event | Pick | Odds | Justification |
+
+**Summary**
+
+* Combined decimal → American odds
+* Potential payout calculation
+* 1–2 sentence rationale per parlay
+
+---
+
+## 💵 Best $20 Bet
+
+| Sport | Event | Pick | Odds | Confidence Score | Source | Expected Return |
+
+**Justification**
+
+* 1–2 sentences explaining edge & value
+
+---
+
+## 🪜 Ladder Pick (Daily Rollover Start)
+
+| Sport | Event | Pick | Odds | Confidence Score | Source | $10 Return |
+
+**Justification**
+
+* Explain why this bet is stable enough to ladder
+
+---
+
+## 🔍 Trends & Angles (Stat-Based Only)
+
+* ATS or totals trends
+* Matchup or situational edge
+* Market inefficiency or public fade signal
+
+---
+
+## 📎 Final Rules
+
+* **Skip entire sections** for inactive sports
+* Always include **team names for props**
+* Use **font size 10**, clean tables, copy-ready
+* Cite expert sources clearly
+
+### Odds & Math Standards
+
+* **Implied Probability**
+
+  * Favorite: `-odds / (odds + 100)`
+  * Underdog: `100 / (odds + 100)`
+* **Decimal Odds**
+
+  * Favorite: `(-odds / 100) + 1`
+  * Underdog: `(odds / 100) + 1`
+* **Parlay Odds**
+
+  * Multiply decimals → convert to American
+* **Expected Return**
+
+  * `(stake × odds) + stake`
+
+---
+

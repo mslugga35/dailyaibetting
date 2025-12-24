@@ -17,6 +17,12 @@ export function Footer() {
           {/* Links */}
           <div className="flex items-center gap-6">
             <Link
+              href="/daily-bets"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Daily Bets
+            </Link>
+            <Link
               href="/consensus"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
