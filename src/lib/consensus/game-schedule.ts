@@ -58,6 +58,28 @@ function getYesterdayET(): string {
 }
 
 /**
+ * Convert UTC date string to Eastern timezone date (YYYY-MM-DD)
+ */
+function toEasternDate(utcDateStr: string): string {
+  try {
+    const date = new Date(utcDateStr);
+    // Format in Eastern timezone
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(date);
+    const year = parts.find(p => p.type === 'year')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    return `${year}-${month}-${day}`;
+  } catch {
+    return utcDateStr.split('T')[0];
+  }
+}
+
+/**
  * Fetch today's games from ESPN API
  */
 async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
@@ -80,10 +102,10 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
     const today = getTodayET();
 
     for (const event of data.events || []) {
-      // Check if game is today (ESPN returns games in progress and upcoming)
-      const gameDate = event.date?.split('T')[0];
+      // Convert ESPN UTC date to Eastern timezone for comparison
+      const gameDate = event.date ? toEasternDate(event.date) : '';
 
-      // Only include games from today
+      // Include games from today (accounting for timezone)
       if (gameDate === today) {
         for (const competition of event.competitions || []) {
           for (const competitor of competition.competitors || []) {
@@ -98,7 +120,7 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
       }
     }
 
-    console.log(`[Schedule] ESPN ${sport}: ${teams.length / 3} teams playing today`);
+    console.log(`[Schedule] ESPN ${sport}: ${teams.length / 3} teams playing today (${today})`);
     return teams;
   } catch (error) {
     console.error(`[Schedule] ESPN ${sport} fetch error:`, error);
