@@ -80,5 +80,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    // Blog
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
   ];
 }
