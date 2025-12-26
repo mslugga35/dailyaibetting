@@ -270,6 +270,56 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
+-- BLOG_POSTS TABLE
+-- AI-generated daily sports betting blog posts
+-- =====================================================
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  excerpt TEXT,                              -- Short description for listings
+  content TEXT NOT NULL,                     -- Full markdown/HTML content
+
+  -- Categorization
+  category TEXT DEFAULT 'daily-picks',       -- 'daily-picks', 'preview', 'recap', 'analysis'
+  sport TEXT,                                -- NULL for multi-sport, or specific sport
+  tags TEXT[] DEFAULT '{}',                  -- ['NFL', 'fire-picks', 'consensus']
+
+  -- SEO
+  meta_title TEXT,
+  meta_description TEXT,
+
+  -- Featured image
+  featured_image TEXT,
+
+  -- Status
+  status TEXT DEFAULT 'published',           -- 'draft', 'published', 'archived'
+
+  -- Stats
+  view_count INTEGER DEFAULT 0,
+
+  -- AI metadata
+  ai_model TEXT,                             -- 'gpt-4', 'gpt-3.5-turbo'
+  generation_prompt TEXT,                    -- Prompt used to generate
+
+  -- Timestamps
+  published_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Blog indexes
+CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published ON blog_posts(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_category ON blog_posts(category);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
+
+-- Blog RLS
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read access on blog_posts" ON blog_posts FOR SELECT USING (status = 'published');
+CREATE POLICY "Service role write access on blog_posts" ON blog_posts FOR ALL USING (auth.role() = 'service_role');
+
+-- =====================================================
 -- SAMPLE DATA (for testing)
 -- =====================================================
 

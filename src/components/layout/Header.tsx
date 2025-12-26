@@ -40,6 +40,7 @@ const navItems = [
   { name: 'Daily Bets', href: '/daily-bets', icon: Zap },
   { name: 'Consensus', href: '/consensus', icon: Target },
   { name: 'All Picks', href: '/picks', icon: Calendar },
+  { name: 'Blog', href: '/blog', icon: BarChart3 },
 ];
 
 export function Header() {

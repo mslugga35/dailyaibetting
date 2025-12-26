@@ -1,0 +1,165 @@
+{
+  "name": "DailyAI Betting - Daily Blog Generator",
+  "description": "Generates AI sports betting blog post every day at 9 AM ET",
+  "nodes": [
+    {
+      "id": "schedule-9am",
+      "name": "Daily 9 AM ET",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * *" }]
+        }
+      },
+      "notes": "Triggers every day at 9 AM ET"
+    },
+    {
+      "id": "webhook-manual",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 500],
+      "parameters": {
+        "path": "generate-blog",
+        "httpMethod": "POST"
+      },
+      "notes": "Manual trigger for testing"
+    },
+    {
+      "id": "fetch-consensus",
+      "name": "Fetch Consensus Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [350, 400],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/consensus",
+        "method": "GET",
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "prepare-prompt",
+      "name": "Prepare AI Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [550, 400],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst topPicks = data.topOverall || [];\nconst bySport = data.bySport || {};\n\nconst today = new Date().toLocaleDateString('en-US', {\n  weekday: 'long',\n  month: 'long',\n  day: 'numeric',\n  year: 'numeric'\n});\n\n// Get fire picks (3+ cappers)\nconst firePicks = topPicks.filter(p => p.capperCount >= 3).slice(0, 10);\n\n// Build picks summary\nlet picksSummary = '';\nif (firePicks.length > 0) {\n  picksSummary = firePicks.map(p => \n    `- ${p.sport}: ${p.bet} (${p.capperCount} cappers agree) - ${p.matchup}`\n  ).join('\\n');\n} else {\n  picksSummary = 'No strong consensus picks available today.';\n}\n\n// Sports breakdown\nconst sportsActive = Object.keys(bySport).filter(s => bySport[s]?.length > 0);\nconst sportsSummary = sportsActive.map(sport => {\n  const picks = bySport[sport];\n  return `${sport}: ${picks.length} consensus picks`;\n}).join(', ');\n\nconst prompt = `Write a professional sports betting blog article for ${today}.\n\nTODAY'S CONSENSUS DATA:\n${picksSummary}\n\nACTIVE SPORTS: ${sportsSummary || 'Various sports'}\n\nREQUIREMENTS:\n1. Title: Create an SEO-friendly title mentioning \"picks\" and today's date\n2. Write 400-600 words in a professional but engaging tone\n3. Highlight the top consensus plays where multiple experts agree\n4. Include betting angles and why these picks have value\n5. Add a disclaimer about responsible gambling\n6. Use HTML formatting (h2, h3, p, ul/li, strong tags)\n7. Do NOT use markdown - use proper HTML tags\n8. Make it feel like expert analysis, not generic content\n\nFormat the response as JSON:\n{\n  \"title\": \"your title\",\n  \"excerpt\": \"2-3 sentence summary for preview\",\n  \"content\": \"<full HTML content>\",\n  \"tags\": [\"relevant\", \"tags\"]\n}`;\n\nreturn [{\n  json: {\n    prompt,\n    date: today,\n    firePicksCount: firePicks.length,\n    sportsActive\n  }\n}];"
+      }
+    },
+    {
+      "id": "openai-generate",
+      "name": "Generate Blog with OpenAI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.4,
+      "position": [750, 400],
+      "parameters": {
+        "operation": "message",
+        "modelId": "gpt-4",
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "openai",
+          "name": "OpenAI"
+        }
+      }
+    },
+    {
+      "id": "parse-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 400],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = response.message?.content || response.choices?.[0]?.message?.content || '';\n\ntry {\n  // Try to parse JSON from response\n  const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    return [{\n      json: {\n        title: parsed.title,\n        excerpt: parsed.excerpt,\n        content: parsed.content,\n        tags: parsed.tags || [],\n        category: 'daily-picks',\n        ai_model: 'gpt-4'\n      }\n    }];\n  }\n} catch (e) {\n  console.log('Parse error:', e);\n}\n\n// Fallback: use raw content\nconst today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });\nreturn [{\n  json: {\n    title: `Sports Betting Picks for ${today}`,\n    excerpt: 'Daily AI-generated sports betting analysis and expert consensus picks.',\n    content: `<p>${content.replace(/\\n/g, '</p><p>')}</p>`,\n    tags: ['daily-picks', 'consensus'],\n    category: 'daily-picks',\n    ai_model: 'gpt-4'\n  }\n}];"
+      }
+    },
+    {
+      "id": "post-to-blog",
+      "name": "Post to Blog API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1150, 400],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/blog",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.BLOG_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "title", "value": "={{ $json.title }}" },
+            { "name": "content", "value": "={{ $json.content }}" },
+            { "name": "excerpt", "value": "={{ $json.excerpt }}" },
+            { "name": "category", "value": "={{ $json.category }}" },
+            { "name": "tags", "value": "={{ $json.tags }}" },
+            { "name": "ai_model", "value": "={{ $json.ai_model }}" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "notes": "Set BLOG_API_KEY in n8n environment variables"
+    },
+    {
+      "id": "success-log",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 400],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconsole.log('Blog post created:', response.url || 'unknown');\nreturn [{ json: { success: true, ...response } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Daily 9 AM ET": {
+      "main": [[{ "node": "Fetch Consensus Data", "type": "main", "index": 0 }]]
+    },
+    "Manual Trigger": {
+      "main": [[{ "node": "Fetch Consensus Data", "type": "main", "index": 0 }]]
+    },
+    "Fetch Consensus Data": {
+      "main": [[{ "node": "Prepare AI Prompt", "type": "main", "index": 0 }]]
+    },
+    "Prepare AI Prompt": {
+      "main": [[{ "node": "Generate Blog with OpenAI", "type": "main", "index": 0 }]]
+    },
+    "Generate Blog with OpenAI": {
+      "main": [[{ "node": "Parse AI Response", "type": "main", "index": 0 }]]
+    },
+    "Parse AI Response": {
+      "main": [[{ "node": "Post to Blog API", "type": "main", "index": 0 }]]
+    },
+    "Post to Blog API": {
+      "main": [[{ "node": "Log Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/New_York"
+  }
+}

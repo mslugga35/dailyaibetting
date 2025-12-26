@@ -34,6 +34,12 @@ export function Footer() {
             >
               All Picks
             </Link>
+            <Link
+              href="/blog"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Blog
+            </Link>
           </div>
 
           {/* Copyright */}
