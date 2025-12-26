@@ -59,20 +59,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, post: data });
     }
 
-    // List posts
+    // List posts (filter by category=daily-picks for dailyaibetting posts)
     let query = supabase
       .from('blog_posts')
-      .select('id, slug, title, excerpt, category, sport, tags, featured_image, published_at, view_count', { count: 'exact' })
+      .select('id, slug, title, excerpt, category, tags, featured_image, published_at, view_count, author', { count: 'exact' })
       .eq('status', 'published')
+      .eq('category', 'daily-picks')  // Only show dailyaibetting posts
       .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (category) {
+    if (category && category !== 'daily-picks') {
       query = query.eq('category', category);
-    }
-
-    if (sport) {
-      query = query.eq('sport', sport);
     }
 
     const { data, error, count } = await query;
@@ -139,7 +136,7 @@ export async function POST(request: Request) {
       .substring(0, 50);
     const slug = `${slugBase}-${dateStr}`;
 
-    // Create post
+    // Create post (using existing table schema from pickleballcourts)
     const { data, error } = await supabase
       .from('blog_posts')
       .insert({
@@ -148,11 +145,12 @@ export async function POST(request: Request) {
         content,
         excerpt: excerpt || title.substring(0, 160),
         category: category || 'daily-picks',
-        sport: sport || null,
         tags: tags || [],
-        meta_title: meta_title || title,
-        meta_description: meta_description || excerpt || title,
-        ai_model: ai_model || 'gpt-4',
+        seo_title: meta_title || title,
+        seo_description: meta_description || excerpt || title,
+        ai_model: ai_model || 'gpt-3.5-turbo',
+        ai_generated: true,
+        author: 'DailyAI Betting',
         status: 'published',
         published_at: new Date().toISOString()
       })
