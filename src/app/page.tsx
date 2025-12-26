@@ -100,6 +100,7 @@ export default function HomePage() {
       {error && !isLoading && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Unable to load picks. Please try refreshing.</p>
+          <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
           <Button variant="outline" className="mt-4" onClick={() => refetch()}>
             Try Again
           </Button>
