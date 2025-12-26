@@ -296,8 +296,9 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
     // Check if sport has games today
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      // Unknown sport or no games - pass through
-      filtered.push(pick);
+      // No games for this sport today - filter OUT (not pass through)
+      // This prevents yesterday's picks from showing when sport has no games
+      console.log(`[Schedule] Filtering out ${team} (${sport}) - no ${sport} games today`);
       continue;
     }
 
