@@ -6,7 +6,7 @@ import {
   formatConsensusOutput,
   NormalizedPick,
 } from '@/lib/consensus/consensus-builder';
-import { filterToTodaysGames } from '@/lib/consensus/game-schedule';
+import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consensus/game-schedule';
 
 // Group picks by capper for the All Picks view
 function groupPicksByCapper(picks: NormalizedPick[]): Record<string, NormalizedPick[]> {
@@ -29,20 +29,24 @@ export async function GET(request: Request) {
     const sport = searchParams.get('sport');
     const minCappers = parseInt(searchParams.get('minCappers') || '2');
 
-    // Fetch all picks from data sources
+    // Log today's ESPN schedule
+    const schedule = await getTodaysScheduleSummary();
+    console.log('[Consensus API] ESPN Schedule:', schedule);
+
+    // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
     const rawPicks = await getAllPicksFromSources();
 
     // Normalize and build consensus
     const normalizedPicks = normalizePicks(rawPicks);
     const rawConsensus = buildConsensus(normalizedPicks);
 
-    // Format output (includes game schedule filtering for today's games only)
+    // Format output
     const formatted = formatConsensusOutput(rawConsensus);
 
-    // Filter normalized picks to today's games only
-    const todaysPicks = filterToTodaysGames(normalizedPicks);
+    // Filter picks using ESPN API (validates teams are actually playing today)
+    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
 
-    // Use filtered consensus (today's games only)
+    // Use filtered consensus
     let consensus = formatted.filteredConsensus;
 
     // Filter by sport if specified

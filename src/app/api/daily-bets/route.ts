@@ -6,36 +6,35 @@ import {
   formatConsensusOutput,
 } from '@/lib/consensus/consensus-builder';
 import { buildDailyBets } from '@/lib/daily-bets/daily-bets-builder';
-import { filterToTodaysGames } from '@/lib/consensus/game-schedule';
+import { filterToTodaysGamesAsync } from '@/lib/consensus/game-schedule';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
   try {
-    // Fetch all picks from data sources
+    // Fetch all picks from data sources (pre-filtered by date)
     const rawPicks = await getAllPicksFromSources();
 
     // Normalize and build consensus
     const normalizedPicks = normalizePicks(rawPicks);
     const consensus = buildConsensus(normalizedPicks);
 
-    // Format consensus output (includes game schedule filtering)
+    // Format consensus output
     const formatted = formatConsensusOutput(consensus);
 
-    // Filter normalized picks to today's games only
-    const todaysPicks = filterToTodaysGames(normalizedPicks);
+    // Filter picks using ESPN API (validates teams are actually playing today)
+    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
 
     // Build daily bets with enhanced analysis
-    // Use filteredConsensus to only include today's actual games
     const dailyBets = buildDailyBets(
-      formatted.filteredConsensus, // Use filtered consensus, not raw
-      todaysPicks, // Today's picks only
+      formatted.filteredConsensus,
+      todaysPicks,
       formatted.bySport,
-      todaysPicks.length // Today's picks count
+      todaysPicks.length
     );
 
-    console.log(`[Daily Bets API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
+    console.log(`[Daily Bets API] Raw: ${rawPicks.length}, ESPN Filtered: ${todaysPicks.length}, Consensus: ${formatted.filteredConsensus.length}`);
 
     return NextResponse.json({
       success: true,
