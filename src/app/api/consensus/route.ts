@@ -6,6 +6,7 @@ import {
   formatConsensusOutput,
   NormalizedPick,
 } from '@/lib/consensus/consensus-builder';
+import { filterToTodaysGames } from '@/lib/consensus/game-schedule';
 
 // Group picks by capper for the All Picks view
 function groupPicksByCapper(picks: NormalizedPick[]): Record<string, NormalizedPick[]> {
@@ -38,6 +39,9 @@ export async function GET(request: Request) {
     // Format output (includes game schedule filtering for today's games only)
     const formatted = formatConsensusOutput(rawConsensus);
 
+    // Filter normalized picks to today's games only
+    const todaysPicks = filterToTodaysGames(normalizedPicks);
+
     // Use filtered consensus (today's games only)
     let consensus = formatted.filteredConsensus;
 
@@ -49,27 +53,27 @@ export async function GET(request: Request) {
     // Filter by minimum capper count
     consensus = consensus.filter(p => p.capperCount >= minCappers);
 
-    // Group picks by capper for All Picks view
-    const picksByCapper = groupPicksByCapper(normalizedPicks);
+    // Group picks by capper for All Picks view (today's games only)
+    const picksByCapper = groupPicksByCapper(todaysPicks);
     const capperCount = Object.keys(picksByCapper).length;
 
     // Debug logging
-    console.log(`[Consensus API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Cappers: ${capperCount}, Raw Consensus: ${rawConsensus.length}, Filtered: ${formatted.filteredConsensus.length}`);
+    console.log(`[Consensus API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
-      totalPicks: rawPicks.length,
-      normalizedCount: normalizedPicks.length,
+      totalPicks: todaysPicks.length, // Today's picks only
+      normalizedCount: todaysPicks.length, // Today's picks only
       capperCount: capperCount,
       consensusCount: consensus.length,
-      consensus: consensus, // Now filtered to today's games only
+      consensus: consensus, // Filtered to today's games only
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
       picksByCapper: picksByCapper,
-      allPicks: normalizedPicks,
+      allPicks: todaysPicks, // Today's picks only
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
