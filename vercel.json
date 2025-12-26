@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/:path((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.dailyaibetting.com"
+        }
+      ],
+      "destination": "https://dailyaibetting.com/:path",
+      "permanent": true
+    }
+  ]
+}
