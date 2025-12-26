@@ -1,0 +1,19 @@
+{
+  "name": "dailyai-betting-bot",
+  "version": "1.0.0",
+  "description": "Discord/Telegram bot for DailyAI Betting fire picks",
+  "main": "discord-bot.js",
+  "scripts": {
+    "start": "node discord-bot.js",
+    "discord": "node discord-bot.js",
+    "telegram": "node telegram-bot.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

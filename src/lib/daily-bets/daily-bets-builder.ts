@@ -345,16 +345,31 @@ export function generateMLBAnalysis(
 
 /**
  * Generate big money parlays (long-shot builds)
+ * ONLY generates parlays on exceptional days with strong consensus
+ * - Requires 6+ fire picks (3+ cappers each)
+ * - Requires at least 2 picks with 5+ cappers
+ * - This makes it a special occasion, not an everyday occurrence
  */
 export function generateBigMoneyParlays(
   consensus: ConsensusPick[]
 ): BigMoneyParlay[] {
   const parlays: BigMoneyParlay[] = [];
 
-  // Sort by confidence
-  const sorted = [...consensus].sort((a, b) => b.capperCount - a.capperCount);
+  // Only show big money parlays on exceptional days
+  const firePicks = consensus.filter(p => p.capperCount >= 3);
+  const strongPicks = consensus.filter(p => p.capperCount >= 5);
 
-  // Generate 4-leg parlay (very high risk)
+  // Requirements for big money parlays:
+  // - At least 6 fire picks AND
+  // - At least 2 strong picks (5+ cappers)
+  if (firePicks.length < 6 || strongPicks.length < 2) {
+    return []; // Not an exceptional day - no long shots
+  }
+
+  // Sort by capper count for best quality legs
+  const sorted = [...firePicks].sort((a, b) => b.capperCount - a.capperCount);
+
+  // Generate 4-leg parlay (very high risk) - only from fire picks
   if (sorted.length >= 4) {
     const legs4: ConsensusPick[] = [];
     for (const pick of sorted) {
@@ -374,8 +389,8 @@ export function generateBigMoneyParlays(
     }
   }
 
-  // Generate 5-leg parlay (extreme risk)
-  if (sorted.length >= 5) {
+  // Generate 5-leg parlay (extreme risk) - requires even more fire picks
+  if (sorted.length >= 7) { // Need 7+ fire picks for the 5-leg
     const legs5: ConsensusPick[] = [];
     for (const pick of sorted) {
       if (legs5.length >= 5) break;

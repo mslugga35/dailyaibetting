@@ -1,0 +1,162 @@
+{
+  "name": "DailyAI Betting - Fire Picks Notifications",
+  "description": "Sends fire picks to Discord and Telegram channels daily",
+  "nodes": [
+    {
+      "id": "schedule-morning",
+      "name": "Morning Alert (10 AM ET)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 200],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 10 * * *" }]
+        }
+      },
+      "notes": "Sends morning fire picks at 10 AM ET"
+    },
+    {
+      "id": "schedule-evening",
+      "name": "Evening Alert (5 PM ET)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 400],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 17 * * *" }]
+        }
+      },
+      "notes": "Sends evening fire picks at 5 PM ET"
+    },
+    {
+      "id": "webhook-trigger",
+      "name": "Manual Trigger Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 600],
+      "parameters": {
+        "path": "fire-picks-notify",
+        "httpMethod": "POST"
+      },
+      "notes": "Manual trigger via webhook for testing"
+    },
+    {
+      "id": "fetch-fire-picks",
+      "name": "Fetch Fire Picks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [350, 400],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/consensus",
+        "method": "GET",
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "filter-fire-picks",
+      "name": "Filter Fire Picks (3+)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [550, 400],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst topPicks = response.topOverall || [];\n\n// Filter to fire picks only (3+ cappers)\nconst firePicks = topPicks\n  .filter(p => p.capperCount >= 3)\n  .slice(0, 10);\n\nif (firePicks.length === 0) {\n  console.log('No fire picks available');\n  return [];\n}\n\nconst today = new Date().toLocaleDateString('en-US', {\n  weekday: 'long',\n  month: 'long',\n  day: 'numeric'\n});\n\nconsole.log(`Found ${firePicks.length} fire picks`);\n\nreturn [{\n  json: {\n    picks: firePicks,\n    pickCount: firePicks.length,\n    date: today\n  }\n}];"
+      }
+    },
+    {
+      "id": "format-discord",
+      "name": "Format Discord Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300],
+      "parameters": {
+        "jsCode": "const { picks, pickCount, date } = $input.first().json;\n\nconst getFireEmoji = (count) => {\n  if (count >= 7) return '🔥🔥🔥';\n  if (count >= 5) return '🔥🔥';\n  return '🔥';\n};\n\nconst fields = picks.map((pick, i) => ({\n  name: `${getFireEmoji(pick.capperCount)} ${pick.sport}`,\n  value: `**${pick.bet}**\\n${pick.matchup || 'Game'}\\n${pick.capperCount} cappers`,\n  inline: true\n}));\n\nconst embed = {\n  title: `🔥 Fire Picks - ${date}`,\n  description: `${pickCount} consensus picks where 3+ experts agree\\n\\n[View All Picks](https://dailyaibetting.com)`,\n  color: 1097593, // Emerald green\n  fields: fields,\n  footer: {\n    text: 'DailyAI Betting'\n  },\n  timestamp: new Date().toISOString()\n};\n\nreturn [{ json: { embeds: [embed] } }];"
+      }
+    },
+    {
+      "id": "format-telegram",
+      "name": "Format Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 500],
+      "parameters": {
+        "jsCode": "const { picks, pickCount, date } = $input.first().json;\n\nconst getFireEmoji = (count) => {\n  if (count >= 7) return '🔥🔥🔥';\n  if (count >= 5) return '🔥🔥';\n  return '🔥';\n};\n\nlet message = `🔥 <b>Fire Picks - ${date}</b>\\n`;\nmessage += `━━━━━━━━━━━━━━━━━━\\n\\n`;\n\npicks.forEach((pick) => {\n  const fire = getFireEmoji(pick.capperCount);\n  message += `${fire} <b>${pick.sport}</b>\\n`;\n  message += `📍 ${pick.matchup || 'Game'}\\n`;\n  message += `✅ <b>${pick.bet}</b>\\n`;\n  message += `👥 ${pick.capperCount} cappers agree\\n\\n`;\n});\n\nmessage += `━━━━━━━━━━━━━━━━━━\\n`;\nmessage += `🌐 <a href=\"https://dailyaibetting.com\">View All Picks</a>`;\n\nreturn [{ json: { text: message, parse_mode: 'HTML' } }];"
+      }
+    },
+    {
+      "id": "send-discord",
+      "name": "Send to Discord",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [1000, 300],
+      "parameters": {
+        "operation": "sendMessage",
+        "webhookUri": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "content": "",
+        "options": {
+          "embeds": "={{ $json.embeds }}"
+        }
+      },
+      "notes": "Set DISCORD_WEBHOOK_URL in n8n environment variables"
+    },
+    {
+      "id": "send-telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1000, 500],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": false
+        }
+      },
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      },
+      "notes": "Set up Telegram Bot credentials in n8n"
+    },
+    {
+      "id": "no-picks",
+      "name": "No Picks Handler",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [750, 650],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Morning Alert (10 AM ET)": {
+      "main": [[{ "node": "Fetch Fire Picks", "type": "main", "index": 0 }]]
+    },
+    "Evening Alert (5 PM ET)": {
+      "main": [[{ "node": "Fetch Fire Picks", "type": "main", "index": 0 }]]
+    },
+    "Manual Trigger Webhook": {
+      "main": [[{ "node": "Fetch Fire Picks", "type": "main", "index": 0 }]]
+    },
+    "Fetch Fire Picks": {
+      "main": [[{ "node": "Filter Fire Picks (3+)", "type": "main", "index": 0 }]]
+    },
+    "Filter Fire Picks (3+)": {
+      "main": [[
+        { "node": "Format Discord Message", "type": "main", "index": 0 },
+        { "node": "Format Telegram Message", "type": "main", "index": 0 }
+      ]]
+    },
+    "Format Discord Message": {
+      "main": [[{ "node": "Send to Discord", "type": "main", "index": 0 }]]
+    },
+    "Format Telegram Message": {
+      "main": [[{ "node": "Send to Telegram", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
