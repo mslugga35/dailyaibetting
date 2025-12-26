@@ -28,12 +28,12 @@ import {
 } from 'lucide-react';
 
 const sports = [
-  { name: 'MLB', href: '/picks/mlb' },
-  { name: 'NFL', href: '/picks/nfl' },
-  { name: 'NBA', href: '/picks/nba' },
-  { name: 'NHL', href: '/picks/nhl' },
-  { name: 'NCAAF', href: '/picks/ncaaf' },
-  { name: 'NCAAB', href: '/picks/ncaab' },
+  { name: 'NFL', href: '/nfl-picks-today' },
+  { name: 'NBA', href: '/nba-picks-today' },
+  { name: 'MLB', href: '/mlb-picks-today' },
+  { name: 'NHL', href: '/nhl-picks-today' },
+  { name: 'CFB', href: '/cfb-picks-today' },
+  { name: 'CBB', href: '/cbb-picks-today' },
 ];
 
 const navItems = [

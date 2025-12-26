@@ -28,6 +28,7 @@ const routeLabels: Record<string, string> = {
   'daily-bets': 'Daily Bets',
   'trends': 'Trends',
   'advertise': 'Advertise',
+  'games': 'Games',
 };
 
 interface BreadcrumbsProps {

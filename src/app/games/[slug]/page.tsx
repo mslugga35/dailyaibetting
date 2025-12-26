@@ -19,6 +19,21 @@ interface GamePick {
   cappers: string[];
 }
 
+// Map sport codes to their URL paths
+function getSportPageUrl(sport: string): string {
+  const sportMap: Record<string, string> = {
+    'NFL': '/nfl-picks-today',
+    'NBA': '/nba-picks-today',
+    'MLB': '/mlb-picks-today',
+    'NHL': '/nhl-picks-today',
+    'NCAAF': '/cfb-picks-today',
+    'CFB': '/cfb-picks-today',
+    'NCAAB': '/cbb-picks-today',
+    'CBB': '/cbb-picks-today',
+  };
+  return sportMap[sport.toUpperCase()] || '/picks';
+}
+
 export default function GamePage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -195,7 +210,7 @@ export default function GamePage() {
               <Link href="/">Today&apos;s Consensus</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/${gameInfo.sport.toLowerCase()}-picks-today`}>
+              <Link href={getSportPageUrl(gameInfo.sport)}>
                 All {gameInfo.sport} Picks
               </Link>
             </Button>
