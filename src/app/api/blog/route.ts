@@ -110,21 +110,9 @@ export async function POST(request: Request) {
     const apiKey = request.headers.get('x-api-key');
     const expectedKey = process.env.BLOG_API_KEY || 'dailyai-blog-secret-2025';
 
-    // Debug: Log headers (remove after testing)
-    console.log('API Key received:', apiKey);
-    console.log('API Key expected:', expectedKey);
-
     if (apiKey !== expectedKey) {
-      // Return detailed error for debugging
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Unauthorized',
-          debug: {
-            received: apiKey ? `${apiKey.substring(0, 5)}...` : 'none',
-            expectedLength: expectedKey.length
-          }
-        },
+        { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
