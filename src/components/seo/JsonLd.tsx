@@ -10,10 +10,17 @@ export function WebsiteJsonLd() {
       '@type': 'Organization',
       name: 'DailyAI Betting',
       url: 'https://dailyaibetting.com',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://dailyaibetting.com/og-image.png',
+      },
     },
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://dailyaibetting.com/picks?sport={search_term_string}',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: 'https://dailyaibetting.com/picks?sport={search_term_string}',
+      },
       'query-input': 'required name=search_term_string',
     },
   };
@@ -61,6 +68,7 @@ export function FAQJsonLd() {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
+    name: 'DailyAI Betting FAQ',
     mainEntity: [
       {
         '@type': 'Question',
