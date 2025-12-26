@@ -16,15 +16,18 @@ export async function GET() {
     // Fetch all picks from data sources (pre-filtered by date)
     const rawPicks = await getAllPicksFromSources();
 
-    // Normalize and build consensus
+    // Normalize picks
     const normalizedPicks = normalizePicks(rawPicks);
-    const consensus = buildConsensus(normalizedPicks);
+
+    // CRITICAL: Filter picks using ESPN API BEFORE building consensus
+    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
+    console.log(`[Daily Bets API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks`);
+
+    // Build consensus from ESPN-filtered picks only
+    const consensus = buildConsensus(todaysPicks);
 
     // Format consensus output
     const formatted = formatConsensusOutput(consensus);
-
-    // Filter picks using ESPN API (validates teams are actually playing today)
-    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
 
     // Build daily bets with enhanced analysis
     const dailyBets = buildDailyBets(
@@ -34,7 +37,7 @@ export async function GET() {
       todaysPicks.length
     );
 
-    console.log(`[Daily Bets API] Raw: ${rawPicks.length}, ESPN Filtered: ${todaysPicks.length}, Consensus: ${formatted.filteredConsensus.length}`);
+    console.log(`[Daily Bets API] Today's picks: ${todaysPicks.length}, Consensus: ${formatted.filteredConsensus.length}`);
 
     return NextResponse.json({
       success: true,

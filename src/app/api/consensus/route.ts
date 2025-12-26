@@ -36,15 +36,19 @@ export async function GET(request: Request) {
     // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
     const rawPicks = await getAllPicksFromSources();
 
-    // Normalize and build consensus
+    // Normalize picks
     const normalizedPicks = normalizePicks(rawPicks);
-    const rawConsensus = buildConsensus(normalizedPicks);
+
+    // CRITICAL: Filter picks using ESPN API BEFORE building consensus
+    // This ensures only teams actually playing today are included
+    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
+    console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks`);
+
+    // Build consensus from ESPN-filtered picks only
+    const rawConsensus = buildConsensus(todaysPicks);
 
     // Format output
     const formatted = formatConsensusOutput(rawConsensus);
-
-    // Filter picks using ESPN API (validates teams are actually playing today)
-    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
 
     // Use filtered consensus
     let consensus = formatted.filteredConsensus;
