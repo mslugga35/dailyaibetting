@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
 import { EmailCapturePopup } from "@/components/monetization/EmailCapture";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -107,7 +108,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          <div className="container px-4 pt-4">
+            <Breadcrumbs />
+          </div>
+          {children}
+        </main>
         <Footer />
         <EmailCapturePopup />
       </body>

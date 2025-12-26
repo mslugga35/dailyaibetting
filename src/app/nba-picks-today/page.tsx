@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Target, RefreshCw, Loader2, Flame } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
+import { SportQuickNav } from '@/components/ui/breadcrumbs';
 import Link from 'next/link';
 
 export default function NBAPicksTodayPage() {
@@ -56,6 +57,9 @@ export default function NBAPicksTodayPage() {
           </Button>
         </div>
       </div>
+
+      {/* Sport Quick Nav */}
+      <SportQuickNav currentSport="NBA" />
 
       {/* Stats */}
       {nbaPicks.length > 0 && (
