@@ -111,9 +111,9 @@ export async function POST(request: Request) {
 
     // Verify API key for automation
     const apiKey = request.headers.get('x-api-key');
-    const expectedKey = process.env.BLOG_API_KEY;
+    const expectedKey = process.env.BLOG_API_KEY || 'dailyai-blog-secret-2025';
 
-    if (expectedKey && apiKey !== expectedKey) {
+    if (apiKey !== expectedKey) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
