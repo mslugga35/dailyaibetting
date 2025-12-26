@@ -1,0 +1,126 @@
+{
+  "name": "DailyAI Betting - Auto Track Results",
+  "description": "Saves top consensus picks daily and grades them after games complete",
+  "nodes": [
+    {
+      "id": "schedule-save",
+      "name": "Daily Save Trigger (6 PM ET)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 200],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 18 * * *" }]
+        }
+      },
+      "notes": "Runs at 6 PM ET to save today's picks before games start"
+    },
+    {
+      "id": "schedule-grade",
+      "name": "Daily Grade Trigger (10 AM ET)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 400],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 10 * * *" }]
+        }
+      },
+      "notes": "Runs at 10 AM ET to grade yesterday's picks"
+    },
+    {
+      "id": "fetch-consensus",
+      "name": "Fetch Today's Consensus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 200],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/consensus",
+        "method": "GET",
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "extract-top-picks",
+      "name": "Extract Top 3 Fire Picks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 200],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst topPicks = response.topOverall || [];\n\n// Get top 3 fire picks (3+ cappers)\nconst firePicks = topPicks\n  .filter(p => p.capperCount >= 3)\n  .slice(0, 3)\n  .map((pick, index) => ({\n    sport: pick.sport,\n    team: pick.standardizedTeam || pick.team,\n    opponent: pick.opponent || '',\n    bet_type: pick.betType,\n    line: pick.line || pick.bet?.match(/([+-]?\\d+\\.?\\d*|ML|O\\s*\\d+|U\\s*\\d+)/i)?.[0] || '',\n    capper_count: pick.capperCount,\n    rank_position: index + 1\n  }));\n\nconsole.log(`Found ${firePicks.length} fire picks to save`);\n\nreturn [{ json: { picks: firePicks } }];"
+      }
+    },
+    {
+      "id": "save-picks",
+      "name": "Save to Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 200],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/results",
+        "method": "POST",
+        "body": {
+          "action": "save_picks",
+          "picks": "={{ $json.picks }}"
+        },
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "fetch-pending",
+      "name": "Fetch Pending Picks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [300, 400],
+      "parameters": {
+        "url": "https://dailyaibetting.com/api/results?view=pending",
+        "method": "GET",
+        "options": { "timeout": 30000 }
+      }
+    },
+    {
+      "id": "check-espn-scores",
+      "name": "Check ESPN for Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 400],
+      "parameters": {
+        "jsCode": "// Get pending picks\nconst pending = $input.first().json.data || [];\n\nif (pending.length === 0) {\n  console.log('No pending picks to grade');\n  return [];\n}\n\n// Filter to yesterday's picks only\nconst yesterday = new Date();\nyesterday.setDate(yesterday.getDate() - 1);\nconst yesterdayStr = yesterday.toISOString().split('T')[0];\n\nconst toGrade = pending.filter(p => p.pick_date === yesterdayStr);\nconsole.log(`${toGrade.length} picks from yesterday to grade`);\n\n// For now, return picks that need manual grading\n// In future, integrate with ESPN scores API for auto-grading\nreturn toGrade.map(pick => ({\n  json: {\n    id: pick.id,\n    pick_date: pick.pick_date,\n    sport: pick.sport,\n    team: pick.team,\n    bet_type: pick.bet_type,\n    line: pick.line,\n    needs_grading: true\n  }\n}));"
+      },
+      "notes": "TODO: Add ESPN scores API integration for auto-grading"
+    },
+    {
+      "id": "notify-grading",
+      "name": "Send Grading Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 400],
+      "parameters": {
+        "jsCode": "const picksToGrade = $input.all();\n\nif (picksToGrade.length === 0) {\n  return [{ json: { message: 'No picks to grade' } }];\n}\n\nconst summary = picksToGrade.map(p => \n  `${p.json.team} ${p.json.line} (${p.json.sport})`\n).join('\\n');\n\nconsole.log('Picks needing grading:\\n' + summary);\n\n// TODO: Send Discord/email notification\nreturn [{ json: { \n  count: picksToGrade.length,\n  picks: summary,\n  grading_url: 'https://dailyaibetting.com/admin/grade'\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Save Trigger (6 PM ET)": {
+      "main": [[{ "node": "Fetch Today's Consensus", "type": "main", "index": 0 }]]
+    },
+    "Fetch Today's Consensus": {
+      "main": [[{ "node": "Extract Top 3 Fire Picks", "type": "main", "index": 0 }]]
+    },
+    "Extract Top 3 Fire Picks": {
+      "main": [[{ "node": "Save to Database", "type": "main", "index": 0 }]]
+    },
+    "Daily Grade Trigger (10 AM ET)": {
+      "main": [[{ "node": "Fetch Pending Picks", "type": "main", "index": 0 }]]
+    },
+    "Fetch Pending Picks": {
+      "main": [[{ "node": "Check ESPN for Scores", "type": "main", "index": 0 }]]
+    },
+    "Check ESPN for Scores": {
+      "main": [[{ "node": "Send Grading Notification", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
