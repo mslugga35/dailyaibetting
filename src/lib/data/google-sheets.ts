@@ -73,9 +73,10 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       console.log(`[${sheetName}] Has structured columns, processing as standard sheet`);
     }
 
-    // Get current time for 24-hour filter
+    // Get today's date in Eastern timezone for strict TODAY filter
     const now = new Date();
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const todayStr = todayET.toISOString().split('T')[0]; // YYYY-MM-DD format
 
     // Map rows to RawPick objects
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string | number | null; f?: string } | null)[] }) => {
@@ -102,25 +103,43 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       };
     });
 
-    // Filter: must have pick (matchup can be empty - team extracted from pick text)
-    // RunDate within last 24 hours
+    // Filter: must have pick and be from TODAY only (not yesterday)
     return picks.filter(p => {
       if (!p.pick) return false;
 
-      // If no RunDate, use date field
+      // If no date, reject
       const dateToCheck = p.runDate || p.date;
       if (!dateToCheck) return false;
 
-      // Try to parse the date
-      const pickTime = new Date(dateToCheck);
-      if (isNaN(pickTime.getTime())) {
-        // If can't parse, check if it matches today's date string
-        const todayStr = now.toISOString().split('T')[0];
-        return dateToCheck.includes(todayStr) || dateToCheck === 'TODAY';
+      // Handle "TODAY" literal
+      if (dateToCheck.toUpperCase() === 'TODAY') return true;
+
+      // Try to parse and compare to today
+      let pickDateStr = dateToCheck.split('T')[0];
+
+      // Handle MM/DD/YYYY format
+      const slashMatch = pickDateStr.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+      if (slashMatch) {
+        const month = slashMatch[1].padStart(2, '0');
+        const day = slashMatch[2].padStart(2, '0');
+        const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : todayET.getFullYear();
+        pickDateStr = `${year}-${month}-${day}`;
       }
 
-      // Check if within last 24 hours
-      return pickTime >= twentyFourHoursAgo;
+      // Handle "Dec 26" format
+      const monthNameMatch = pickDateStr.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(\d{1,2})/i);
+      if (monthNameMatch) {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const monthAbbr = pickDateStr.slice(0, 3).toLowerCase();
+        const monthNum = monthNames.indexOf(monthAbbr) + 1;
+        if (monthNum > 0) {
+          const day = monthNameMatch[1].padStart(2, '0');
+          pickDateStr = `${todayET.getFullYear()}-${String(monthNum).padStart(2, '0')}-${day}`;
+        }
+      }
+
+      // Strict TODAY check - must match today's date exactly
+      return pickDateStr === todayStr;
     });
   } catch (error) {
     console.error(`Error fetching sheet ${sheetName}:`, error);
@@ -138,7 +157,10 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
  */
 function parseManualPicksSheet(rows: { c: ({ v: string } | null)[] }[], headers: string[]): RawPick[] {
   const picks: RawPick[] = [];
-  const today = new Date().toISOString().split('T')[0];
+  // Use Eastern timezone for today's date
+  const now = new Date();
+  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const today = todayET.toISOString().split('T')[0];
 
   // Sport detection patterns
   const sportTeams: Record<string, string[]> = {
@@ -317,7 +339,10 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
   let currentCapper = '';
   let currentSport = '';
-  const today = new Date().toISOString().split('T')[0];
+  // Use Eastern timezone for today's date
+  const now = new Date();
+  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const today = todayET.toISOString().split('T')[0];
 
   // Sport name mapping - handle various formats
   const sportMap: Record<string, string> = {

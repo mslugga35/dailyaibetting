@@ -19,18 +19,19 @@ export async function GET() {
     const normalizedPicks = normalizePicks(rawPicks);
     const consensus = buildConsensus(normalizedPicks);
 
-    // Format consensus output
+    // Format consensus output (includes game schedule filtering)
     const formatted = formatConsensusOutput(consensus);
 
     // Build daily bets with enhanced analysis
+    // Use filteredConsensus to only include today's actual games
     const dailyBets = buildDailyBets(
-      consensus,
+      formatted.filteredConsensus, // Use filtered consensus, not raw
       normalizedPicks,
       formatted.bySport,
       rawPicks.length
     );
 
-    console.log(`[Daily Bets API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Consensus: ${consensus.length}`);
+    console.log(`[Daily Bets API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Consensus: ${consensus.length}, Filtered: ${formatted.filteredConsensus.length}`);
 
     return NextResponse.json({
       success: true,

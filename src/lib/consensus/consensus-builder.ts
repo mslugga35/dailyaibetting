@@ -2,6 +2,7 @@
 // Follows exact rules from ConsensusProject
 
 import { standardizeTeamName, identifySport } from './team-mappings';
+import { hasGameAlreadyHappened, hasSportGamesToday, getTodaysScheduleSummary } from './game-schedule';
 
 export type BetType = 'ML' | 'SPREAD' | 'OVER' | 'UNDER' | 'F5_ML' | 'PROP';
 
@@ -510,28 +511,69 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
 }
 
 /**
+ * Extract team name from consensus pick for schedule checking
+ */
+function getTeamFromPick(pick: ConsensusPick): string {
+  // For totals, get first team from "Team1/Team2 Over X"
+  if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
+    const teams = pick.bet.split(/\s+(?:Over|Under)\s+/i)[0];
+    const firstTeam = teams.split('/')[0].trim();
+    return firstTeam;
+  }
+  // For spreads/ML, extract team name
+  const team = pick.bet.replace(/\s+(ML|[+-][\d.]+).*$/, '').trim();
+  return team;
+}
+
+/**
  * Format consensus output
  * Based on consensusinstructions.txt
+ * Filters out games that have already happened
  */
 export function formatConsensusOutput(consensus: ConsensusPick[]): {
   topOverall: ConsensusPick[];
   bySport: Record<string, ConsensusPick[]>;
   fadeThePublic: ConsensusPick[];
+  filteredConsensus: ConsensusPick[]; // All consensus picks filtered to today's games only
 } {
-  // Find sports with at least one "fire" pick (3+ cappers)
-  // This filters out sports that don't have games today (random 2-capper picks)
+  // Log today's schedule for debugging
+  const schedule = getTodaysScheduleSummary();
+  console.log('[Consensus] Today\'s game schedule:', JSON.stringify(schedule));
+
+  // STEP 1: Filter out games that have already happened (yesterday's games)
+  const todaysGamesOnly = consensus.filter(pick => {
+    const team = getTeamFromPick(pick);
+
+    // Check if this game already happened
+    if (hasGameAlreadyHappened(team, pick.sport)) {
+      console.log(`[Consensus] Filtering out ${pick.bet} (${pick.sport}) - game already happened`);
+      return false;
+    }
+
+    // Check if sport has games today
+    if (!hasSportGamesToday(pick.sport)) {
+      console.log(`[Consensus] Filtering out ${pick.bet} - ${pick.sport} has no games today`);
+      return false;
+    }
+
+    return true;
+  });
+
+  console.log(`[Consensus] After schedule filter: ${todaysGamesOnly.length} picks (was ${consensus.length})`);
+
+  // STEP 2: Find sports with at least one "fire" pick (3+ cappers)
   const sportsWithFire = new Set<string>();
-  for (const pick of consensus) {
+  for (const pick of todaysGamesOnly) {
     if (pick.isFire) {
       sportsWithFire.add(pick.sport);
     }
   }
 
-  // Filter consensus to only sports with fire picks (indicates active games)
-  const activeConsensus = consensus.filter(p => sportsWithFire.has(p.sport));
+  // Filter to only sports with fire picks (indicates real consensus)
+  const activeConsensus = todaysGamesOnly.filter(p => sportsWithFire.has(p.sport));
 
-  // Top 5 overall from active sports (sorted by capper count)
-  const topOverall = activeConsensus.slice(0, 5);
+  // Top 6 overall from active sports (sorted by capper count)
+  const topOverall = activeConsensus.slice(0, 6);
 
   // Group by sport - only include sports with fire picks
   const bySport: Record<string, ConsensusPick[]> = {};
@@ -547,5 +589,5 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
     .filter(p => p.capperCount >= 7)
     .slice(0, 5);
 
-  return { topOverall, bySport, fadeThePublic };
+  return { topOverall, bySport, fadeThePublic, filteredConsensus: activeConsensus };
 }

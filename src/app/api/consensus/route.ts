@@ -33,7 +33,13 @@ export async function GET(request: Request) {
 
     // Normalize and build consensus
     const normalizedPicks = normalizePicks(rawPicks);
-    let consensus = buildConsensus(normalizedPicks);
+    const rawConsensus = buildConsensus(normalizedPicks);
+
+    // Format output (includes game schedule filtering for today's games only)
+    const formatted = formatConsensusOutput(rawConsensus);
+
+    // Use filtered consensus (today's games only)
+    let consensus = formatted.filteredConsensus;
 
     // Filter by sport if specified
     if (sport && sport !== 'ALL') {
@@ -43,15 +49,12 @@ export async function GET(request: Request) {
     // Filter by minimum capper count
     consensus = consensus.filter(p => p.capperCount >= minCappers);
 
-    // Format output
-    const formatted = formatConsensusOutput(consensus);
-
-    // Group picks by capper for All Picks view (24-hour filter applied in data source)
+    // Group picks by capper for All Picks view
     const picksByCapper = groupPicksByCapper(normalizedPicks);
     const capperCount = Object.keys(picksByCapper).length;
 
     // Debug logging
-    console.log(`[Consensus API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}`);
+    console.log(`[Consensus API] Raw: ${rawPicks.length}, Normalized: ${normalizedPicks.length}, Cappers: ${capperCount}, Raw Consensus: ${rawConsensus.length}, Filtered: ${formatted.filteredConsensus.length}`);
 
     return NextResponse.json({
       success: true,
@@ -61,7 +64,7 @@ export async function GET(request: Request) {
       normalizedCount: normalizedPicks.length,
       capperCount: capperCount,
       consensusCount: consensus.length,
-      consensus: consensus,
+      consensus: consensus, // Now filtered to today's games only
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
