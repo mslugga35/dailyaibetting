@@ -1,14 +1,40 @@
-'use client';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
-import { Brain, RefreshCw, Target, Loader2 } from 'lucide-react';
+import { Brain, Target } from 'lucide-react';
 import Link from 'next/link';
-import { useConsensus } from '@/lib/hooks/use-consensus';
+import { RefreshButton } from '@/components/ui/RefreshButton';
 
-export default function HomePage() {
-  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus();
+// Server-side data fetching
+async function getConsensusData() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+    const response = await fetch(`${baseUrl}/api/consensus`, {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      console.error('[HomePage] API error:', response.status);
+      return null;
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('[HomePage] Fetch error:', error);
+    return null;
+  }
+}
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export default async function HomePage() {
+  const data = await getConsensusData();
+
+  const topOverall = data?.topOverall || [];
+  const bySport = data?.bySport || {};
+  const totalPicks = data?.totalPicks || 0;
+  const firePicksCount = topOverall.filter((p: { capperCount: number }) => p.capperCount >= 3).length;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -16,9 +42,6 @@ export default function HomePage() {
     month: 'long',
     day: 'numeric',
   });
-
-  const totalPicks = data?.totalPicks || 0;
-  const firePicksCount = topOverall.filter(p => p.capperCount >= 3).length;
 
   return (
     <div className="container px-4 py-8">
@@ -52,16 +75,7 @@ export default function HomePage() {
             Last updated: {new Date().toLocaleTimeString()}
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <RefreshButton />
       </div>
 
       {/* Quick Stats - Only show if we have real data */}
@@ -88,27 +102,16 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading picks...</span>
-        </div>
-      )}
-
       {/* Error State */}
-      {error && !isLoading && (
+      {!data && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Unable to load picks. Please try refreshing.</p>
-          <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
-          <Button variant="outline" className="mt-4" onClick={() => refetch()}>
-            Try Again
-          </Button>
+          <RefreshButton className="mt-4" />
         </Card>
       )}
 
       {/* Main Content */}
-      {!isLoading && !error && (
+      {data && (
         <div className="max-w-4xl mx-auto">
           <Card>
             <CardHeader>
