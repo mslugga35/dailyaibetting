@@ -89,7 +89,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      _version: 'v8-with-counts',
+      _version: 'v9-final-fix',
       _libertyDebug: libertyDebug,
       _libertyNCAAB: libertyNCAAB,
       _libertyOther: libertyOther,

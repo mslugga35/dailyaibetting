@@ -525,5 +525,27 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   console.log(`[DataSources] Sheet: ${sheetPicks.length} picks`, sheetSports);
   console.log(`[DataSources] Doc: ${docPicks.length} picks`, docSports);
 
-  return [...sheetPicks, ...docPicks];
+  // Combine all picks
+  const allPicks = [...sheetPicks, ...docPicks];
+
+  // FINAL fix: Override any Liberty/known NCAAB team picks to correct sport
+  // This is the last chance to fix sport misclassification
+  const ncaabTeams = ['liberty', 'gonzaga', 'wazzu', 'colgate', 'seattle', 'pepperdine', 'ul-monroe', 'winthrop'];
+  let fixCount = 0;
+  for (const pick of allPicks) {
+    const pickText = (pick.pick || '').toLowerCase();
+    const matchupText = (pick.matchup || '').toLowerCase();
+    const isNCAABTeam = ncaabTeams.some(t => pickText.includes(t) || matchupText.includes(t));
+
+    if (isNCAABTeam && pick.league !== 'NCAAB') {
+      console.log(`[getAllPicks] Fix: ${pick.service}/${pick.pick} from ${pick.league} -> NCAAB`);
+      pick.league = 'NCAAB';
+      fixCount++;
+    }
+  }
+  if (fixCount > 0) {
+    console.log(`[getAllPicks] Fixed ${fixCount} picks to NCAAB`);
+  }
+
+  return allPicks;
 }
