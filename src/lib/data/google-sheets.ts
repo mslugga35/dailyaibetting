@@ -478,16 +478,22 @@ function parseGoogleDocContent(content: string): RawPick[] {
   console.log(`[DocParser v2] Parsed ${picks.length} picks: NCAAB=${ncaabCount}, NCAAF=${ncaafCount}, NHL=${nhlCount}`);
 
   // Fix: Override any Liberty/Gonzaga/etc picks that are NOT NCAAB
-  for (const pick of picks) {
-    const teamLower = pick.matchup.toLowerCase();
-    const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
-                        teamLower.includes('wazzu') || teamLower.includes('colgate') ||
-                        teamLower.includes('seattle') || teamLower.includes('pepperdine');
+  let fixedCount = 0;
+  for (let i = 0; i < picks.length; i++) {
+    const pick = picks[i];
+    const teamLower = (pick.matchup || '').toLowerCase();
+    const pickLower = (pick.pick || '').toLowerCase();
+    const isKnownNCAAB = teamLower.includes('liberty') || pickLower.includes('liberty') ||
+                        teamLower.includes('gonzaga') || pickLower.includes('gonzaga') ||
+                        teamLower.includes('wazzu') || pickLower.includes('wazzu') ||
+                        teamLower.includes('colgate') || pickLower.includes('colgate');
     if (isKnownNCAAB && pick.league !== 'NCAAB') {
-      console.log(`[DocParser] Post-fix: ${pick.service}/${pick.matchup} from ${pick.league} -> NCAAB`);
-      pick.league = 'NCAAB';
+      console.log(`[DocParser] Post-fix #${i}: ${pick.service}/${pick.matchup}/${pick.pick} from ${pick.league} -> NCAAB`);
+      picks[i].league = 'NCAAB';
+      fixedCount++;
     }
   }
+  console.log(`[DocParser] Post-fix complete: fixed ${fixedCount} picks`);
 
   return picks;
 }

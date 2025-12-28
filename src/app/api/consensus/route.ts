@@ -84,7 +84,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      _version: 'v6-postfix',
+      _version: 'v7-postfix-enhanced',
       _libertyDebug: libertyDebug,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
