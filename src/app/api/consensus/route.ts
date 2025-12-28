@@ -80,12 +80,19 @@ export async function GET(request: Request) {
       service: p.service,
       league: p.league,
       pick: p.pick,
+      matchup: p.matchup,
     }));
+
+    // Count NCAAB vs other for Liberty
+    const libertyNCAAB = libertyDebug.filter(p => p.league === 'NCAAB').length;
+    const libertyOther = libertyDebug.length - libertyNCAAB;
 
     return NextResponse.json({
       success: true,
-      _version: 'v7-postfix-enhanced',
+      _version: 'v8-with-counts',
       _libertyDebug: libertyDebug,
+      _libertyNCAAB: libertyNCAAB,
+      _libertyOther: libertyOther,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,

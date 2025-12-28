@@ -495,6 +495,12 @@ function parseGoogleDocContent(content: string): RawPick[] {
   }
   console.log(`[DocParser] Post-fix complete: fixed ${fixedCount} picks`);
 
+  // Add debug marker to verify post-fix ran
+  if (picks.length > 0) {
+    (picks as any)._postFixRan = true;
+    (picks as any)._postFixCount = fixedCount;
+  }
+
   return picks;
 }
 
