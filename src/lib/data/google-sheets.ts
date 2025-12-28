@@ -395,17 +395,26 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
     // Check for sport header (various formats)
     // Order matters: check longer patterns first to avoid partial matches
-    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|NCAA Football|College Football|NFL Football|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?/i);
+    let lineToProcess = line;
+    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|NCAA Football|College Football|NFL Football|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?\s*/i);
     if (sportMatch) {
-      const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:$/, '').toLowerCase().trim();
+      const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:?\s*$/, '').toLowerCase().trim();
       currentSport = sportMap[sportText] || sportText.toUpperCase();
       console.log(`[DocParser] Sport header detected: "${sportText}" -> ${currentSport}`);
-      continue;
+
+      // Check if there's a pick on the same line after the sport header
+      const remainingLine = line.slice(sportMatch[0].length).trim();
+      if (remainingLine && remainingLine.match(/^[•\-\*]/)) {
+        // There's a pick on this line - process the remaining part
+        lineToProcess = remainingLine;
+      } else {
+        continue;
+      }
     }
 
     // Check for pick line: • Team +spread (odds) or Team -spread
     // Pattern: bullet point or dash, team name, spread/ML/total
-    const pickMatch = line.match(/^[•\-\*]\s*(.+?)\s*([+-]\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+)\s*(?:\(([^)]+)\))?/i);
+    const pickMatch = lineToProcess.match(/^[•\-\*]\s*(.+?)\s*([+-]\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+)\s*(?:\(([^)]+)\))?/i);
     if (pickMatch && currentCapper) {
       const team = pickMatch[1].trim();
       const betPart = pickMatch[2].trim();
@@ -430,8 +439,8 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
 
     // Alternative pick format without bullet: Team +spread
-    const altPickMatch = line.match(/^([A-Z][A-Za-z\s]+)\s+([+-]\d+\.?\d*|ML)\s*(?:\(|$)/i);
-    if (altPickMatch && currentCapper && !line.includes('[') && !line.includes(':')) {
+    const altPickMatch = lineToProcess.match(/^([A-Z][A-Za-z\s]+)\s+([+-]\d+\.?\d*|ML)\s*(?:\(|$)/i);
+    if (altPickMatch && currentCapper && !lineToProcess.includes('[') && !lineToProcess.includes(':')) {
       const team = altPickMatch[1].trim();
       const betPart = altPickMatch[2].trim();
       const pick = `${team} ${betPart}`;

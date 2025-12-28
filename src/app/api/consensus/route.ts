@@ -76,7 +76,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      _version: 'v2-ncaab-fix',
+      _version: 'v3-sport-inline',
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,
