@@ -422,9 +422,13 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
       // Fallback sport detection: if current sport is NCAAF but team is a known NCAAB team
       let sport = currentSport || 'ALL';
-      if (isLikelyNCAAB(team) && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+      const teamLower = team.toLowerCase();
+      const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
+                          teamLower.includes('wazzu') || teamLower.includes('colgate') ||
+                          teamLower.includes('seattle') || teamLower.includes('pepperdine');
+      if (isKnownNCAAB && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+        console.log(`[DocParser] Overriding sport for "${team}": ${sport} -> NCAAB`);
         sport = 'NCAAB';
-        console.log(`[DocParser] Overriding sport for ${team}: ${currentSport} -> NCAAB`);
       }
 
       picks.push({
@@ -447,9 +451,13 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
       // Fallback sport detection for NCAAB teams
       let sport = currentSport || 'ALL';
-      if (isLikelyNCAAB(team) && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+      const teamLower = team.toLowerCase();
+      const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
+                          teamLower.includes('wazzu') || teamLower.includes('colgate') ||
+                          teamLower.includes('seattle') || teamLower.includes('pepperdine');
+      if (isKnownNCAAB && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+        console.log(`[DocParser] Overriding sport for "${team}": ${sport} -> NCAAB`);
         sport = 'NCAAB';
-        console.log(`[DocParser] Overriding sport for ${team}: ${currentSport} -> NCAAB`);
       }
 
       picks.push({
