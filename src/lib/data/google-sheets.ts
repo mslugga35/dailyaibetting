@@ -454,7 +454,9 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
   }
 
-  console.log(`[DocParser] Parsed ${picks.length} picks from Google Doc`);
+  // Count NCAAB overrides for debugging
+  const ncaabCount = picks.filter(p => p.league === 'NCAAB').length;
+  console.log(`[DocParser v2] Parsed ${picks.length} picks, ${ncaabCount} NCAAB (including overrides)`);
   return picks;
 }
 
