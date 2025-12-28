@@ -473,7 +473,22 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
   // Count NCAAB overrides for debugging
   const ncaabCount = picks.filter(p => p.league === 'NCAAB').length;
-  console.log(`[DocParser v2] Parsed ${picks.length} picks, ${ncaabCount} NCAAB (including overrides)`);
+  const ncaafCount = picks.filter(p => p.league === 'NCAAF').length;
+  const nhlCount = picks.filter(p => p.league === 'NHL').length;
+  console.log(`[DocParser v2] Parsed ${picks.length} picks: NCAAB=${ncaabCount}, NCAAF=${ncaafCount}, NHL=${nhlCount}`);
+
+  // Fix: Override any Liberty/Gonzaga/etc picks that are NOT NCAAB
+  for (const pick of picks) {
+    const teamLower = pick.matchup.toLowerCase();
+    const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
+                        teamLower.includes('wazzu') || teamLower.includes('colgate') ||
+                        teamLower.includes('seattle') || teamLower.includes('pepperdine');
+    if (isKnownNCAAB && pick.league !== 'NCAAB') {
+      console.log(`[DocParser] Post-fix: ${pick.service}/${pick.matchup} from ${pick.league} -> NCAAB`);
+      pick.league = 'NCAAB';
+    }
+  }
+
   return picks;
 }
 
