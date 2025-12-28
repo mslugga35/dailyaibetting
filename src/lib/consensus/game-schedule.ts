@@ -289,9 +289,18 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
 
   const filtered: T[] = [];
 
+  // Sports where ESPN doesn't show all games (pass through without filtering)
+  const PASS_THROUGH_SPORTS = ['NCAAB', 'NCAAF'];
+
   for (const pick of picks) {
     const team = pick.standardizedTeam || pick.team || '';
     const sport = pick.sport;
+
+    // College sports: ESPN doesn't show all games, pass through
+    if (PASS_THROUGH_SPORTS.includes(sport)) {
+      filtered.push(pick);
+      continue;
+    }
 
     // Check if sport has games today
     const sportGames = gamesCache.games.get(sport);

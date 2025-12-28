@@ -68,35 +68,20 @@ export async function GET(request: Request) {
     // Debug logging
     console.log(`[Consensus API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
 
-    // Debug: Count picks by sport before and after consensus
-    const sportCounts: Record<string, number> = {};
-    for (const p of todaysPicks) {
-      sportCounts[p.sport] = (sportCounts[p.sport] || 0) + 1;
-    }
-    const consensusSportCounts: Record<string, number> = {};
-    for (const p of rawConsensus) {
-      consensusSportCounts[p.sport] = (consensusSportCounts[p.sport] || 0) + 1;
-    }
-
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
-      totalPicks: todaysPicks.length, // Today's picks only
-      normalizedCount: todaysPicks.length, // Today's picks only
+      totalPicks: todaysPicks.length,
+      normalizedCount: todaysPicks.length,
       capperCount: capperCount,
       consensusCount: consensus.length,
-      consensus: consensus, // Filtered to today's games only
+      consensus: consensus,
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
       picksByCapper: picksByCapper,
-      allPicks: todaysPicks, // Today's picks only
-      _debug: {
-        picksBySport: sportCounts,
-        consensusBySport: consensusSportCounts,
-        rawConsensusCount: rawConsensus.length,
-      },
+      allPicks: todaysPicks,
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
