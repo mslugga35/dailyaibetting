@@ -74,9 +74,18 @@ export async function GET(request: Request) {
     // Debug logging
     console.log(`[Consensus API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
 
+    // Debug: Find Liberty picks in raw data
+    const libertyDebug = rawPicks.filter(p => p.pick.toLowerCase().includes('liberty')).map(p => ({
+      site: p.site,
+      service: p.service,
+      league: p.league,
+      pick: p.pick,
+    }));
+
     return NextResponse.json({
       success: true,
-      _version: 'v4-inline-check',
+      _version: 'v5-liberty-debug',
+      _libertyDebug: libertyDebug,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,
