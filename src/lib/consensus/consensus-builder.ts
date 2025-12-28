@@ -542,21 +542,14 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
   // All picks passed here should be from today's date
   console.log(`[Consensus] Processing ${consensus.length} picks (pre-filtered by date)`);
 
-  // Find sports with at least one "fire" pick (3+ cappers)
-  const sportsWithFire = new Set<string>();
-  for (const pick of consensus) {
-    if (pick.isFire) {
-      sportsWithFire.add(pick.sport);
-    }
-  }
+  // Include ALL consensus picks (2+ cappers), not just sports with fire picks
+  // This ensures NBA/NCAAB with 2-capper consensus still appear
+  const activeConsensus = consensus;
 
-  // Filter to only sports with fire picks (indicates real consensus)
-  const activeConsensus = consensus.filter(p => sportsWithFire.has(p.sport));
-
-  // Top 6 overall from active sports (sorted by capper count)
+  // Top 6 overall (sorted by capper count)
   const topOverall = activeConsensus.slice(0, 6);
 
-  // Group by sport - only include sports with fire picks
+  // Group by sport - include ALL sports with consensus picks
   const bySport: Record<string, ConsensusPick[]> = {};
   for (const pick of activeConsensus) {
     if (!bySport[pick.sport]) {
@@ -570,7 +563,9 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
     .filter(p => p.capperCount >= 7)
     .slice(0, 5);
 
-  console.log(`[Consensus] Active sports: ${[...sportsWithFire].join(', ')}, Fire picks: ${activeConsensus.length}`);
+  const activeSports = Object.keys(bySport);
+  const fireCount = activeConsensus.filter(p => p.isFire).length;
+  console.log(`[Consensus] Active sports: ${activeSports.join(', ')}, Total: ${activeConsensus.length}, Fire: ${fireCount}`);
 
   return { topOverall, bySport, fadeThePublic, filteredConsensus: activeConsensus };
 }
