@@ -74,25 +74,8 @@ export async function GET(request: Request) {
     // Debug logging
     console.log(`[Consensus API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
 
-    // Debug: Find Liberty picks in raw data
-    const libertyDebug = rawPicks.filter(p => p.pick.toLowerCase().includes('liberty')).map(p => ({
-      site: p.site,
-      service: p.service,
-      league: p.league,
-      pick: p.pick,
-      matchup: p.matchup,
-    }));
-
-    // Count NCAAB vs other for Liberty
-    const libertyNCAAB = libertyDebug.filter(p => p.league === 'NCAAB').length;
-    const libertyOther = libertyDebug.length - libertyNCAAB;
-
     return NextResponse.json({
       success: true,
-      _version: 'v9-final-fix',
-      _libertyDebug: libertyDebug,
-      _libertyNCAAB: libertyNCAAB,
-      _libertyOther: libertyOther,
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,

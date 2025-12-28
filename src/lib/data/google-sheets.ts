@@ -344,21 +344,6 @@ function parseGoogleDocContent(content: string): RawPick[] {
   const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const today = todayET.toISOString().split('T')[0];
 
-  // Known college basketball teams (for fallback sport detection)
-  const ncaabTeams = [
-    'liberty', 'gonzaga', 'duke', 'kentucky', 'kansas', 'ucla', 'villanova',
-    'purdue', 'houston', 'uconn', 'arizona', 'michigan state', 'unc', 'north carolina',
-    'baylor', 'indiana', 'oregon', 'tennessee', 'auburn', 'arkansas', 'iowa',
-    'texas tech', 'san francisco', 'sf', 'wazzu', 'washington state', 'seattle',
-    'colgate', 'winthrop', 'ul-monroe', 'ul lafayette', 'ull', 'pepperdine',
-  ];
-
-  // Check if team name suggests NCAAB (college basketball)
-  const isLikelyNCAAB = (team: string): boolean => {
-    const lower = team.toLowerCase();
-    return ncaabTeams.some(t => lower.includes(t) || t.includes(lower.slice(0, 4)));
-  };
-
   // Sport name mapping - handle various formats
   const sportMap: Record<string, string> = {
     'ncaa basketball': 'NCAAB',
@@ -400,7 +385,6 @@ function parseGoogleDocContent(content: string): RawPick[] {
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:?\s*$/, '').toLowerCase().trim();
       currentSport = sportMap[sportText] || sportText.toUpperCase();
-      console.log(`[DocParser] Sport header detected: "${sportText}" -> ${currentSport}`);
 
       // Check if there's a pick on the same line after the sport header
       const remainingLine = line.slice(sportMatch[0].length).trim();
@@ -420,16 +404,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
       const betPart = pickMatch[2].trim();
       const pick = `${team} ${betPart}`;
 
-      // Fallback sport detection: if current sport is NCAAF but team is a known NCAAB team
-      let sport = currentSport || 'ALL';
-      const teamLower = team.toLowerCase();
-      const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
-                          teamLower.includes('wazzu') || teamLower.includes('colgate') ||
-                          teamLower.includes('seattle') || teamLower.includes('pepperdine');
-      if (isKnownNCAAB && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
-        console.log(`[DocParser] Overriding sport for "${team}": ${sport} -> NCAAB`);
-        sport = 'NCAAB';
-      }
+      const sport = currentSport || 'ALL';
 
       picks.push({
         site: 'GoogleDoc',
@@ -449,16 +424,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
       const betPart = altPickMatch[2].trim();
       const pick = `${team} ${betPart}`;
 
-      // Fallback sport detection for NCAAB teams
-      let sport = currentSport || 'ALL';
-      const teamLower = team.toLowerCase();
-      const isKnownNCAAB = teamLower.includes('liberty') || teamLower.includes('gonzaga') ||
-                          teamLower.includes('wazzu') || teamLower.includes('colgate') ||
-                          teamLower.includes('seattle') || teamLower.includes('pepperdine');
-      if (isKnownNCAAB && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
-        console.log(`[DocParser] Overriding sport for "${team}": ${sport} -> NCAAB`);
-        sport = 'NCAAB';
-      }
+      const sport = currentSport || 'ALL';
 
       picks.push({
         site: 'GoogleDoc',
@@ -469,36 +435,6 @@ function parseGoogleDocContent(content: string): RawPick[] {
         pick,
       });
     }
-  }
-
-  // Count NCAAB overrides for debugging
-  const ncaabCount = picks.filter(p => p.league === 'NCAAB').length;
-  const ncaafCount = picks.filter(p => p.league === 'NCAAF').length;
-  const nhlCount = picks.filter(p => p.league === 'NHL').length;
-  console.log(`[DocParser v2] Parsed ${picks.length} picks: NCAAB=${ncaabCount}, NCAAF=${ncaafCount}, NHL=${nhlCount}`);
-
-  // Fix: Override any Liberty/Gonzaga/etc picks that are NOT NCAAB
-  let fixedCount = 0;
-  for (let i = 0; i < picks.length; i++) {
-    const pick = picks[i];
-    const teamLower = (pick.matchup || '').toLowerCase();
-    const pickLower = (pick.pick || '').toLowerCase();
-    const isKnownNCAAB = teamLower.includes('liberty') || pickLower.includes('liberty') ||
-                        teamLower.includes('gonzaga') || pickLower.includes('gonzaga') ||
-                        teamLower.includes('wazzu') || pickLower.includes('wazzu') ||
-                        teamLower.includes('colgate') || pickLower.includes('colgate');
-    if (isKnownNCAAB && pick.league !== 'NCAAB') {
-      console.log(`[DocParser] Post-fix #${i}: ${pick.service}/${pick.matchup}/${pick.pick} from ${pick.league} -> NCAAB`);
-      picks[i].league = 'NCAAB';
-      fixedCount++;
-    }
-  }
-  console.log(`[DocParser] Post-fix complete: fixed ${fixedCount} picks`);
-
-  // Add debug marker to verify post-fix ran
-  if (picks.length > 0) {
-    (picks as any)._postFixRan = true;
-    (picks as any)._postFixCount = fixedCount;
   }
 
   return picks;
@@ -528,23 +464,17 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   // Combine all picks
   const allPicks = [...sheetPicks, ...docPicks];
 
-  // FINAL fix: Override any Liberty/known NCAAB team picks to correct sport
-  // This is the last chance to fix sport misclassification
+  // Fix sport misclassification for known NCAAB teams
+  // Teams like Liberty, Gonzaga, etc. should always be NCAAB (basketball), not NCAAF (football)
   const ncaabTeams = ['liberty', 'gonzaga', 'wazzu', 'colgate', 'seattle', 'pepperdine', 'ul-monroe', 'winthrop'];
-  let fixCount = 0;
   for (const pick of allPicks) {
     const pickText = (pick.pick || '').toLowerCase();
     const matchupText = (pick.matchup || '').toLowerCase();
     const isNCAABTeam = ncaabTeams.some(t => pickText.includes(t) || matchupText.includes(t));
 
     if (isNCAABTeam && pick.league !== 'NCAAB') {
-      console.log(`[getAllPicks] Fix: ${pick.service}/${pick.pick} from ${pick.league} -> NCAAB`);
       pick.league = 'NCAAB';
-      fixCount++;
     }
-  }
-  if (fixCount > 0) {
-    console.log(`[getAllPicks] Fixed ${fixCount} picks to NCAAB`);
   }
 
   return allPicks;
