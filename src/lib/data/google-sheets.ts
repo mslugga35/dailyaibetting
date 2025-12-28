@@ -433,5 +433,17 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
     fetchPicksFromGoogleDoc(),
   ]);
 
+  // Debug: log pick counts by source and sport
+  const sheetSports: Record<string, number> = {};
+  for (const p of sheetPicks) {
+    sheetSports[p.league] = (sheetSports[p.league] || 0) + 1;
+  }
+  const docSports: Record<string, number> = {};
+  for (const p of docPicks) {
+    docSports[p.league] = (docSports[p.league] || 0) + 1;
+  }
+  console.log(`[DataSources] Sheet: ${sheetPicks.length} picks`, sheetSports);
+  console.log(`[DataSources] Doc: ${docPicks.length} picks`, docSports);
+
   return [...sheetPicks, ...docPicks];
 }

@@ -36,6 +36,12 @@ export async function GET(request: Request) {
     // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
     const rawPicks = await getAllPicksFromSources();
 
+    // Count by source for debugging
+    const sourceCount: Record<string, number> = {};
+    for (const p of rawPicks) {
+      sourceCount[p.site] = (sourceCount[p.site] || 0) + 1;
+    }
+
     // Normalize picks
     const normalizedPicks = normalizePicks(rawPicks);
 
@@ -82,6 +88,7 @@ export async function GET(request: Request) {
       fadeThePublic: formatted.fadeThePublic,
       picksByCapper: picksByCapper,
       allPicks: todaysPicks,
+      _sourceCount: sourceCount, // Debug: picks by source
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
