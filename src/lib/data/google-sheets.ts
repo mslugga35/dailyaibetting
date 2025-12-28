@@ -344,23 +344,40 @@ function parseGoogleDocContent(content: string): RawPick[] {
   const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
   const today = todayET.toISOString().split('T')[0];
 
+  // Known college basketball teams (for fallback sport detection)
+  const ncaabTeams = [
+    'liberty', 'gonzaga', 'duke', 'kentucky', 'kansas', 'ucla', 'villanova',
+    'purdue', 'houston', 'uconn', 'arizona', 'michigan state', 'unc', 'north carolina',
+    'baylor', 'indiana', 'oregon', 'tennessee', 'auburn', 'arkansas', 'iowa',
+    'texas tech', 'san francisco', 'sf', 'wazzu', 'washington state', 'seattle',
+    'colgate', 'winthrop', 'ul-monroe', 'ul lafayette', 'ull', 'pepperdine',
+  ];
+
+  // Check if team name suggests NCAAB (college basketball)
+  const isLikelyNCAAB = (team: string): boolean => {
+    const lower = team.toLowerCase();
+    return ncaabTeams.some(t => lower.includes(t) || t.includes(lower.slice(0, 4)));
+  };
+
   // Sport name mapping - handle various formats
   const sportMap: Record<string, string> = {
-    'ncaa': 'NCAAF',
     'ncaa basketball': 'NCAAB',
-    'college basketball': 'NCAAB',
-    'college football': 'NCAAF',
-    'football': 'NCAAF', // Generic "Football:" usually means college
-    'cfb': 'NCAAF',
+    'ncaab': 'NCAAB',
     'cbb': 'NCAAB',
+    'college basketball': 'NCAAB',
+    'basketball': 'NCAAB', // Generic "Basketball:" means college in this context
+    'ncaa football': 'NCAAF',
+    'ncaaf': 'NCAAF',
+    'cfb': 'NCAAF',
+    'college football': 'NCAAF',
+    'football': 'NCAAF', // Generic "Football:" means college
+    'ncaa': 'NCAAF', // Ambiguous, but usually means football in this context
     'nfl': 'NFL',
     'nfl football': 'NFL',
     'nba': 'NBA',
     'nhl': 'NHL',
     'mlb': 'MLB',
     'wnba': 'WNBA',
-    'ncaab': 'NCAAB',
-    'ncaaf': 'NCAAF',
   };
 
   for (const line of lines) {
@@ -376,11 +393,13 @@ function parseGoogleDocContent(content: string): RawPick[] {
       continue;
     }
 
-    // Check for sport header (various formats including just "Football:")
-    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|College Football|NFL Football|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?/i);
+    // Check for sport header (various formats)
+    // Order matters: check longer patterns first to avoid partial matches
+    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|NCAA Football|College Football|NFL Football|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?/i);
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:$/, '').toLowerCase().trim();
       currentSport = sportMap[sportText] || sportText.toUpperCase();
+      console.log(`[DocParser] Sport header detected: "${sportText}" -> ${currentSport}`);
       continue;
     }
 
@@ -392,9 +411,16 @@ function parseGoogleDocContent(content: string): RawPick[] {
       const betPart = pickMatch[2].trim();
       const pick = `${team} ${betPart}`;
 
+      // Fallback sport detection: if current sport is NCAAF but team is a known NCAAB team
+      let sport = currentSport || 'ALL';
+      if (isLikelyNCAAB(team) && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+        sport = 'NCAAB';
+        console.log(`[DocParser] Overriding sport for ${team}: ${currentSport} -> NCAAB`);
+      }
+
       picks.push({
         site: 'GoogleDoc',
-        league: currentSport || 'ALL',
+        league: sport,
         date: today,
         matchup: team,
         service: currentCapper,
@@ -410,9 +436,16 @@ function parseGoogleDocContent(content: string): RawPick[] {
       const betPart = altPickMatch[2].trim();
       const pick = `${team} ${betPart}`;
 
+      // Fallback sport detection for NCAAB teams
+      let sport = currentSport || 'ALL';
+      if (isLikelyNCAAB(team) && (sport === 'NCAAF' || sport === 'ALL' || sport === '')) {
+        sport = 'NCAAB';
+        console.log(`[DocParser] Overriding sport for ${team}: ${currentSport} -> NCAAB`);
+      }
+
       picks.push({
         site: 'GoogleDoc',
-        league: currentSport || 'ALL',
+        league: sport,
         date: today,
         matchup: team,
         service: currentCapper,
@@ -421,6 +454,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
   }
 
+  console.log(`[DocParser] Parsed ${picks.length} picks from Google Doc`);
   return picks;
 }
 
