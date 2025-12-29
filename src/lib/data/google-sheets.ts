@@ -11,7 +11,7 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH43
 // ManualPicks contains the complete dataset (43 rows vs AllPicks' 33 rows)
 // Using only ManualPicks to avoid duplicate picks
 // Both tabs now have structured columns (Site, League, Date, Matchup, Service, Pick, RunDate)
-const SHEET_TABS = ['ManualPicks'];
+const SHEET_TABS = ['Daily_Capper_Picks'];
 
 /**
  * Fetch picks from Google Sheets (published as CSV)
