@@ -1,0 +1,598 @@
+I'll create a comprehensive standardization file for you with all sports and major college programs:
+
+```yaml
+# ===========================================
+# TEAM NAME STANDARDIZATION MASTER FILE
+# ===========================================
+# Format: Variant1/Variant2/Abbreviation → Standard Name
+
+# -------------------------------------------
+# NFL (32 Teams)
+# -------------------------------------------
+NFL:
+  - Cardinals/Arizona/ARI/ARZ/Cards → Cardinals
+  - Falcons/Atlanta/ATL/Dirty Birds → Falcons
+  - Ravens/Baltimore/BAL/Balt → Ravens
+  - Bills/Buffalo/BUF/Buff → Bills
+  - Panthers/Carolina/CAR/Caro → Panthers
+  - Bears/Chicago/CHI/Chi → Bears
+  - Bengals/Cincinnati/CIN/Cincy → Bengals
+  - Browns/Cleveland/CLE/Clev → Browns
+  - Cowboys/Dallas/DAL/Dalls → Cowboys
+  - Broncos/Denver/DEN/Denv → Broncos
+  - Lions/Detroit/DET/Det → Lions
+  - Packers/Green Bay/GB/GNB/Pack → Packers
+  - Texans/Houston/HOU/Houst → Texans
+  - Colts/Indianapolis/IND/Indy → Colts
+  - Jaguars/Jacksonville/JAX/JAC/Jags → Jaguars
+  - Chiefs/Kansas City/KC/KAN/KCity → Chiefs
+  - Raiders/Las Vegas/LV/LVR/Oak/Oakland → Raiders
+  - Chargers/Los Angeles/LAC/LA Chargers → Chargers
+  - Rams/Los Angeles/LAR/LA Rams → Rams
+  - Dolphins/Miami/MIA/Phins → Dolphins
+  - Vikings/Minnesota/MIN/Minn/Vikes → Vikings
+  - Patriots/New England/NE/NEP/Pats → Patriots
+  - Saints/New Orleans/NO/NOS/Nawlins → Saints
+  - Giants/New York Giants/NYG/NY Giants → Giants
+  - Jets/New York Jets/NYJ/NY Jets → Jets
+  - Eagles/Philadelphia/PHI/Philly → Eagles
+  - Steelers/Pittsburgh/PIT/Pitt → Steelers
+  - 49ers/San Francisco/SF/SFO/Niners → 49ers
+  - Seahawks/Seattle/SEA/Hawks → Seahawks
+  - Buccaneers/Tampa Bay/TB/TAM/Bucs → Buccaneers
+  - Titans/Tennessee/TEN/Tenn → Titans
+  - Commanders/Washington/WAS/WSH/Commies → Commanders
+
+# -------------------------------------------
+# NBA (30 Teams)
+# -------------------------------------------
+NBA:
+  - Hawks/Atlanta/ATL → Hawks
+  - Celtics/Boston/BOS/Cs → Celtics
+  - Nets/Brooklyn/BKN/BRK/NJN → Nets
+  - Hornets/Charlotte/CHA/CHO/Buzz → Hornets
+  - Bulls/Chicago/CHI → Bulls
+  - Cavaliers/Cleveland/CLE/Cavs → Cavaliers
+  - Mavericks/Dallas/DAL/Mavs → Mavericks
+  - Nuggets/Denver/DEN/Nugs → Nuggets
+  - Pistons/Detroit/DET → Pistons
+  - Warriors/Golden State/GS/GSW/Dubs → Warriors
+  - Rockets/Houston/HOU/Rox → Rockets
+  - Pacers/Indiana/IND → Pacers
+  - Clippers/Los Angeles Clippers/LAC/LA Clippers/Clips → Clippers
+  - Lakers/Los Angeles Lakers/LAL/LA Lakers → Lakers
+  - Grizzlies/Memphis/MEM/Grizz → Grizzlies
+  - Heat/Miami/MIA → Heat
+  - Bucks/Milwaukee/MIL → Bucks
+  - Timberwolves/Minnesota/MIN/Wolves/TWolves → Timberwolves
+  - Pelicans/New Orleans/NOP/NO/Pels → Pelicans
+  - Knicks/New York/NYK/NY → Knicks
+  - Thunder/Oklahoma City/OKC → Thunder
+  - Magic/Orlando/ORL → Magic
+  - 76ers/Sixers/Philadelphia/PHI → 76ers
+  - Suns/Phoenix/PHX/PHO → Suns
+  - Trail Blazers/Blazers/Portland/POR → Trail Blazers
+  - Kings/Sacramento/SAC → Kings
+  - Spurs/San Antonio/SAS/SA → Spurs
+  - Raptors/Toronto/TOR/Raps → Raptors
+  - Jazz/Utah/UTA → Jazz
+  - Wizards/Washington/WAS/WSH/Wiz → Wizards
+
+# -------------------------------------------
+# MLB (30 Teams)
+# -------------------------------------------
+MLB:
+  - Diamondbacks/Arizona/ARI/AZ/Dbacks/D-backs → Diamondbacks
+  - Braves/Atlanta/ATL → Braves
+  - Orioles/Baltimore/BAL/O's → Orioles
+  - Red Sox/Boston/BOS/BoSox/RSox → Red Sox
+  - Cubs/Chicago Cubs/CHC/Cubbies → Cubs
+  - White Sox/Chicago White Sox/CWS/CHW/WSox/Sox → White Sox
+  - Reds/Cincinnati/CIN → Reds
+  - Guardians/Cleveland/CLE/Guards → Guardians
+  - Rockies/Colorado/COL/Rox → Rockies
+  - Tigers/Detroit/DET → Tigers
+  - Astros/Houston/HOU/Stros → Astros
+  - Royals/Kansas City/KC/KCR → Royals
+  - Angels/Los Angeles Angels/LAA/Halos/Anaheim → Angels
+  - Dodgers/Los Angeles Dodgers/LAD/LA → Dodgers
+  - Marlins/Miami/MIA/Fish → Marlins
+  - Brewers/Milwaukee/MIL/Brew Crew → Brewers
+  - Twins/Minnesota/MIN/Twinkies → Twins
+  - Yankees/New York Yankees/NYY/Yanks/Bronx Bombers → Yankees
+  - Mets/New York Mets/NYM → Mets
+  - Athletics/Oakland/OAK/A's/As → Athletics
+  - Phillies/Philadelphia/PHI/Phils → Phillies
+  - Pirates/Pittsburgh/PIT/Bucs → Pirates
+  - Padres/San Diego/SD/SDP/Pads → Padres
+  - Giants/San Francisco/SF/SFG → Giants
+  - Mariners/Seattle/SEA/M's → Mariners
+  - Cardinals/St. Louis/STL/Cards/Redbirds → Cardinals
+  - Rays/Tampa Bay/TB/TBR → Rays
+  - Rangers/Texas/TEX → Rangers
+  - Blue Jays/Toronto/TOR/Jays → Blue Jays
+  - Nationals/Washington/WAS/WSH/Nats → Nationals
+
+# -------------------------------------------
+# NHL (32 Teams)
+# -------------------------------------------
+NHL:
+  - Ducks/Anaheim/ANA → Ducks
+  - Utah HC/Utah/UTA/Coyotes/Arizona/ARI → Utah HC
+  - Bruins/Boston/BOS/Bs → Bruins
+  - Sabres/Buffalo/BUF → Sabres
+  - Flames/Calgary/CGY/CAL → Flames
+  - Hurricanes/Carolina/CAR/Canes → Hurricanes
+  - Blackhawks/Chicago/CHI/Hawks → Blackhawks
+  - Avalanche/Colorado/COL/Avs → Avalanche
+  - Blue Jackets/Columbus/CBJ/CLB/Jackets → Blue Jackets
+  - Stars/Dallas/DAL → Stars
+  - Red Wings/Detroit/DET/Wings → Red Wings
+  - Oilers/Edmonton/EDM/Oil → Oilers
+  - Panthers/Florida/FLA/Cats → Panthers
+  - Kings/Los Angeles/LAK/LA → Kings
+  - Wild/Minnesota/MIN → Wild
+  - Canadiens/Montreal/MTL/MON/Habs → Canadiens
+  - Predators/Nashville/NSH/NAS/Preds → Predators
+  - Devils/New Jersey/NJD/NJ → Devils
+  - Islanders/New York Islanders/NYI/Isles → Islanders
+  - Rangers/New York Rangers/NYR → Rangers
+  - Senators/Ottawa/OTT/Sens → Senators
+  - Flyers/Philadelphia/PHI → Flyers
+  - Penguins/Pittsburgh/PIT/Pens → Penguins
+  - Sharks/San Jose/SJS/SJ → Sharks
+  - Kraken/Seattle/SEA → Kraken
+  - Blues/St. Louis/STL → Blues
+  - Lightning/Tampa Bay/TBL/TB/Bolts → Lightning
+  - Maple Leafs/Toronto/TOR/Leafs → Maple Leafs
+  - Canucks/Vancouver/VAN/Nucks → Canucks
+  - Golden Knights/Vegas/VGK/VEG/Knights → Golden Knights
+  - Capitals/Washington/WSH/WAS/Caps → Capitals
+  - Jets/Winnipeg/WPG/WIN → Jets
+
+# -------------------------------------------
+# MLS (29 Teams)
+# -------------------------------------------
+MLS:
+  - Atlanta United/Atlanta/ATL/Five Stripes → Atlanta United
+  - Austin FC/Austin/ATX → Austin FC
+  - Charlotte FC/Charlotte/CLT → Charlotte FC
+  - Chicago Fire/Chicago/CHI/Fire → Chicago Fire
+  - FC Cincinnati/Cincinnati/CIN/FCC → FC Cincinnati
+  - Colorado Rapids/Colorado/COL/Rapids → Colorado Rapids
+  - Columbus Crew/Columbus/CLB/Crew → Columbus Crew
+  - FC Dallas/Dallas/DAL/FCD → FC Dallas
+  - DC United/Washington/DC/DCU → DC United
+  - Houston Dynamo/Houston/HOU/Dynamo → Houston Dynamo
+  - Sporting KC/Kansas City/SKC/Sporting → Sporting KC
+  - LA Galaxy/Los Angeles Galaxy/LAG/Galaxy → LA Galaxy
+  - LAFC/Los Angeles FC/LA FC → LAFC
+  - Inter Miami/Miami/MIA/INT → Inter Miami
+  - Minnesota United/Minnesota/MIN/Loons → Minnesota United
+  - CF Montreal/Montreal/MTL/CFM → CF Montreal
+  - Nashville SC/Nashville/NSH/NSC → Nashville SC
+  - New England Revolution/New England/NE/Revs → Revolution
+  - NYCFC/New York City FC/NYC → NYCFC
+  - Red Bulls/New York Red Bulls/NYRB/NY Red Bulls → Red Bulls
+  - Orlando City/Orlando/ORL/Lions → Orlando City
+  - Philadelphia Union/Philadelphia/PHI/Union → Union
+  - Portland Timbers/Portland/POR/Timbers → Timbers
+  - Real Salt Lake/Salt Lake/RSL → Real Salt Lake
+  - San Jose Earthquakes/San Jose/SJ/Quakes → Earthquakes
+  - Seattle Sounders/Seattle/SEA/Sounders → Sounders
+  - St. Louis City/St. Louis/STL/City SC → St. Louis City
+  - Toronto FC/Toronto/TOR/TFC → Toronto FC
+  - Vancouver Whitecaps/Vancouver/VAN/Caps → Whitecaps
+
+# -------------------------------------------
+# WNBA (12 Teams)
+# -------------------------------------------
+WNBA:
+  - Dream/Atlanta/ATL → Dream
+  - Sky/Chicago/CHI → Sky
+  - Sun/Connecticut/CON/CT → Sun
+  - Wings/Dallas/DAL → Wings
+  - Fever/Indiana/IND → Fever
+  - Aces/Las Vegas/LV/LVA → Aces
+  - Sparks/Los Angeles/LA/LAS → Sparks
+  - Lynx/Minnesota/MIN → Lynx
+  - Liberty/New York/NY/NYL → Liberty
+  - Mercury/Phoenix/PHX/PHO → Mercury
+  - Storm/Seattle/SEA → Storm
+  - Mystics/Washington/WAS/WSH → Mystics
+  - Valkyries/Golden State/GS/GSV → Valkyries
+
+# -------------------------------------------
+# COLLEGE - SEC (16 Teams)
+# -------------------------------------------
+NCAAF_SEC:
+  - Alabama/Bama/ALA/UA/Crimson Tide/Roll Tide → Alabama
+  - Arkansas/Ark/ARK/Hogs/Razorbacks → Arkansas
+  - Auburn/AUB/AU/Tigers/War Eagle → Auburn
+  - Florida/Fla/UF/FLA/Gators → Florida
+  - Georgia/UGA/GA/Dawgs/Bulldogs → Georgia
+  - Kentucky/UK/KY/KEN/Wildcats → Kentucky
+  - LSU/Louisiana State/Tigers/Geaux Tigers → LSU
+  - Mississippi State/Miss St/MSST/MSU/Bulldogs → Mississippi St
+  - Missouri/Mizzou/MIZ/MU/Tigers → Missouri
+  - Oklahoma/OU/OKL/Sooners/Boomer → Oklahoma
+  - Ole Miss/Mississippi/MISS/UM/Rebels → Ole Miss
+  - South Carolina/USC/SC/SCAR/Gamecocks → South Carolina
+  - Tennessee/Tenn/TENN/UT/Vols/Volunteers → Tennessee
+  - Texas/TEX/UT/Longhorns/Hook Em → Texas
+  - Texas A&M/TAMU/A&M/ATM/Aggies → Texas A&M
+  - Vanderbilt/Vandy/VAN/VANDY/Commodores → Vanderbilt
+
+# -------------------------------------------
+# COLLEGE - BIG TEN (18 Teams)
+# -------------------------------------------
+NCAAF_BigTen:
+  - Illinois/ILL/UI/Illini/Fighting Illini → Illinois
+  - Indiana/IND/IU/Hoosiers → Indiana
+  - Iowa/IOWA/UI/Hawkeyes → Iowa
+  - Maryland/MD/UMD/Terps/Terrapins → Maryland
+  - Michigan/Mich/MICH/UM/Wolverines → Michigan
+  - Michigan State/Mich St/MSU/Spartans → Michigan St
+  - Minnesota/Minn/MINN/UM/Gophers/Golden Gophers → Minnesota
+  - Nebraska/Neb/NEB/NU/Huskers/Cornhuskers → Nebraska
+  - Northwestern/NW/NWU/NWST/Wildcats → Northwestern
+  - Ohio State/OSU/tOSU/Ohio St/Buckeyes → Ohio State
+  - Oregon/ORE/UO/Ducks → Oregon
+  - Penn State/PSU/Penn St/Nittany Lions → Penn State
+  - Purdue/PUR/PU/Boilermakers → Purdue
+  - Rutgers/RUT/RU/Scarlet Knights → Rutgers
+  - UCLA/Bruins → UCLA
+  - USC/Southern Cal/Trojans → USC
+  - Washington/Wash/WASH/UW/Huskies → Washington
+  - Wisconsin/Wis/WIS/UW/Badgers → Wisconsin
+
+# -------------------------------------------
+# COLLEGE - BIG 12 (16 Teams)
+# -------------------------------------------
+NCAAF_Big12:
+  - Arizona/Zona/ARIZ/UA/Wildcats → Arizona
+  - Arizona State/ASU/AZ State/Sun Devils → Arizona State
+  - Baylor/BAY/BU/Bears → Baylor
+  - BYU/Brigham Young/Cougars → BYU
+  - Cincinnati/Cincy/CIN/UC/Bearcats → Cincinnati
+  - Colorado/Colo/COL/CU/Buffs/Buffaloes → Colorado
+  - Houston/HOU/UH/Cougars → Houston
+  - Iowa State/ISU/Iowa St/Cyclones → Iowa State
+  - Kansas/KU/KAN/Jayhawks → Kansas
+  - Kansas State/K-State/KSU/KState/Wildcats → Kansas State
+  - Oklahoma State/Okla St/OKST/OSU/Cowboys/Pokes → Oklahoma State
+  - TCU/Texas Christian/Horned Frogs → TCU
+  - Texas Tech/TT/TTU/Red Raiders → Texas Tech
+  - UCF/Central Florida/Knights → UCF
+  - Utah/UTA/UTAH/UU/Utes → Utah
+  - West Virginia/WVU/WV/Mountaineers → West Virginia
+
+# -------------------------------------------
+# COLLEGE - ACC (17 Teams + ND Football)
+# -------------------------------------------
+NCAAF_ACC:
+  - Boston College/BC/Eagles → Boston College
+  - California/Cal/CAL/UC Berkeley/Golden Bears → California
+  - Clemson/CLEM/CU/Tigers → Clemson
+  - Duke/DUKE/Blue Devils → Duke
+  - Florida State/FSU/Fla St/Seminoles/Noles → Florida State
+  - Georgia Tech/GT/Ga Tech/Yellow Jackets/Rambling Wreck → Georgia Tech
+  - Louisville/Lou/LOU/UL/Cardinals → Louisville
+  - Miami/MIA/UM/Hurricanes/Canes → Miami
+  - NC State/NCST/NCS/North Carolina State/Wolfpack → NC State
+  - North Carolina/UNC/Carolina/Tar Heels → North Carolina
+  - Notre Dame/ND/Irish/Fighting Irish → Notre Dame
+  - Pittsburgh/Pitt/PITT/Panthers → Pittsburgh
+  - SMU/Southern Methodist/Mustangs → SMU
+  - Stanford/STAN/Cardinal → Stanford
+  - Syracuse/Cuse/SYR/Orange → Syracuse
+  - Virginia/UVA/VA/Cavaliers/Hoos → Virginia
+  - Virginia Tech/VT/Va Tech/Hokies → Virginia Tech
+  - Wake Forest/Wake/WAKE/WF/Demon Deacons → Wake Forest
+
+# -------------------------------------------
+# COLLEGE - GROUP OF 5 (Notable)
+# -------------------------------------------
+NCAAF_G5:
+  # AAC
+  - Army/ARMY/Black Knights → Army
+  - Charlotte/CLT/49ers → Charlotte
+  - East Carolina/ECU/Pirates → East Carolina
+  - FAU/Florida Atlantic/Owls → FAU
+  - Memphis/MEM/Tigers → Memphis
+  - Navy/NAVY/Midshipmen → Navy
+  - North Texas/UNT/Mean Green → North Texas
+  - Rice/RICE/Owls → Rice
+  - South Florida/USF/Bulls → South Florida
+  - Temple/TEM/Owls → Temple
+  - Tulane/TUL/Green Wave → Tulane
+  - Tulsa/TLSA/Golden Hurricane → Tulsa
+  - UAB/Alabama Birmingham/Blazers → UAB
+  - UTSA/Texas San Antonio/Roadrunners → UTSA
+  
+  # Mountain West
+  - Air Force/AFA/AF/Falcons → Air Force
+  - Boise State/Boise/BSU/Broncos → Boise State
+  - Colorado State/CSU/Colo St/Rams → Colorado State
+  - Fresno State/Fresno/FRES/Bulldogs → Fresno State
+  - Hawaii/HAW/Rainbow Warriors → Hawaii
+  - Nevada/NEV/Wolf Pack → Nevada
+  - New Mexico/UNM/NM/Lobos → New Mexico
+  - San Diego State/SDSU/Aztecs → San Diego State
+  - San Jose State/SJSU/Spartans → San Jose State
+  - UNLV/Las Vegas/Rebels → UNLV
+  - Utah State/USU/Aggies → Utah State
+  - Wyoming/WYO/Cowboys → Wyoming
+  
+  # Sun Belt
+  - Appalachian State/App State/APP/Mountaineers → Appalachian State
+  - Arkansas State/ArkSt/ARST/Red Wolves → Arkansas State
+  - Coastal Carolina/CCU/Coastal/Chanticleers → Coastal Carolina
+  - Georgia Southern/GASO/Eagles → Georgia Southern
+  - Georgia State/GSU/Panthers → Georgia State
+  - James Madison/JMU/Dukes → James Madison
+  - Louisiana/UL/Ragin Cajuns → Louisiana
+  - Louisiana Tech/LaTech/LATECH/Bulldogs → Louisiana Tech
+  - Marshall/MARSH/Thundering Herd → Marshall
+  - Old Dominion/ODU/Monarchs → Old Dominion
+  - South Alabama/USA/Jaguars → South Alabama
+  - Southern Miss/USM/Golden Eagles → Southern Miss
+  - Texas State/TXST/Bobcats → Texas State
+  - Troy/TROY/Trojans → Troy
+  
+  # MAC
+  - Akron/AKR/Zips → Akron
+  - Ball State/BALL/BSU/Cardinals → Ball State
+  - Bowling Green/BGSU/BG/Falcons → Bowling Green
+  - Buffalo/BUFF/Bulls → Buffalo
+  - Central Michigan/CMU/Chippewas → Central Michigan
+  - Eastern Michigan/EMU/Eagles → Eastern Michigan
+  - Kent State/KENT/Golden Flashes → Kent State
+  - Miami Ohio/MIA-OH/MIAMI/RedHawks → Miami Ohio
+  - Northern Illinois/NIU/Huskies → Northern Illinois
+  - Ohio/OHIO/Bobcats → Ohio
+  - Toledo/TOL/Rockets → Toledo
+  - Western Michigan/WMU/Broncos → Western Michigan
+
+# -------------------------------------------
+# COLLEGE - INDEPENDENTS
+# -------------------------------------------
+NCAAF_Independent:
+  - UConn/Connecticut/CONN/Huskies → UConn
+  - UMass/Massachusetts/Minutemen → UMass
+
+# -------------------------------------------
+# COLLEGE BASKETBALL - Additional Programs
+# (Use football mappings for shared schools)
+# -------------------------------------------
+NCAAB_Additional:
+  # Big East
+  - Butler/BUT/Bulldogs → Butler
+  - Creighton/CREI/CU/Bluejays → Creighton
+  - DePaul/DEPL/Blue Demons → DePaul
+  - Georgetown/GTWN/GU/Hoyas → Georgetown
+  - Marquette/MARQ/MU/Golden Eagles → Marquette
+  - Providence/PROV/Friars → Providence
+  - Seton Hall/HALL/SHU/Pirates → Seton Hall
+  - St. John's/STJ/STJN/Red Storm → St. John's
+  - UConn/Connecticut/CONN/Huskies → UConn
+  - Villanova/Nova/VILL/Wildcats → Villanova
+  - Xavier/XAV/X/Musketeers → Xavier
+  
+  # WCC
+  - Gonzaga/Gonz/GONZ/GU/Zags/Bulldogs → Gonzaga
+  - Saint Mary's/SMC/Gaels → Saint Mary's
+  - San Francisco/USF/Dons → San Francisco
+  - Santa Clara/SCU/Broncos → Santa Clara
+  - Pepperdine/PEPP/Waves → Pepperdine
+  - Pacific/PAC/Tigers → Pacific
+  - Portland/PORT/UP/Pilots → Portland
+  - Loyola Marymount/LMU/Lions → Loyola Marymount
+  
+  # A10
+  - Dayton/DAY/UD/Flyers → Dayton
+  - VCU/Virginia Commonwealth/Rams → VCU
+  - Saint Louis/SLU/Billikens → Saint Louis
+  - Richmond/RICH/Spiders → Richmond
+  - George Mason/GMU/Patriots → George Mason
+  - Davidson/DAV/Wildcats → Davidson
+  - La Salle/LAS/Explorers → La Salle
+  - Rhode Island/URI/Rams → Rhode Island
+  - St. Bonaventure/BONN/SBU/Bonnies → St. Bonaventure
+  - UMass/Massachusetts/Minutemen → UMass
+  
+  # MVC
+  - Drake/DRAKE/Bulldogs → Drake
+  - Loyola Chicago/LUC/Ramblers → Loyola Chicago
+  - Bradley/BRAD/Braves → Bradley
+  - Indiana State/INST/Sycamores → Indiana State
+  - Southern Illinois/SIU/Salukis → Southern Illinois
+  - Missouri State/MOST/Bears → Missouri State
+  - Evansville/EVAN/Purple Aces → Evansville
+  - Northern Iowa/UNI/Panthers → Northern Iowa
+  - Illinois State/ILST/Redbirds → Illinois State
+  - Valparaiso/VALP/Beacons → Valparaiso
+  - Murray State/MURR/Racers → Murray State
+  - Belmont/BELM/Bruins → Belmont
+  
+  # Ivy League
+  - Princeton/PRIN/Tigers → Princeton
+  - Yale/YALE/Bulldogs → Yale
+  - Harvard/HARV/Crimson → Harvard
+  - Penn/Pennsylvania/PENN/Quakers → Penn
+  - Cornell/CORN/Big Red → Cornell
+  - Columbia/COLM/Lions → Columbia
+  - Brown/BRWN/Bears → Brown
+  - Dartmouth/DART/Big Green → Dartmouth
+  
+  # Other Notable
+  - Wichita State/Wichita/WICH/Shockers → Wichita State
+  - Oral Roberts/ORU/Golden Eagles → Oral Roberts
+  - Grand Canyon/GCU/Antelopes → Grand Canyon
+  - Liberty/LIB/Flames → Liberty
+  - Iona/IONA/Gaels → Iona
+  - Fairleigh Dickinson/FDU/Knights → Fairleigh Dickinson
+  - Vermont/UVM/Catamounts → Vermont
+  - FGCU/Florida Gulf Coast/Eagles → FGCU
+  - Middle Tennessee/MTSU/Blue Raiders → Middle Tennessee
+  - Western Kentucky/WKU/Hilltoppers → Western Kentucky
+  - UAB/Alabama Birmingham/Blazers → UAB
+  - New Mexico State/NMSU/Aggies → New Mexico State
+  - Saint Peter's/SPU/Peacocks → Saint Peter's
+  - Mercer/MERC/Bears → Mercer
+  - North Carolina A&T/NCAT/Aggies → NC A&T
+  - Norfolk State/NORF/Spartans → Norfolk State
+  - Grambling/GRAM/GSU/Tigers → Grambling
+  - Jackson State/JKST/Tigers → Jackson State
+  - Texas Southern/TXSO/TSU/Tigers → Texas Southern
+  - Alabama State/ALST/Hornets → Alabama State
+  - Alcorn State/ALCN/Braves → Alcorn State
+  - Howard/HOW/Bison → Howard
+  - Coppin State/COPP/Eagles → Coppin State
+  - Florida A&M/FAMU/Rattlers → Florida A&M
+  - Bethune-Cookman/BCU/Wildcats → Bethune-Cookman
+  - Prairie View A&M/PVAM/Panthers → Prairie View A&M
+  - Morgan State/MORG/Bears → Morgan State
+  - Delaware State/DSU/Hornets → Delaware State
+  - South Carolina State/SCST/Bulldogs → SC State
+  - North Carolina Central/NCCU/Eagles → NC Central
+
+# -------------------------------------------
+# UFC/MMA (Common Name Variants)
+# -------------------------------------------
+UFC:
+  # Use Fighter Last Name as standard
+  # Examples for common variants
+  - Adesanya/Izzy/Stylebender → Adesanya
+  - Makhachev/Islam → Makhachev
+  - Oliveira/Do Bronx/Charles → Oliveira
+  - Pereira/Poatan/Alex → Pereira
+  - Strickland/Sean → Strickland
+  - Chimaev/Khamzat/Borz → Chimaev
+  - Volkanovski/Volk/Alex → Volkanovski
+  - Edwards/Leon/Rocky → Edwards
+  - Dvalishvili/Merab → Dvalishvili
+  - O'Malley/Suga/Sean → O'Malley
+  - Topuria/Ilia → Topuria
+  - Pantoja/Alexandre → Pantoja
+  - Du Plessis/Dricus/DDP → Du Plessis
+  - Grasso/Alexa → Grasso
+  - Shevchenko/Valentina/Bullet → Shevchenko
+  - Nunes/Amanda/Lioness → Nunes
+  - Jones/Jon/Bones → Jones
+  - Aspinall/Tom → Aspinall
+  - Blachowicz/Jan → Blachowicz
+  - Ankalaev/Magomed → Ankalaev
+
+# -------------------------------------------
+# TENNIS (ATP/WTA)
+# -------------------------------------------
+Tennis:
+  # ATP
+  - Sinner/Jannik → Sinner
+  - Alcaraz/Carlos/Carlitos → Alcaraz
+  - Djokovic/Novak/Nole/Djoker → Djokovic
+  - Medvedev/Daniil → Medvedev
+  - Zverev/Sascha/Alexander → Zverev
+  - Rublev/Andrey → Rublev
+  - Ruud/Casper → Ruud
+  - Hurkacz/Hubert/Hubi → Hurkacz
+  - Fritz/Taylor → Fritz
+  - Tsitsipas/Stefanos/Stef → Tsitsipas
+  - Tiafoe/Frances → Tiafoe
+  - Paul/Tommy → Paul
+  - Shelton/Ben → Shelton
+  - Rune/Holger → Rune
+  - De Minaur/Alex/Demon → De Minaur
+  
+  # WTA
+  - Swiatek/Iga → Swiatek
+  - Sabalenka/Aryna → Sabalenka
+  - Gauff/Coco → Gauff
+  - Rybakina/Elena → Rybakina
+  - Pegula/Jessica → Pegula
+  - Zheng/Qinwen → Zheng
+  - Jabeur/Ons → Jabeur
+  - Kvitova/Petra → Kvitova
+  - Ostapenko/Jelena → Ostapenko
+  - Keys/Madison → Keys
+  - Collins/Danielle → Collins
+
+# -------------------------------------------
+# GOLF (PGA/LIV)
+# -------------------------------------------
+Golf:
+  - Scheffler/Scottie → Scheffler
+  - McIlroy/Rory → McIlroy
+  - Rahm/Jon → Rahm
+  - Koepka/Brooks → Koepka
+  - Thomas/JT/Justin → Thomas
+  - Spieth/Jordan → Spieth
+  - Hovland/Viktor → Hovland
+  - Morikawa/Collin → Morikawa
+  - Cantlay/Patrick → Cantlay
+  - Burns/Sam → Burns
+  - Clark/Wyndham → Clark
+  - DeChambeau/Bryson → DeChambeau
+  - Mickelson/Phil/Lefty → Mickelson
+  - DJ/Dustin Johnson → Johnson
+  - Fleetwood/Tommy → Fleetwood
+  - Matsuyama/Hideki → Matsuyama
+  - Schauffele/Xander → Schauffele
+  - Finau/Tony → Finau
+  - Homa/Max → Homa
+  - Kim/Tom → Kim
+
+# -------------------------------------------
+# BOXING (Common Variants)
+# -------------------------------------------
+Boxing:
+  - Crawford/Terence/Bud → Crawford
+  - Inoue/Naoya/Monster → Inoue
+  - Beterbiev/Artur → Beterbiev
+  - Bivol/Dmitry → Bivol
+  - Alvarez/Canelo/Saul → Canelo
+  - Usyk/Oleksandr → Usyk
+  - Fury/Tyson/Gypsy King → Fury
+  - Joshua/Anthony/AJ → Joshua
+  - Haney/Devin/Dream → Haney
+  - Davis/Gervonta/Tank → Davis
+  - Garcia/Ryan/KingRy → Garcia
+  - Spence/Errol → Spence
+  - Benavidez/David → Benavidez
+  - Munguia/Jaime → Munguia
+  - Lomachenko/Vasiliy/Loma → Lomachenko
+  - Shakur/Stevenson → Stevenson
+
+# -------------------------------------------
+# NASCAR (Common Driver References)
+# -------------------------------------------
+NASCAR:
+  - Larson/Kyle → Larson
+  - Elliott/Chase → Elliott
+  - Blaney/Ryan → Blaney
+  - Byron/William → Byron
+  - Logano/Joey → Logano
+  - Hamlin/Denny → Hamlin
+  - Busch/Kyle/KyBusch → Kyle Busch
+  - Truex/Martin/MTJ → Truex Jr
+  - Chastain/Ross/Melon Man → Chastain
+  - Bell/Christopher → Bell
+  - Reddick/Tyler → Reddick
+  - Suarez/Daniel → Suarez
+  - Wallace/Bubba → Wallace
+  - Briscoe/Chase → Briscoe
+  - Keselowski/Brad → Keselowski
+  - Cindric/Austin → Cindric
+  - Bowman/Alex → Bowman
+  - Buescher/Chris → Buescher
+  - Gibbs/Ty → Gibbs
+  - Dillon/Austin → Dillon
+```
+
+---
+
+Want me to:
+1. **Create this as a downloadable YAML/JSON file** for your pipeline?
+2. **Add a Python mapping function** that can auto-standardize team names from any source format?
+3. **Expand any specific conference or league** with more detail?
