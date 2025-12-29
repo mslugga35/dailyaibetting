@@ -150,10 +150,14 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
   },
   NCAAF: {
     // Bowl Games & Common Teams
+    // IMPORTANT: More specific names must come BEFORE shorter ones to avoid false matches
+    'Georgia Southern': ['Georgia Southern', 'Georgia Southern Eagles', 'GSU', 'GASO'],
+    'Georgia Tech': ['Georgia Tech', 'Yellow Jackets', 'GT'],
+    'Georgia State': ['Georgia State', 'Panthers', 'GSU'],
     Hawaii: ['Hawaii', 'Rainbow Warriors', 'Hawaii Rainbow Warriors', 'HAW'],
     California: ['California', 'Cal', 'Golden Bears', 'CAL', 'California Golden Bears'],
     Alabama: ['Alabama', 'Crimson Tide', 'Bama', 'ALA'],
-    Georgia: ['Georgia', 'Bulldogs', 'UGA'],
+    Georgia: ['Georgia', 'UGA', 'Georgia Bulldogs'],
     'Ohio State': ['Ohio State', 'Buckeyes', 'OSU'],
     Michigan: ['Michigan', 'Wolverines', 'MICH'],
     Texas: ['Texas', 'Longhorns', 'TEX'],
@@ -250,12 +254,22 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
 
 /**
  * Standardize a team name to its canonical form
+ * Checks longer/more specific names first to avoid false matches
  */
 export function standardizeTeamName(team: string, sport: string): string {
   const sportMappings = teamMappings[sport] || {};
+  const teamLower = team.toLowerCase();
 
-  for (const [standardName, variations] of Object.entries(sportMappings)) {
-    if (variations.some(v => team.toLowerCase().includes(v.toLowerCase()))) {
+  // Sort entries by the length of variations (longest first) to match specific names first
+  // e.g., "Georgia Southern" should match before "Georgia"
+  const sortedEntries = Object.entries(sportMappings).sort((a, b) => {
+    const maxLenA = Math.max(...a[1].map(v => v.length));
+    const maxLenB = Math.max(...b[1].map(v => v.length));
+    return maxLenB - maxLenA; // Longest first
+  });
+
+  for (const [standardName, variations] of sortedEntries) {
+    if (variations.some(v => teamLower.includes(v.toLowerCase()))) {
       return standardName;
     }
   }
