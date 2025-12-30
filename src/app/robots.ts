@@ -13,6 +13,9 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
       },
     ],
-    sitemap: 'https://dailyaibetting.com/sitemap.xml',
+    sitemap: [
+      'https://dailyaibetting.com/sitemap.xml',
+      'https://dailyaibetting.com/sitemap-static.xml',
+    ],
   };
 }
