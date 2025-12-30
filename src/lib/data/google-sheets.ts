@@ -7,11 +7,20 @@ import { RawPick } from '../consensus/consensus-builder';
 // Document ID from your n8n workflow: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
 const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI';
 
-// Sheet names (tabs) from your n8n workflow
-// ManualPicks contains the complete dataset (43 rows vs AllPicks' 33 rows)
-// Using only ManualPicks to avoid duplicate picks
-// Both tabs now have structured columns (Site, League, Date, Matchup, Service, Pick, RunDate)
-const SHEET_TABS = ['AllPicks'];
+// Sheet names (tabs) - AllPicks + all source tabs
+// Each tab has columns: Site, League, Date, Matchup, Service, Pick, RunDate
+// Duplicates are handled by consensus builder (uses Set for cappers)
+const SHEET_TABS = [
+  'AllPicks',      // Main consolidated tab
+  'BoydBets',      // Boyd's Bets source
+  'SportsLine',    // SportsLine source
+  'Pickswise',     // Pickswise source
+  'Dimers',        // Dimers source
+  'Covers',        // Covers source
+  'WagerTalk',     // WagerTalk source
+  'SportsMemo',    // SportsMemo source
+  'SportsCapping', // SportsCapping source
+];
 
 /**
  * Fetch picks from Google Sheets (published as CSV)
