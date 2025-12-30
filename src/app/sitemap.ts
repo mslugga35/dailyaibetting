@@ -87,5 +87,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 0.8,
     },
+    // AI Visibility
+    {
+      url: `${baseUrl}/llm.txt`,
+      lastModified: '2025-12-30',
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
   ];
 }
