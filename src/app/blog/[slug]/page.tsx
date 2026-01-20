@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, Eye, ArrowLeft, Share2, BookOpen } from 'lucide-react';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
+import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
 import Link from 'next/link';
 
 interface BlogPost {
@@ -127,6 +128,17 @@ export default function BlogPostPage() {
         <ArrowLeft className="h-4 w-4 mr-1" />
         Back to Blog
       </Link>
+
+      {/* Blog Post Schema */}
+      <BlogPostingJsonLd
+        title={post.title}
+        description={post.meta_description || post.excerpt}
+        slug={post.slug}
+        publishedAt={post.published_at}
+        category={post.category}
+        tags={post.tags}
+        viewCount={post.view_count}
+      />
 
       {/* Article Header */}
       <article>

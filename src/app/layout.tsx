@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     description: "Free daily AI-analyzed consensus picks from 10+ expert cappers. NFL, NBA, MLB, NHL picks updated every 5 minutes.",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://dailyaibetting.com/opengraph-image",
         width: 1200,
         height: 630,
         alt: "DailyAI Betting - Free AI Sports Picks",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     creator: "@dailyaibetting",
     title: "DailyAI Betting - Free AI Sports Picks Today",
     description: "Free daily AI-analyzed consensus picks from expert cappers. Updated every 5 minutes.",
-    images: ["/og-image.png"],
+    images: ["https://dailyaibetting.com/opengraph-image"],
   },
   robots: {
     index: true,
@@ -85,9 +85,10 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // Add these when you have them
-    // google: "your-google-verification-code",
-    // yandex: "your-yandex-verification-code",
+    // Google Search Console verification
+    // Service account: picks-exporter-bot@free-picks-exporter.iam.gserviceaccount.com
+    // Site already verified - add verification code here if needed for HTML tag method
+    // google: "your-verification-code-here",
   },
   category: "Sports Betting",
 };

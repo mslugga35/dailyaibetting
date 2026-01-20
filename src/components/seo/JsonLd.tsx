@@ -12,7 +12,7 @@ export function WebsiteJsonLd() {
       url: 'https://dailyaibetting.com',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://dailyaibetting.com/og-image.png',
+        url: 'https://dailyaibetting.com/opengraph-image',
       },
     },
     potentialAction: {
@@ -54,6 +54,69 @@ export function SportsEventJsonLd({
       '@type': 'Organization',
       name: 'DailyAI Betting',
     },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
+}
+
+export function BlogPostingJsonLd({
+  title,
+  description,
+  slug,
+  publishedAt,
+  category,
+  tags = [],
+  viewCount = 0,
+}: {
+  title: string;
+  description: string;
+  slug: string;
+  publishedAt: string;
+  category: string;
+  tags?: string[];
+  viewCount?: number;
+}) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: title,
+    description: description,
+    url: `https://dailyaibetting.com/blog/${slug}`,
+    datePublished: publishedAt,
+    dateModified: publishedAt,
+    author: {
+      '@type': 'Organization',
+      name: 'DailyAI Betting',
+      url: 'https://dailyaibetting.com',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'DailyAI Betting',
+      url: 'https://dailyaibetting.com',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://dailyaibetting.com/opengraph-image',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://dailyaibetting.com/blog/${slug}`,
+    },
+    image: 'https://dailyaibetting.com/opengraph-image',
+    articleSection: category,
+    keywords: tags.join(', '),
+    interactionStatistic: {
+      '@type': 'InteractionCounter',
+      interactionType: 'https://schema.org/ReadAction',
+      userInteractionCount: viewCount,
+    },
+    isAccessibleForFree: true,
+    inLanguage: 'en-US',
   };
 
   return (
