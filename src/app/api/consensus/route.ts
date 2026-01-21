@@ -33,8 +33,24 @@ export async function GET(request: Request) {
     const schedule = await getTodaysScheduleSummary();
     console.log('[Consensus API] ESPN Schedule:', schedule);
 
+    // Check if sports have games today (for reclassification)
+    const ncaafHasGames = (schedule['NCAAF'] || 0) > 0;
+    const ncaabHasGames = (schedule['NCAAB'] || 0) > 0;
+    console.log(`[Consensus API] NCAAF games: ${schedule['NCAAF'] || 0}, NCAAB games: ${schedule['NCAAB'] || 0}`);
+
     // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
     const rawPicks = await getAllPicksFromSources();
+
+    // Reclassify NCAAF -> NCAAB when football season is over (no NCAAF games)
+    // Teams like Florida, Notre Dame, Auburn play both sports
+    if (!ncaafHasGames && ncaabHasGames) {
+      for (const pick of rawPicks) {
+        if (pick.league === 'NCAAF' || pick.league === 'CFB') {
+          console.log(`[Consensus API] Reclassifying ${pick.pick} from NCAAF to NCAAB (no football games today)`);
+          pick.league = 'NCAAB';
+        }
+      }
+    }
 
     // Count by source for debugging
     const sourceCount: Record<string, number> = {};
@@ -47,8 +63,8 @@ export async function GET(request: Request) {
 
     // CRITICAL: Filter picks using ESPN API BEFORE building consensus
     // This ensures only teams actually playing today are included
-    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
-    console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks`);
+    const { filtered: todaysPicks, rejected: rejectedPicks } = await filterToTodaysGamesAsync(normalizedPicks);
+    console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks (${rejectedPicks.length} rejected)`);
 
     // Build consensus from ESPN-filtered picks only
     const rawConsensus = buildConsensus(todaysPicks);

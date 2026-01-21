@@ -20,7 +20,7 @@ export async function GET() {
     const normalizedPicks = normalizePicks(rawPicks);
 
     // CRITICAL: Filter picks using ESPN API BEFORE building consensus
-    const todaysPicks = await filterToTodaysGamesAsync(normalizedPicks);
+    const { filtered: todaysPicks } = await filterToTodaysGamesAsync(normalizedPicks);
     console.log(`[Daily Bets API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks`);
 
     // Build consensus from ESPN-filtered picks only

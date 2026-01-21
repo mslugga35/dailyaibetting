@@ -18,7 +18,7 @@ export async function GET() {
       { team: 'New Mexico', standardizedTeam: 'New Mexico', sport: 'NCAAF' },
     ];
 
-    const filtered = await filterToTodaysGamesAsync(testPicks);
+    const { filtered, rejected } = await filterToTodaysGamesAsync(testPicks);
     const filteredTeams = filtered.map(p => p.team);
 
     return NextResponse.json({

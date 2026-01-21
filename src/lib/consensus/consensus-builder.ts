@@ -196,23 +196,52 @@ export function extractTeam(pick: string, matchup: string): string {
 /**
  * Normalize capper name
  * Based on MASTER_CONSENSUS_RULES Section 2
+ * Handles whitespace issues ("Dave  Price" vs "Dave Price")
  */
 export function normalizeCapper(capper: string): string {
-  // Remove spaces/punctuation for consistency
-  const normalized = capper.trim();
+  // Step 1: Normalize whitespace (collapse multiple spaces, trim)
+  const normalized = capper.trim().replace(/\s+/g, ' ');
 
-  // Special entities that count as single cappers
+  // Special entities that count as single cappers (expanded list)
   const specialEntities: Record<string, string> = {
     'dimers': 'Dimers',
+    'dimers model': 'Dimers',
     'consensus leans': 'Consensus Leans',
     'ballpark pal': 'Ballpark Pal',
     'ballparkpal': 'Ballpark Pal',
     'lightning bolt': 'Lightning Bolt',
+    'sportsline': 'SportsLine',
+    'sports line': 'SportsLine',
+    'boydsbets': 'BoydsBets',
+    'boyds bets': 'BoydsBets',
+    'boyd bets': 'BoydsBets',
+    'pickswise': 'Pickswise',
+    'picks wise': 'Pickswise',
+    'wagertalk': 'WagerTalk',
+    'wager talk': 'WagerTalk',
+    'sportsmemo': 'SportsMemo',
+    'sports memo': 'SportsMemo',
+    'covers expert': 'Covers Expert',
+    'coversexpert': 'Covers Expert',
+    'betfirm': 'BetFirm',
+    'bet firm': 'BetFirm',
+    'pure lock': 'Pure Lock',
+    'purelock': 'Pure Lock',
+    'matt fargo': 'Matt Fargo',
+    'dave price': 'Dave Price',
+    'jack jones': 'Jack Jones',
+    'chris vasile': 'Chris Vasile',
+    'quinn allen': 'Quinn Allen',
   };
 
-  const lower = normalized.toLowerCase().replace(/\s+/g, '');
+  // Check special entities (case insensitive, whitespace normalized)
+  const lowerNoSpace = normalized.toLowerCase().replace(/\s+/g, '');
+  const lowerWithSpace = normalized.toLowerCase();
+
   for (const [key, value] of Object.entries(specialEntities)) {
-    if (lower.includes(key.replace(/\s+/g, ''))) {
+    const keyNoSpace = key.replace(/\s+/g, '');
+    // Check both with and without spaces for flexibility
+    if (lowerNoSpace.includes(keyNoSpace) || lowerWithSpace.includes(key)) {
       return value;
     }
   }
@@ -224,9 +253,17 @@ export function normalizeCapper(capper: string): string {
   }
 
   // Title case for consistency (prevents "Dave Price" vs "dave price" as different cappers)
-  return normalized.split(' ').map(w =>
-    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-  ).join(' ');
+  // Handle multi-word names properly
+  return normalized
+    .split(' ')
+    .map(word => {
+      if (word.length === 0) return '';
+      // Keep all-caps abbreviations (e.g., "NBA", "ML")
+      if (word === word.toUpperCase() && word.length <= 4) return word;
+      // Title case otherwise
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
 /**
@@ -404,20 +441,44 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
 /**
  * Normalize game name for totals (over/under)
  * Ensures "Cal/Hawaii", "Hawaii/California", "California vs Hawaii" all become the same
+ * Also handles single team + matchup: "Cal" with matchup "Cal vs Hawaii"
  */
-function normalizeGameForTotal(team: string, sport: string): string {
-  // Split by common separators
-  const parts = team.split(/\s*[\/vs@]+\s*/i).map(t => t.trim()).filter(Boolean);
+function normalizeGameForTotal(team: string, sport: string, matchup?: string): string {
+  // First, try to extract both teams from the team field itself
+  const teamParts = team.split(/\s*[\/]|(?:\s+(?:vs\.?|@|at)\s+)/i).map(t => t.trim()).filter(Boolean);
 
-  if (parts.length < 2) {
-    // Single team, just return standardized
-    return standardizeTeamName(team, sport);
+  if (teamParts.length >= 2) {
+    // Team field has both teams (e.g., "Cal/Hawaii" or "Cal vs Hawaii")
+    const standardizedParts = teamParts.map(t => standardizeTeamName(t, sport));
+    standardizedParts.sort((a, b) => a.localeCompare(b));
+    return standardizedParts.join('/');
   }
 
-  // Standardize each team name, then sort alphabetically
-  const standardizedParts = parts.map(t => standardizeTeamName(t, sport));
-  standardizedParts.sort((a, b) => a.localeCompare(b));
-  return standardizedParts.join('/');
+  // Single team in team field - try to get opponent from matchup
+  if (matchup && matchup.trim()) {
+    // Parse matchup for both teams
+    const matchupClean = matchup
+      .replace(/\s*[ou]\s*\d+[½]?\.?\d*[½]?/gi, '')  // Remove totals
+      .replace(/\s*over\s*\d+[½]?\.?\d*[½]?/gi, '')
+      .replace(/\s*under\s*\d+[½]?\.?\d*[½]?/gi, '')
+      .replace(/\s+[+-]?\d+[½]?\.?\d*[½]?\s*/g, ' ')  // Remove spreads
+      .trim();
+
+    const matchupParts = matchupClean.split(/\s*[\/]|(?:\s+(?:vs\.?|@|at)\s+)/i)
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    if (matchupParts.length >= 2) {
+      // Matchup has both teams
+      const standardizedParts = matchupParts.map(t => standardizeTeamName(t, sport));
+      standardizedParts.sort((a, b) => a.localeCompare(b));
+      return standardizedParts.join('/');
+    }
+  }
+
+  // Single team only - just return standardized name
+  // This will at least group "Cal Over 50" picks together
+  return standardizeTeamName(team, sport);
 }
 
 /**
@@ -430,6 +491,22 @@ function roundTotalLineForGrouping(line: string): string {
   // Round to nearest 2 points for aggressive grouping
   const rounded = Math.round(num / 2) * 2;
   return String(rounded);
+}
+
+/**
+ * Round spread line for grouping - groups within ±0.5 points
+ * NC State +3 and +3.5 become the same group
+ * Uses floor for positive, ceil for negative to group .5 with base number
+ * +3 and +3.5 → +3, -7 and -7.5 → -7
+ */
+function roundSpreadLineForGrouping(line: string): string {
+  const num = parseFloat(line);
+  if (isNaN(num)) return line;
+  // Floor positive numbers, ceil negative numbers
+  // This groups +3 and +3.5 together, -7 and -7.5 together
+  const rounded = num >= 0 ? Math.floor(num) : Math.ceil(num);
+  const sign = rounded >= 0 ? '+' : '';
+  return `${sign}${rounded}`;
 }
 
 /**
@@ -452,20 +529,15 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
     let teamForKey = pick.standardizedTeam;
     let lineForKey = pick.line;
 
+    // Round spread lines to group within ±0.5 points (NC State +3 and +3.5 combine)
+    if (pick.betType === 'SPREAD' && lineForKey) {
+      lineForKey = roundSpreadLineForGrouping(lineForKey);
+    }
+
     if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
-      // For totals, try to get both teams from matchup or team field
-      // If only one team mentioned, try to use matchup for the game name
-      let gameTeams = pick.standardizedTeam;
-      if (pick.matchup && pick.matchup.includes('/') || pick.matchup.includes(' vs ') || pick.matchup.includes('@')) {
-        // Matchup has both teams, normalize it
-        gameTeams = normalizeGameForTotal(pick.matchup, pick.sport);
-      } else if (!pick.standardizedTeam.includes('/')) {
-        // Only one team in standardizedTeam, try to get game from matchup
-        gameTeams = normalizeGameForTotal(pick.matchup || pick.standardizedTeam, pick.sport);
-      } else {
-        gameTeams = normalizeGameForTotal(pick.standardizedTeam, pick.sport);
-      }
-      teamForKey = gameTeams;
+      // For totals, normalize game name using both team and matchup fields
+      // This handles "Cal Over 50" with matchup "Cal vs Hawaii" -> "California/Hawaii"
+      teamForKey = normalizeGameForTotal(pick.standardizedTeam, pick.sport, pick.matchup);
       if (lineForKey) {
         lineForKey = roundTotalLineForGrouping(lineForKey);
       }

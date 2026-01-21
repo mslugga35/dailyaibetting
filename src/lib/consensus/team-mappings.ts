@@ -405,13 +405,27 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
 
 /**
  * Standardize a team name to its canonical form
- * Checks longer/more specific names first to avoid false matches
+ * Priority-based matching:
+ * 1. FIRST: Exact abbreviation match (SF, NYY, LAD) - case insensitive
+ * 2. THEN: Longer/more specific names to avoid false matches
  */
 export function standardizeTeamName(team: string, sport: string): string {
   const sportMappings = teamMappings[sport] || {};
-  const teamLower = team.toLowerCase();
+  const teamTrimmed = team.trim();
+  const teamLower = teamTrimmed.toLowerCase();
 
-  // Sort entries by the length of the longest variation (longest first)
+  // PRIORITY 1: Check for exact abbreviation match first (2-5 letter codes)
+  // This prevents "SF" from incorrectly matching via includes() on wrong teams
+  if (teamTrimmed.length <= 5) {
+    for (const [standardName, variations] of Object.entries(sportMappings)) {
+      // Check if any variation is an exact match (case insensitive)
+      if (variations.some(v => v.toLowerCase() === teamLower)) {
+        return standardName;
+      }
+    }
+  }
+
+  // PRIORITY 2: Check longer names - sort by longest variation first
   // This ensures "Georgia Southern" matches before "Georgia"
   const sortedEntries = Object.entries(sportMappings).sort((a, b) => {
     const maxLenA = Math.max(...a[1].map(v => v.length));
@@ -425,7 +439,7 @@ export function standardizeTeamName(team: string, sport: string): string {
     }
   }
 
-  return team.trim();
+  return teamTrimmed;
 }
 
 /**

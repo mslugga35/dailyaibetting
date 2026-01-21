@@ -494,6 +494,83 @@ function parseGoogleDocContent(content: string): RawPick[] {
 }
 
 /**
+ * Split parlay legs into individual picks
+ * Detects patterns like "Bills + Chiefs ML" or "Bills ML + Chiefs -3"
+ * Returns array of individual picks (1 for non-parlays, N for N-leg parlays)
+ *
+ * IMPORTANT: Must distinguish between:
+ * - Parlays: "Bills + Chiefs ML" (space + space pattern between teams)
+ * - Spreads: "Bills +3" (no space after +, this is NOT a parlay)
+ */
+function splitParlayLegs(pick: RawPick): RawPick[] {
+  const pickText = pick.pick || '';
+
+  // Pattern: Require space on BOTH sides of + to identify parlay separator
+  // This prevents "Bills +3" from being split (no space after +)
+  // Examples that SHOULD split: "Bills + Chiefs", "Bills ML + Chiefs ML"
+  // Examples that should NOT split: "Bills +3", "Chiefs +7.5"
+  const parlayPattern = /\s+\+\s+/;
+
+  // Check if this looks like a parlay (has + separator with spaces on both sides)
+  if (!parlayPattern.test(pickText)) {
+    return [pick]; // Not a parlay, return as-is
+  }
+
+  // Split by " + " (space-plus-space)
+  const legs = pickText.split(parlayPattern).map(leg => leg.trim()).filter(Boolean);
+
+  // If only one leg after split, not a parlay
+  if (legs.length < 2) {
+    return [pick];
+  }
+
+  // Validate each leg looks like a bet (has team name + optional line/ML)
+  // Skip if any leg doesn't look like a bet (might be odds like "+110")
+  const validLegs = legs.filter(leg => {
+    // Must start with a letter (team name)
+    if (!/^[A-Za-z]/.test(leg)) return false;
+    // Must have at least 2 characters
+    if (leg.length < 2) return false;
+    // Skip pure numbers/odds
+    if (/^\d+$/.test(leg)) return false;
+    return true;
+  });
+
+  if (validLegs.length < 2) {
+    return [pick]; // Not enough valid legs, return as-is
+  }
+
+  // Create individual picks for each leg
+  return validLegs.map(leg => ({
+    ...pick,
+    pick: leg,
+    matchup: leg.replace(/\s+(ML|[+-]\d+\.?\d*|Over\s*[\d.]+|Under\s*[\d.]+).*$/i, '').trim(),
+    // Keep original service/capper but note it was from a parlay
+  }));
+}
+
+/**
+ * Process all raw picks to split parlays into individual legs
+ */
+function processRawPicks(picks: RawPick[]): RawPick[] {
+  const processed: RawPick[] = [];
+
+  for (const pick of picks) {
+    const splitLegs = splitParlayLegs(pick);
+    processed.push(...splitLegs);
+  }
+
+  // Log if any parlays were split
+  const originalCount = picks.length;
+  const processedCount = processed.length;
+  if (processedCount > originalCount) {
+    console.log(`[Parlays] Split ${processedCount - originalCount} parlay legs (${originalCount} -> ${processedCount} picks)`);
+  }
+
+  return processed;
+}
+
+/**
  * Get all picks from all sources
  */
 export async function getAllPicksFromSources(): Promise<RawPick[]> {
@@ -514,8 +591,9 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   console.log(`[DataSources] Sheet: ${sheetPicks.length} picks`, sheetSports);
   console.log(`[DataSources] Doc: ${docPicks.length} picks`, docSports);
 
-  // Combine all picks
-  const allPicks = [...sheetPicks, ...docPicks];
+  // Combine all picks and split parlay legs into individual picks
+  const combinedPicks = [...sheetPicks, ...docPicks];
+  const allPicks = processRawPicks(combinedPicks);
 
   // Fix sport misclassification for known college teams
   // Teams like Liberty, Gonzaga, etc. should always be NCAAB (basketball)

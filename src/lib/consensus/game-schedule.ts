@@ -290,19 +290,45 @@ export function filterToTodaysGames<T extends { team?: string; standardizedTeam?
 }
 
 /**
- * Async version that actually checks ESPN
+ * Extended pick type with optional capper field for better logging
  */
-export async function filterToTodaysGamesAsync<T extends { team?: string; standardizedTeam?: string; sport: string }>(
+interface PickWithCapper {
+  team?: string;
+  standardizedTeam?: string;
+  sport: string;
+  capper?: string;
+  originalPick?: string;
+}
+
+/**
+ * Rejection reason types for clear logging
+ */
+type RejectionReason = 'UNSUPPORTED_SPORT' | 'NO_GAMES_TODAY' | 'TEAM_NOT_PLAYING';
+
+interface RejectedPick {
+  team: string;
+  sport: string;
+  capper?: string;
+  reason: RejectionReason;
+  details: string;
+}
+
+/**
+ * Async version that actually checks ESPN
+ * Returns both filtered picks and rejection details for debugging
+ */
+export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
   picks: T[]
-): Promise<T[]> {
+): Promise<{ filtered: T[]; rejected: RejectedPick[] }> {
   await loadGamesCache();
 
   if (!gamesCache || gamesCache.games.size === 0) {
     console.warn('[Schedule] No cache available, passing all picks through');
-    return picks;
+    return { filtered: picks, rejected: [] };
   }
 
   const filtered: T[] = [];
+  const rejected: RejectedPick[] = [];
 
   // Only allow sports we have ESPN endpoints for
   const SUPPORTED_SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB'];
@@ -310,18 +336,30 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
   for (const pick of picks) {
     const team = pick.standardizedTeam || pick.team || '';
     const sport = pick.sport.toUpperCase();
+    const capper = pick.capper || 'Unknown';
 
     // Filter out unsupported sports entirely (soccer, tennis, etc.)
     if (!SUPPORTED_SPORTS.includes(sport)) {
-      console.log(`[Schedule] FILTERING OUT ${team} (${sport}) - unsupported sport`);
+      rejected.push({
+        team,
+        sport,
+        capper,
+        reason: 'UNSUPPORTED_SPORT',
+        details: `${sport} is not supported (only: ${SUPPORTED_SPORTS.join(', ')})`,
+      });
       continue;
     }
 
     // Check if sport has games today
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      // No games for this sport today - filter OUT
-      console.log(`[Schedule] FILTERING OUT ${team} (${sport}) - no ${sport} games today`);
+      rejected.push({
+        team,
+        sport,
+        capper,
+        reason: 'NO_GAMES_TODAY',
+        details: `No ${sport} games scheduled for today`,
+      });
       continue;
     }
 
@@ -339,11 +377,50 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
     if (isPlaying) {
       filtered.push(pick);
     } else {
-      console.log(`[Schedule] Filtering out ${team} (${sport}) - not playing today per ESPN`);
+      rejected.push({
+        team,
+        sport,
+        capper,
+        reason: 'TEAM_NOT_PLAYING',
+        details: `${team} not found in today's ${sport} schedule`,
+      });
     }
   }
 
-  console.log(`[Schedule] Filtered ${picks.length} -> ${filtered.length} picks`);
+  // Log summary with rejection breakdown
+  if (rejected.length > 0) {
+    console.log(`\n[Schedule] ⚠ Filtered out ${rejected.length} picks:`);
+
+    // Group by reason for cleaner output
+    const byReason = rejected.reduce((acc, r) => {
+      acc[r.reason] = acc[r.reason] || [];
+      acc[r.reason].push(r);
+      return acc;
+    }, {} as Record<RejectionReason, RejectedPick[]>);
+
+    for (const [reason, picks] of Object.entries(byReason)) {
+      console.log(`  ${reason}: ${picks.length} picks`);
+      // Show first 3 examples for each reason
+      for (const p of picks.slice(0, 3)) {
+        console.log(`    - ${p.team} (${p.sport}) from ${p.capper}: ${p.details}`);
+      }
+      if (picks.length > 3) {
+        console.log(`    ... and ${picks.length - 3} more`);
+      }
+    }
+  }
+
+  console.log(`[Schedule] ESPN Validation: ${picks.length} -> ${filtered.length} picks (${rejected.length} filtered)`);
+  return { filtered, rejected };
+}
+
+/**
+ * Simple async filter (backwards compatible - returns only filtered picks)
+ */
+export async function filterToTodaysGamesAsyncSimple<T extends PickWithCapper>(
+  picks: T[]
+): Promise<T[]> {
+  const { filtered } = await filterToTodaysGamesAsync(picks);
   return filtered;
 }
 
