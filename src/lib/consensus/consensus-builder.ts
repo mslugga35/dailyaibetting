@@ -129,6 +129,9 @@ export function extractTeam(pick: string, matchup: string): string {
   // Clean the pick text step by step
   let cleanPick = pick;
 
+  // Step 0: Remove sportsbook names (at PlayMGM, at DraftKings, etc.)
+  cleanPick = cleanPick.replace(/\s+at\s+(PlayMGM|DraftKings|FanDuel|BetMGM|Caesars|PointsBet|BetRivers|Barstool|WynnBET|Unibet|bet365|Betway|SugarHouse)/gi, '');
+
   // Step 1: Remove odds in parentheses (-110), (+150)
   cleanPick = cleanPick.replace(/\([+-]?\d+\)/g, '');
 
