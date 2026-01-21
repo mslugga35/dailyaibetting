@@ -28,6 +28,7 @@ let gamesCache: {
   date: string;
   games: Map<string, Set<string>>; // sport -> Set of team names
   fetchedAt: number;
+  yesterdaysTeams?: Set<string>; // For stale pick detection
 } | null = null;
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
@@ -42,19 +43,29 @@ const ESPN_ENDPOINTS: Record<string, string> = {
   NCAAB: 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard',
 };
 
-// Get today's date in Eastern timezone
+// Get today's date in Eastern timezone (using reliable Intl.DateTimeFormat)
 function getTodayET(): string {
   const now = new Date();
-  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  return todayET.toISOString().split('T')[0];
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(now);
+  return `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
 }
 
-// Get yesterday's date in Eastern timezone
+// Get yesterday's date in Eastern timezone (using reliable Intl.DateTimeFormat)
 function getYesterdayET(): string {
-  const now = new Date();
-  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  todayET.setDate(todayET.getDate() - 1);
-  return todayET.toISOString().split('T')[0];
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(yesterday);
+  return `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
 }
 
 /**
@@ -87,9 +98,14 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
   if (!endpoint) return [];
 
   try {
-    const response = await fetch(endpoint, {
+    // Add date parameter to ensure we get TODAY's games (ESPN default may show yesterday)
+    const today = getTodayET();
+    const dateParam = today.replace(/-/g, ''); // YYYYMMDD format
+    const url = `${endpoint}?dates=${dateParam}`;
+
+    const response = await fetch(url, {
       headers: { 'Accept': 'application/json' },
-      next: { revalidate: 1800 }, // Cache for 30 min
+      next: { revalidate: 300 }, // Cache for 5 min (reduced from 30)
     });
 
     if (!response.ok) {
@@ -99,7 +115,6 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
 
     const data: ESPNResponse = await response.json();
     const teams: string[] = [];
-    const today = getTodayET();
 
     for (const event of data.events || []) {
       // Convert ESPN UTC date to Eastern timezone for comparison
@@ -210,7 +225,7 @@ async function loadGamesCache(): Promise<void> {
   };
 
   // Store yesterday's teams for filtering
-  (gamesCache as any).yesterdaysTeams = yesterdaysTeams;
+  gamesCache.yesterdaysTeams = yesterdaysTeams;
 
   console.log('[Schedule] Cache updated:',
     Object.fromEntries([...todaysGames.entries()].map(([k, v]) => [k, v.size / 3]))
@@ -289,25 +304,24 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
 
   const filtered: T[] = [];
 
-  // Sports where ESPN doesn't show all games (pass through without filtering)
-  const PASS_THROUGH_SPORTS = ['NCAAB', 'NCAAF'];
+  // Only allow sports we have ESPN endpoints for
+  const SUPPORTED_SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB'];
 
   for (const pick of picks) {
     const team = pick.standardizedTeam || pick.team || '';
-    const sport = pick.sport;
+    const sport = pick.sport.toUpperCase();
 
-    // College sports: ESPN doesn't show all games, pass through
-    if (PASS_THROUGH_SPORTS.includes(sport)) {
-      filtered.push(pick);
+    // Filter out unsupported sports entirely (soccer, tennis, etc.)
+    if (!SUPPORTED_SPORTS.includes(sport)) {
+      console.log(`[Schedule] FILTERING OUT ${team} (${sport}) - unsupported sport`);
       continue;
     }
 
     // Check if sport has games today
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      // No games for this sport today - filter OUT (not pass through)
-      // This prevents yesterday's picks from showing when sport has no games
-      console.log(`[Schedule] Filtering out ${team} (${sport}) - no ${sport} games today`);
+      // No games for this sport today - filter OUT
+      console.log(`[Schedule] FILTERING OUT ${team} (${sport}) - no ${sport} games today`);
       continue;
     }
 
@@ -325,7 +339,7 @@ export async function filterToTodaysGamesAsync<T extends { team?: string; standa
     if (isPlaying) {
       filtered.push(pick);
     } else {
-      console.log(`[Schedule] Filtering out ${team} (${sport}) - not playing today`);
+      console.log(`[Schedule] Filtering out ${team} (${sport}) - not playing today per ESPN`);
     }
   }
 

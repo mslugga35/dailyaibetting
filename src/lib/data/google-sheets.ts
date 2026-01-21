@@ -36,7 +36,7 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       headers: {
         'Accept': 'application/json',
       },
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: 60 }, // Cache for 1 minute (reduced to catch stale data faster)
     });
 
     if (!response.ok) {
@@ -83,9 +83,27 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     }
 
     // Get today's date in Eastern timezone for strict TODAY filter
+    // Use Intl.DateTimeFormat for reliable timezone conversion
     const now = new Date();
-    const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const todayStr = todayET.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const todayParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(now);
+    const todayStr = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
+    console.log(`[${sheetName}] Today (ET): ${todayStr}, UTC: ${now.toISOString()}`);
+
+    // Also get yesterday to warn about stale picks
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).formatToParts(yesterdayDate);
+    const yesterdayStr = `${yesterdayParts.find(p => p.type === 'year')?.value}-${yesterdayParts.find(p => p.type === 'month')?.value}-${yesterdayParts.find(p => p.type === 'day')?.value}`;
 
     // Map rows to RawPick objects
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string | number | null; f?: string } | null)[] }) => {
@@ -126,12 +144,15 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       // Try to parse and compare to today
       let pickDateStr = dateToCheck.split('T')[0];
 
+      // Extract year from todayStr for date parsing
+      const currentYear = todayStr.split('-')[0];
+
       // Handle MM/DD/YYYY format
       const slashMatch = pickDateStr.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
       if (slashMatch) {
         const month = slashMatch[1].padStart(2, '0');
         const day = slashMatch[2].padStart(2, '0');
-        const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : todayET.getFullYear();
+        const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : currentYear;
         pickDateStr = `${year}-${month}-${day}`;
       }
 
@@ -143,12 +164,24 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
         const monthNum = monthNames.indexOf(monthAbbr) + 1;
         if (monthNum > 0) {
           const day = monthNameMatch[1].padStart(2, '0');
-          pickDateStr = `${todayET.getFullYear()}-${String(monthNum).padStart(2, '0')}-${day}`;
+          pickDateStr = `${currentYear}-${String(monthNum).padStart(2, '0')}-${day}`;
         }
       }
 
       // Strict TODAY check - must match today's date exactly
-      return pickDateStr === todayStr;
+      const isToday = pickDateStr === todayStr;
+
+      // Log rejections for debugging
+      if (!isToday) {
+        const isYesterday = pickDateStr === yesterdayStr;
+        if (isYesterday) {
+          console.log(`[${sheetName}] REJECTED STALE: "${p.pick}" date=${pickDateStr} (yesterday) - today is ${todayStr}`);
+        } else {
+          console.log(`[${sheetName}] REJECTED: "${p.pick?.slice(0,30)}" date=${pickDateStr} (not today: ${todayStr})`);
+        }
+      }
+
+      return isToday;
     });
   } catch (error) {
     console.error(`Error fetching sheet ${sheetName}:`, error);
@@ -166,10 +199,15 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
  */
 function parseManualPicksSheet(rows: { c: ({ v: string } | null)[] }[], headers: string[]): RawPick[] {
   const picks: RawPick[] = [];
-  // Use Eastern timezone for today's date
+  // Use Eastern timezone for today's date (reliable Intl.DateTimeFormat)
   const now = new Date();
-  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const today = todayET.toISOString().split('T')[0];
+  const todayParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(now);
+  const today = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
 
   // Sport detection patterns
   const sportTeams: Record<string, string[]> = {
@@ -319,7 +357,7 @@ export async function fetchPicksFromGoogleDoc(): Promise<RawPick[]> {
     const url = `https://docs.google.com/document/d/${docId}/export?format=txt`;
 
     const response = await fetch(url, {
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: 60 }, // Cache for 1 minute (reduced to catch stale data faster)
     });
 
     if (!response.ok) {
@@ -348,24 +386,30 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
   let currentCapper = '';
   let currentSport = '';
-  // Use Eastern timezone for today's date
+  // Use Eastern timezone for today's date (reliable Intl.DateTimeFormat)
   const now = new Date();
-  const todayET = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const today = todayET.toISOString().split('T')[0];
+  const todayParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(now);
+  const today = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
 
   // Sport name mapping - handle various formats
+  // Basketball mappings checked first (more common year-round)
   const sportMap: Record<string, string> = {
     'ncaa basketball': 'NCAAB',
     'ncaab': 'NCAAB',
     'cbb': 'NCAAB',
     'college basketball': 'NCAAB',
-    'basketball': 'NCAAB', // Generic "Basketball:" means college in this context
+    'basketball': 'NCAAB',
     'ncaa football': 'NCAAF',
     'ncaaf': 'NCAAF',
     'cfb': 'NCAAF',
     'college football': 'NCAAF',
-    'football': 'NCAAF', // Generic "Football:" means college
-    'ncaa': 'NCAAF', // Ambiguous, but usually means football in this context
+    'football': 'NCAAF',
+    'ncaa': 'NCAAB', // Ambiguous - default to basketball (more games year-round)
     'nfl': 'NFL',
     'nfl football': 'NFL',
     'nba': 'NBA',
@@ -473,16 +517,38 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   // Combine all picks
   const allPicks = [...sheetPicks, ...docPicks];
 
-  // Fix sport misclassification for known NCAAB teams
-  // Teams like Liberty, Gonzaga, etc. should always be NCAAB (basketball), not NCAAF (football)
-  const ncaabTeams = ['liberty', 'gonzaga', 'wazzu', 'colgate', 'seattle', 'pepperdine', 'ul-monroe', 'winthrop'];
+  // Fix sport misclassification for known college teams
+  // Teams like Liberty, Gonzaga, etc. should always be NCAAB (basketball)
+  const ncaabOnlyTeams = ['liberty', 'gonzaga', 'wazzu', 'colgate', 'seattle', 'pepperdine', 'ul-monroe', 'winthrop'];
+
+  // College team names that might be confused with NFL (e.g., "Hurricanes" is college, not NFL)
+  const collegeTeamNames = ['hurricanes', 'gators', 'seminoles', 'volunteers', 'bulldogs', 'crimson tide',
+    'longhorns', 'wolverines', 'buckeyes', 'nittany lions', 'spartans', 'cornhuskers', 'tar heels',
+    'blue devils', 'hokies', 'cavaliers', 'yellow jackets', 'fightin irish', 'fighting irish'];
+
   for (const pick of allPicks) {
     const pickText = (pick.pick || '').toLowerCase();
     const matchupText = (pick.matchup || '').toLowerCase();
-    const isNCAABTeam = ncaabTeams.some(t => pickText.includes(t) || matchupText.includes(t));
+    const leagueUpper = (pick.league || '').toUpperCase();
 
+    // Fix NCAAB-only teams
+    const isNCAABTeam = ncaabOnlyTeams.some(t => pickText.includes(t) || matchupText.includes(t));
     if (isNCAABTeam && pick.league !== 'NCAAB') {
+      console.log(`[DataSources] Reclassifying ${pick.pick} from ${pick.league} to NCAAB (basketball-only team)`);
       pick.league = 'NCAAB';
+    }
+
+    // Fix college teams incorrectly labeled as NFL
+    if (leagueUpper === 'NFL') {
+      const isCollegeTeam = collegeTeamNames.some(t => pickText.includes(t) || matchupText.includes(t));
+      if (isCollegeTeam) {
+        // Check if it's basketball season (Nov-Apr) or football (Aug-Jan)
+        const month = new Date().getMonth() + 1;
+        const isBasketballSeason = month >= 11 || month <= 4;
+        const newLeague = isBasketballSeason ? 'NCAAB' : 'NCAAF';
+        console.log(`[DataSources] Reclassifying ${pick.pick} from NFL to ${newLeague} (college team name detected)`);
+        pick.league = newLeague;
+      }
     }
   }
 

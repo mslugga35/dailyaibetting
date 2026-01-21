@@ -164,7 +164,7 @@ export function extractTeam(pick: string, matchup: string): string {
   // Try to match from matchup if provided
   if (matchup && matchup.trim()) {
     // Clean matchup (handle ½ character in numbers)
-    let cleanMatchup = matchup
+    const cleanMatchup = matchup
       .replace(/\s*[ou]\s*\d+[½]?\.?\d*[½]?/gi, '')
       .replace(/\s*over\s*\d+[½]?\.?\d*[½]?/gi, '')
       .replace(/\s*under\s*\d+[½]?\.?\d*[½]?/gi, '')
@@ -199,7 +199,7 @@ export function extractTeam(pick: string, matchup: string): string {
  */
 export function normalizeCapper(capper: string): string {
   // Remove spaces/punctuation for consistency
-  let normalized = capper.trim();
+  const normalized = capper.trim();
 
   // Special entities that count as single cappers
   const specialEntities: Record<string, string> = {
@@ -223,7 +223,10 @@ export function normalizeCapper(capper: string): string {
     return `Capper ${capperNumMatch[1]}`;
   }
 
-  return normalized;
+  // Title case for consistency (prevents "Dave Price" vs "dave price" as different cappers)
+  return normalized.split(' ').map(w =>
+    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(' ');
 }
 
 /**
@@ -242,20 +245,26 @@ export function isTodayPick(pickDate: string): boolean {
     return true;
   }
 
-  // Get today's date in Eastern timezone
-  const today = new Date();
-  const todayET = new Date(today.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-  const todayStr = todayET.toISOString().split('T')[0];
+  // Get today's date in Eastern timezone (using reliable Intl.DateTimeFormat)
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(now);
+  const todayStr = `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
 
   // Parse pick date - handle various formats
   let pickDateClean = pickDate.split('T')[0];
+  const currentYear = todayStr.split('-')[0];
 
   // Handle MM/DD/YYYY or M/D/YYYY format
   const slashMatch = pickDateClean.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
   if (slashMatch) {
     const month = slashMatch[1].padStart(2, '0');
     const day = slashMatch[2].padStart(2, '0');
-    const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : todayET.getFullYear();
+    const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : currentYear;
     pickDateClean = `${year}-${month}-${day}`;
   }
 
@@ -267,7 +276,7 @@ export function isTodayPick(pickDate: string): boolean {
     const monthNum = monthNames.indexOf(monthAbbr) + 1;
     if (monthNum > 0) {
       const day = monthNameMatch[1].padStart(2, '0');
-      pickDateClean = `${todayET.getFullYear()}-${String(monthNum).padStart(2, '0')}-${day}`;
+      pickDateClean = `${currentYear}-${String(monthNum).padStart(2, '0')}-${day}`;
     }
   }
 
@@ -301,6 +310,23 @@ export function normalizeSport(sport: string): string {
   return sportMap[upper] || upper;
 }
 
+// Sports that we support (have ESPN endpoints for)
+export const SUPPORTED_SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'WNBA'];
+
+// Sports to always filter out (tennis, soccer, etc.)
+const UNSUPPORTED_SPORTS = ['SOCCER', 'TENNIS', 'ATP', 'WTA', 'UFC', 'MMA', 'GOLF', 'PGA', 'BOXING', 'ESPORTS'];
+
+/**
+ * Check if sport is supported (has ESPN endpoint)
+ */
+export function isSupportedSport(sport: string): boolean {
+  const upper = sport.toUpperCase();
+  // Filter out explicitly unsupported sports
+  if (UNSUPPORTED_SPORTS.includes(upper)) return false;
+  // Only allow supported sports
+  return SUPPORTED_SPORTS.includes(upper);
+}
+
 /**
  * Check if sport is in season
  * Based on MASTER_CONSENSUS_RULES Section 1
@@ -324,7 +350,7 @@ export function isInSeason(sport: string): boolean {
     case 'NCAAB':
       return month >= 11 || month <= 4;
     default:
-      return true;
+      return false; // Unknown sports filtered out
   }
 }
 
@@ -340,6 +366,13 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
       // Normalize and filter in-season sports
       const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
       const sport = normalizeSport(rawSport);
+
+      // Filter out unsupported sports (soccer, tennis, etc.)
+      if (!isSupportedSport(sport)) {
+        console.log(`[Consensus] Filtering out unsupported sport: ${sport} - ${pick.pick}`);
+        return false;
+      }
+
       if (!isInSeason(sport)) return false;
 
       return true;
