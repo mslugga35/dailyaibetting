@@ -1,187 +1,59 @@
-'use client';
+import { Metadata } from 'next'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Target, RefreshCw, Loader2, Flame } from 'lucide-react';
-import { useConsensus } from '@/lib/hooks/use-consensus';
-import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
-import { SportQuickNav } from '@/components/ui/breadcrumbs';
-import Link from 'next/link';
+export const metadata: Metadata = {
+  title: 'Free NBA Picks Today - Expert Consensus Picks | DailyAI Betting',
+  description: 'Get free NBA picks today from top cappers. Our AI analyzes expert consensus to find the best NBA bets. Updated daily with spread, moneyline, and total picks.',
+  keywords: 'free NBA picks today, NBA betting picks, NBA consensus picks, NBA best bets, NBA expert picks',
+}
 
-export default function NBAPicksTodayPage() {
-  const { topOverall, isLoading, error, refetch, data } = useConsensus();
-
-  const nbaPicks = topOverall.filter(p => p.sport === 'NBA');
-  const firePicks = nbaPicks.filter(p => p.capperCount >= 3);
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
-  const getFireEmoji = (count: number) => {
-    if (count >= 10) return '🔥🔥🔥';
-    if (count >= 3) return '🔥';
-    return '';
-  };
-
+export default function NBAPicksToday() {
   return (
-    <div className="container px-4 py-8">
-      {/* SEO Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <Target className="h-5 w-5" />
-              <span className="text-sm font-medium">NBA Picks</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Free NBA Picks Today
-            </h1>
-            <p className="text-muted-foreground">
-              {today} &middot; Expert consensus picks for today&apos;s NBA games
-            </p>
+    <main className="container mx-auto px-4 py-8">
+      <h1 className="text-4xl font-bold mb-4">Free NBA Picks Today</h1>
+      <p className="text-xl text-muted-foreground mb-8">
+        Expert consensus picks updated daily. We track 10+ professional cappers and highlight plays where multiple experts agree.
+      </p>
+      
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">🔥 Today&apos;s NBA Consensus Picks</h2>
+        <p className="mb-4">
+          Our AI scans picks from top sports betting experts and identifies where 3 or more cappers agree on the same play. 
+          These consensus picks historically hit at a higher rate than individual picks.
+        </p>
+        <a 
+          href="/consensus?sport=NBA" 
+          className="inline-block bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700"
+        >
+          View NBA Consensus Picks →
+        </a>
+      </section>
+
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">How Our NBA Picks Work</h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="p-4 border rounded-lg">
+            <h3 className="font-semibold mb-2">1. We Track Experts</h3>
+            <p className="text-sm text-muted-foreground">10+ professional cappers including BetFirm, Covers, Dimers, and more.</p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Sport Quick Nav */}
-      <SportQuickNav currentSport="NBA" />
-
-      {/* Stats */}
-      {nbaPicks.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-3xl font-bold text-primary">{nbaPicks.length}</div>
-              <div className="text-sm text-muted-foreground">NBA Consensus Picks</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-3xl font-bold text-orange-500">{firePicks.length}</div>
-              <div className="text-sm text-muted-foreground">Fire Picks (3+)</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-3xl font-bold">
-                {nbaPicks.length > 0 ? Math.max(...nbaPicks.map(p => p.capperCount)) : 0}
-              </div>
-              <div className="text-sm text-muted-foreground">Max Agreement</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-3xl font-bold text-primary">{data?.totalPicks || 0}</div>
-              <div className="text-sm text-muted-foreground">Total Analyzed</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading NBA picks...</span>
-        </div>
-      )}
-
-      {/* Error */}
-      {error && !isLoading && (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Unable to load picks. Please try refreshing.</p>
-          <Button variant="outline" className="mt-4" onClick={() => refetch()}>
-            Try Again
-          </Button>
-        </Card>
-      )}
-
-      {/* Picks */}
-      {!isLoading && !error && (
-        <div className="space-y-4 mb-8">
-          {nbaPicks.length > 0 ? (
-            nbaPicks
-              .sort((a, b) => b.capperCount - a.capperCount)
-              .map((pick, index) => (
-                <Card key={index} className={pick.capperCount >= 3 ? 'border-orange-500/50 bg-orange-500/5' : ''}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline">NBA</Badge>
-                          {pick.capperCount >= 3 && (
-                            <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
-                          )}
-                        </div>
-                        <div className="font-medium">{pick.matchup}</div>
-                        <div className="text-lg font-bold text-primary">{pick.bet}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">{pick.capperCount}</div>
-                        <div className="text-xs text-muted-foreground">cappers agree</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-          ) : (
-            <Card className="p-8 text-center">
-              <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No NBA picks available today.</p>
-              <p className="text-sm text-muted-foreground mt-2">Check back closer to game time!</p>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Email Capture */}
-      <div className="mb-8">
-        <EmailCaptureBanner />
-      </div>
-
-      {/* Cross-links for SEO */}
-      <Card>
-        <CardHeader>
-          <CardTitle>More Free Picks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/nfl-picks-today">NFL Picks</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/mlb-picks-today">MLB Picks</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/nhl-picks-today">NHL Picks</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/cbb-picks-today">College Basketball</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/daily-bets">Daily Bets</Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/sportsbooks">Sportsbooks</Link>
-            </Button>
+          <div className="p-4 border rounded-lg">
+            <h3 className="font-semibold mb-2">2. Find Consensus</h3>
+            <p className="text-sm text-muted-foreground">Our AI identifies plays where multiple experts agree on the same bet.</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+          <div className="p-4 border rounded-lg">
+            <h3 className="font-semibold mb-2">3. 🔥 Fire Picks</h3>
+            <p className="text-sm text-muted-foreground">3+ cappers agreeing = Fire pick. These are our strongest plays.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">NBA Betting Resources</h2>
+        <ul className="space-y-2">
+          <li><a href="/consensus" className="text-emerald-600 hover:underline">All Consensus Picks</a></li>
+          <li><a href="/cappers" className="text-emerald-600 hover:underline">Capper Leaderboard</a></li>
+          <li><a href="/trends" className="text-emerald-600 hover:underline">Betting Trends</a></li>
+        </ul>
+      </section>
+    </main>
+  )
 }
