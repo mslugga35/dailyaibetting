@@ -1,16 +1,19 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, Target, TrendingUp, Users, ExternalLink } from 'lucide-react';
-import { useConsensus } from '@/lib/hooks/use-consensus';
+import { Calendar, Target, TrendingUp, Users, ExternalLink } from 'lucide-react';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
-import Link from 'next/link';
 
-interface GamePick {
+export const dynamic = 'force-dynamic';
+
+interface PageProps {
+  params: { slug: string };
+}
+
+interface ConsensusPick {
   matchup: string;
   bet: string;
   betType: string;
@@ -34,39 +37,72 @@ function getSportPageUrl(sport: string): string {
   return sportMap[sport.toUpperCase()] || '/picks';
 }
 
-export default function GamePage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const { topOverall, isLoading, error } = useConsensus();
-  const [gamePicks, setGamePicks] = useState<GamePick[]>([]);
-  const [gameInfo, setGameInfo] = useState<{ team1: string; team2: string; sport: string } | null>(null);
+async function getConsensusData(): Promise<ConsensusPick[]> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  try {
+    const response = await fetch(`${baseUrl}/api/consensus`, {
+      cache: 'no-store',
+    });
+    const result = await response.json();
+    return result.success ? result.data?.topOverall || [] : [];
+  } catch (error) {
+    console.error('Failed to fetch consensus data:', error);
+    return [];
+  }
+}
 
-  useEffect(() => {
-    if (!slug) return;
+function parseGameSlug(slug: string): { team1: string; team2: string } | null {
+  // Parse slug: format is "team1-vs-team2" or "team1-at-team2"
+  const parts = slug.split(/-vs-|-at-/i);
+  if (parts.length !== 2) return null;
 
-    // Parse slug: format is "team1-vs-team2" or "team1-at-team2"
-    const parts = slug.split(/-vs-|-at-/i);
-    if (parts.length === 2) {
-      const team1 = parts[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const team2 = parts[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const team1 = parts[0].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const team2 = parts[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  
+  return { team1, team2 };
+}
 
-      // Find matching picks
-      const matchingPicks = topOverall.filter(pick => {
-        const matchup = pick.matchup?.toLowerCase() || '';
-        const t1Lower = team1.toLowerCase();
-        const t2Lower = team2.toLowerCase();
-        return matchup.includes(t1Lower) || matchup.includes(t2Lower) ||
-               pick.bet?.toLowerCase().includes(t1Lower) ||
-               pick.bet?.toLowerCase().includes(t2Lower);
-      });
+function findMatchingPicks(topOverall: ConsensusPick[], team1: string, team2: string): ConsensusPick[] {
+  return topOverall.filter(pick => {
+    const matchup = pick.matchup?.toLowerCase() || '';
+    const t1Lower = team1.toLowerCase();
+    const t2Lower = team2.toLowerCase();
+    return matchup.includes(t1Lower) || matchup.includes(t2Lower) ||
+           pick.bet?.toLowerCase().includes(t1Lower) ||
+           pick.bet?.toLowerCase().includes(t2Lower);
+  });
+}
 
-      // Determine sport from picks
-      const sport = matchingPicks[0]?.sport || 'SPORTS';
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const gameInfo = parseGameSlug(params.slug);
+  
+  if (!gameInfo) {
+    return {
+      title: 'Game Not Found | DailyAI Betting',
+      robots: { index: false, follow: false },
+    };
+  }
 
-      setGameInfo({ team1, team2, sport });
-      setGamePicks(matchingPicks);
-    }
-  }, [slug, topOverall]);
+  return {
+    title: `${gameInfo.team1} vs ${gameInfo.team2} - Expert Betting Picks | DailyAI Betting`,
+    description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which handicappers agree on spreads, moneylines, and totals.`,
+    keywords: `${gameInfo.team1} vs ${gameInfo.team2} picks, ${gameInfo.team1} ${gameInfo.team2} predictions, betting picks, spread picks`,
+  };
+}
+
+export default async function GamePage({ params }: PageProps) {
+  const gameInfo = parseGameSlug(params.slug);
+  
+  if (!gameInfo) {
+    notFound();
+  }
+
+  const topOverall = await getConsensusData();
+  const gamePicks = findMatchingPicks(topOverall, gameInfo.team1, gameInfo.team2);
+  
+  // Determine sport from picks
+  const sport = gamePicks[0]?.sport || 'SPORTS';
 
   const getFireEmoji = (count: number) => {
     if (count >= 10) return '🔥🔥🔥';
@@ -81,30 +117,6 @@ export default function GamePage() {
     year: 'numeric',
   });
 
-  if (isLoading) {
-    return (
-      <div className="container px-4 py-16 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading game data...</p>
-      </div>
-    );
-  }
-
-  if (!gameInfo) {
-    return (
-      <div className="container px-4 py-16 text-center">
-        <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Game Not Found</h1>
-        <p className="text-muted-foreground mb-6">
-          We couldn&apos;t find picks for this matchup. It may not be scheduled for today.
-        </p>
-        <Button asChild>
-          <Link href="/">View Today&apos;s Picks</Link>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="container px-4 py-8 max-w-4xl mx-auto">
       {/* Header */}
@@ -117,13 +129,13 @@ export default function GamePage() {
           {gameInfo.team1} vs {gameInfo.team2}
         </h1>
         <div className="flex items-center gap-3">
-          <Badge variant="outline">{gameInfo.sport}</Badge>
+          <Badge variant="outline">{sport}</Badge>
           <span className="text-muted-foreground">Expert Consensus Picks</span>
         </div>
       </div>
 
       {/* Sport Quick Nav */}
-      <SportQuickNav currentSport={gameInfo.sport} />
+      <SportQuickNav currentSport={sport} />
 
       {/* Picks for this game */}
       {gamePicks.length > 0 ? (
@@ -210,8 +222,8 @@ export default function GamePage() {
               <Link href="/">Today&apos;s Consensus</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={getSportPageUrl(gameInfo.sport)}>
-                All {gameInfo.sport} Picks
+              <Link href={getSportPageUrl(sport)}>
+                All {sport} Picks
               </Link>
             </Button>
             <Button variant="outline" asChild>
@@ -237,7 +249,7 @@ export default function GamePage() {
         </p>
         <p className="text-muted-foreground mt-4">
           All picks are updated in real-time as new expert predictions come in. Check back often
-          for the latest consensus on this {gameInfo.sport} matchup.
+          for the latest consensus on this {sport} matchup.
         </p>
       </section>
     </div>

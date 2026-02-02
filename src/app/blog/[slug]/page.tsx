@@ -1,14 +1,18 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Calendar, Eye, ArrowLeft, Share2, BookOpen } from 'lucide-react';
+import { Calendar, Eye, ArrowLeft, Share2 } from 'lucide-react';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
-import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
+
+interface PageProps {
+  params: { slug: string };
+}
 
 interface BlogPost {
   id: string;
@@ -34,35 +38,44 @@ const categoryLabels: Record<string, string> = {
   'analysis': 'Analysis',
 };
 
-export default function BlogPostPage() {
-  const params = useParams();
-  const slug = params.slug as string;
-  const [post, setPost] = useState<BlogPost | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+async function getBlogPost(slug: string): Promise<BlogPost | null> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  
+  try {
+    const res = await fetch(`${baseUrl}/api/blog?slug=${encodeURIComponent(slug)}`, {
+      cache: 'no-store',
+    });
+    const data = await res.json();
+    return data.success && data.post ? data.post : null;
+  } catch (error) {
+    console.error('Failed to fetch blog post:', error);
+    return null;
+  }
+}
 
-  useEffect(() => {
-    async function fetchPost() {
-      if (!slug) return;
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const post = await getBlogPost(params.slug);
+  
+  if (!post) {
+    return {
+      title: 'Article Not Found | DailyAI Betting',
+      robots: { index: false, follow: false },
+    };
+  }
 
-      try {
-        const res = await fetch(`/api/blog?slug=${encodeURIComponent(slug)}`);
-        const data = await res.json();
+  return {
+    title: post.meta_title || `${post.title} | DailyAI Betting`,
+    description: post.meta_description || post.excerpt,
+    keywords: post.tags?.join(', '),
+  };
+}
 
-        if (data.success && data.post) {
-          setPost(data.post);
-        } else {
-          setError('Article not found');
-        }
-      } catch (err) {
-        setError('Failed to load article');
-      } finally {
-        setIsLoading(false);
-      }
-    }
+export default async function BlogPostPage({ params }: PageProps) {
+  const post = await getBlogPost(params.slug);
 
-    fetchPost();
-  }, [slug]);
+  if (!post) {
+    notFound();
+  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -72,51 +85,6 @@ export default function BlogPostPage() {
       day: 'numeric',
     });
   };
-
-  const handleShare = async () => {
-    if (navigator.share && post) {
-      try {
-        await navigator.share({
-          title: post.title,
-          text: post.excerpt,
-          url: window.location.href,
-        });
-      } catch (err) {
-        // User cancelled or error
-      }
-    } else {
-      // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="container px-4 py-16 text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        <p className="mt-4 text-muted-foreground">Loading article...</p>
-      </div>
-    );
-  }
-
-  if (error || !post) {
-    return (
-      <div className="container px-4 py-16 text-center max-w-2xl mx-auto">
-        <BookOpen className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Article Not Found</h1>
-        <p className="text-muted-foreground mb-6">
-          This article may have been removed or the URL is incorrect.
-        </p>
-        <Button asChild>
-          <Link href="/blog">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Blog
-          </Link>
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="container px-4 py-8 max-w-3xl mx-auto">
@@ -167,10 +135,7 @@ export default function BlogPostPage() {
                 {post.view_count} views
               </span>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4 mr-1" />
-              Share
-            </Button>
+            <ShareButton />
           </div>
         </header>
 
@@ -226,5 +191,15 @@ export default function BlogPostPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Client component for share functionality
+function ShareButton() {
+  return (
+    <Button variant="ghost" size="sm" className="share-button" data-share="true">
+      <Share2 className="h-4 w-4 mr-1" />
+      Share
+    </Button>
   );
 }

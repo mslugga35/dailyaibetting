@@ -80,6 +80,57 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    // SEO Landing Pages - High Volume Keywords
+    {
+      url: `${baseUrl}/free-sports-picks`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.95,
+    },
+    {
+      url: `${baseUrl}/parlay-picks`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/expert-picks`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/best-bets`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    // Performance & History Pages
+    {
+      url: `${baseUrl}/results`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/history`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.75,
+    },
+    {
+      url: `${baseUrl}/trends`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.75,
+    },
+    // Cappers
+    {
+      url: `${baseUrl}/cappers`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
     // Blog
     {
       url: `${baseUrl}/blog`,
