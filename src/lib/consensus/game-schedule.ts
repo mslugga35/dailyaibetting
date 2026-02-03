@@ -338,21 +338,20 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     const sport = pick.sport.toUpperCase();
     const capper = pick.capper || 'Unknown';
 
-    // Filter out unsupported sports entirely (soccer, tennis, etc.)
+    // Pass through unsupported sports (soccer, tennis, euroleague, etc.)
+    // We can't validate them via ESPN but the picks might still be valid
     if (!SUPPORTED_SPORTS.includes(sport)) {
-      rejected.push({
-        team,
-        sport,
-        capper,
-        reason: 'UNSUPPORTED_SPORT',
-        details: `${sport} is not supported (only: ${SUPPORTED_SPORTS.join(', ')})`,
-      });
+      console.log(`[Schedule] Passing through ${sport} pick: ${team} (no ESPN validation available)`);
+      filtered.push(pick);
       continue;
     }
 
-    // Check if sport has games today
+    // Check if sport has games today - STRICT for major sports with no games
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
+      // For major sports, if ESPN says 0 games, REJECT the pick
+      // This catches stale/future picks like "NFL" picks when season is over
+      console.log(`[Schedule] Rejecting ${team} (${sport}) - NO ${sport} games today per ESPN`);
       rejected.push({
         team,
         sport,
@@ -363,27 +362,30 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
       continue;
     }
 
-    // Check if team is playing today
-    const teamLower = team.toLowerCase();
-    const standardized = standardizeTeamName(team, sport).toLowerCase();
+    // Check if team is playing today - be LENIENT to avoid missing valid picks
+    const teamLower = team.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const standardized = standardizeTeamName(team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
 
+    // Multiple matching strategies - any match = pass through
     const isPlaying = sportGames.has(standardized) ||
                       sportGames.has(teamLower) ||
-                      [...sportGames].some(t =>
-                        t.includes(teamLower.slice(0, 4)) ||
-                        teamLower.includes(t.slice(0, 4))
-                      );
+                      [...sportGames].some(t => {
+                        const tClean = t.replace(/[^a-z0-9]/g, '');
+                        return tClean.includes(teamLower.slice(0, 4)) ||
+                               teamLower.includes(tClean.slice(0, 4)) ||
+                               tClean.includes(standardized.slice(0, 4)) ||
+                               standardized.includes(tClean.slice(0, 4));
+                      });
 
     if (isPlaying) {
       filtered.push(pick);
     } else {
-      rejected.push({
-        team,
-        sport,
-        capper,
-        reason: 'TEAM_NOT_PLAYING',
-        details: `${team} not found in today's ${sport} schedule`,
-      });
+      // FAIL OPEN: If we can't confirm team isn't playing, pass it through
+      // Better to show a pick that might be stale than miss a valid consensus
+      console.log(`[Schedule] Can't confirm ${team} (${sport}) - passing through anyway`);
+      filtered.push(pick);
+      // Still log it but don't reject
+      // rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule` });
     }
   }
 

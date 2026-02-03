@@ -4,6 +4,7 @@ import {
   normalizePicks,
   buildConsensus,
   formatConsensusOutput,
+  buildInsights,
   NormalizedPick,
 } from '@/lib/consensus/consensus-builder';
 import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consensus/game-schedule';
@@ -87,6 +88,9 @@ export async function GET(request: Request) {
     const picksByCapper = groupPicksByCapper(todaysPicks);
     const capperCount = Object.keys(picksByCapper).length;
 
+    // Build insights section
+    const insights = buildInsights(rawConsensus, todaysPicks);
+
     // Debug logging
     console.log(`[Consensus API] Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Filtered Consensus: ${formatted.filteredConsensus.length}`);
 
@@ -102,6 +106,7 @@ export async function GET(request: Request) {
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
+      insights: insights, // NEW: Fire tiers, stacks, contrarian alerts
       picksByCapper: picksByCapper,
       allPicks: todaysPicks,
       _sourceCount: sourceCount, // Debug: picks by source
