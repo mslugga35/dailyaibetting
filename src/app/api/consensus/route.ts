@@ -80,8 +80,30 @@ export async function GET(request: Request) {
 
     // CRITICAL: Filter picks using ESPN API BEFORE building consensus
     // This ensures only teams actually playing today are included
-    const { filtered: todaysPicks, rejected: rejectedPicks } = await filterToTodaysGamesAsync(normalizedPicks);
-    console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks (${rejectedPicks.length} rejected)`);
+    const { filtered: espnFiltered, rejected: rejectedPicks } = await filterToTodaysGamesAsync(normalizedPicks);
+    console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${espnFiltered.length} picks (${rejectedPicks.length} rejected)`);
+
+    // HOTFIX: Additional filter to remove known bad picks
+    // TODO: Fix root cause in parser
+    const nflGames = schedule['NFL'] || 0;
+    const todaysPicks = espnFiltered.filter(pick => {
+      // Filter out NFL-related picks when no NFL games
+      if (nflGames === 0) {
+        const team = (pick.team || '').toLowerCase();
+        const nflTeams = ['seahawks', 'patriots', 'new england', 'seattle', 'buffalo', 'bills', 'hunter henry'];
+        if (nflTeams.some(t => team.includes(t))) {
+          console.log(`[HOTFIX] Filtering NFL pick (0 games): ${pick.team}`);
+          return false;
+        }
+      }
+      // Filter out picks with bad formatting
+      if (pick.team?.includes('(') || pick.team?.includes(':')) {
+        console.log(`[HOTFIX] Filtering bad format pick: ${pick.team}`);
+        return false;
+      }
+      return true;
+    });
+    console.log(`[Consensus API] After HOTFIX: ${todaysPicks.length} picks`);
 
     // Build consensus from ESPN-filtered picks only
     const rawConsensus = buildConsensus(todaysPicks);
