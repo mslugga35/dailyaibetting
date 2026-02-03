@@ -378,7 +378,12 @@ export async function fetchPicksFromGoogleDoc(): Promise<RawPick[]> {
 
 /**
  * Parse Google Doc content into RawPick objects
- * Format: [TIME] CAPPER_NAME -> [OCR] -> SPORT: -> • PICK (ODDS)
+ * Format: [HH:MM AM/PM EST M/D] [OCR] CAPPER_NAME -> SPORT: -> • PICK (ODDS)
+ * 
+ * Updated to handle new cappers_free_live.py format:
+ * [03:38 PM EST 2/3] [OCR] PorterPicks
+ * NBA:
+ * • GOLDEN STATE WARRIORS (-3) over Philadelphia 76ERS (3-UNITS)
  */
 function parseGoogleDocContent(content: string): RawPick[] {
   const picks: RawPick[] = [];
@@ -397,52 +402,109 @@ function parseGoogleDocContent(content: string): RawPick[] {
   const today = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
 
   // Sport name mapping - handle various formats
-  // Basketball mappings checked first (more common year-round)
   const sportMap: Record<string, string> = {
     'ncaa basketball': 'NCAAB',
+    'ncaab basketball': 'NCAAB',
     'ncaab': 'NCAAB',
     'cbb': 'NCAAB',
     'college basketball': 'NCAAB',
     'basketball': 'NCAAB',
+    'nba basketball': 'NBA',
     'ncaa football': 'NCAAF',
     'ncaaf': 'NCAAF',
     'cfb': 'NCAAF',
     'college football': 'NCAAF',
-    'football': 'NCAAF',
-    'ncaa': 'NCAAB', // Ambiguous - default to basketball (more games year-round)
+    'football': 'NFL', // Default football to NFL
+    'ncaa': 'NCAAB',
     'nfl': 'NFL',
     'nfl football': 'NFL',
     'nba': 'NBA',
     'nhl': 'NHL',
     'mlb': 'MLB',
     'wnba': 'WNBA',
+    'euroleague': 'EURO',
+    'euro': 'EURO',
+    'tennis': 'TENNIS',
+    'atp tennis': 'TENNIS',
+    'wta tennis': 'TENNIS',
+    'challenger': 'TENNIS',
+    'soccer': 'SOCCER',
   };
 
+  // Skip these lines - they're not cappers
+  const skipPatterns = [
+    /RESULT_SCREENSHOT/i,
+    /^\[OCR\]\s*$/,
+    /^Tab\s+\d+$/i,
+    /^PICKS_DATE/i,
+    /^FREE PICKS/i,
+    /^Last updated/i,
+    /^═+$/,
+    /^─+$/,
+    /^Total picks/i,
+    /CAPPERS FREE/i,
+  ];
+
   for (const line of lines) {
-    // Check for capper header: [11:13 AM] CAPPER_NAME
-    const capperMatch = line.match(/^\[[\d:]+\s*[AP]M\]\s*(.+)/i);
-    if (capperMatch && !line.includes('[OCR]')) {
-      currentCapper = capperMatch[1].trim();
+    // Skip known non-content lines
+    if (skipPatterns.some(p => p.test(line))) {
       continue;
     }
 
-    // Skip [OCR] lines that just repeat the capper name
-    if (line.match(/^\[OCR\]\s*[\w\s]+\s*(Picks)?$/i)) {
-      continue;
+    // Check for capper name in [OCR] format: [OCR] CapperName
+    // This is the PRIMARY way to get capper names from the new format
+    const ocrCapperMatch = line.match(/^\[OCR\]\s+([A-Za-z0-9_]+(?:\s+[A-Za-z0-9_]+)?)\s*$/);
+    if (ocrCapperMatch) {
+      const capperName = ocrCapperMatch[1].trim();
+      // Skip if it looks like a sport name
+      if (!sportMap[capperName.toLowerCase()]) {
+        currentCapper = capperName;
+        continue;
+      }
     }
 
-    // Check for sport header (various formats)
-    // Order matters: check longer patterns first to avoid partial matches
+    // Check for timestamp + capper: [03:38 PM EST 2/3] [OCR] CapperName
+    const timestampCapperMatch = line.match(/^\[[\d:]+\s*[AP]M(?:\s+EST)?\s*[\d\/]*\]\s*\[OCR\]\s+([A-Za-z0-9_]+(?:\s*[A-Za-z0-9_]*)*)\s*$/i);
+    if (timestampCapperMatch) {
+      const capperName = timestampCapperMatch[1].trim();
+      if (!sportMap[capperName.toLowerCase()] && capperName.length > 1) {
+        currentCapper = capperName;
+        continue;
+      }
+    }
+
+    // Check for timestamp + plain capper: [11:13 AM EST 2/3] CAPPER_NAME (no [OCR])
+    const plainCapperMatch = line.match(/^\[[\d:]+\s*[AP]M(?:\s+EST)?\s*[\d\/]*\]\s+([A-Za-z][A-Za-z0-9_\s]+)$/i);
+    if (plainCapperMatch && !line.includes('[OCR]')) {
+      const capperName = plainCapperMatch[1].trim();
+      // Skip collage lists (comma separated)
+      if (!capperName.includes(',') && !capperName.includes('&') && !sportMap[capperName.toLowerCase()]) {
+        currentCapper = capperName;
+        continue;
+      }
+    }
+
+    // Check for sport header: NBA:, NHL:, NCAAB Basketball:, etc.
+    // Also handle: [timestamp] [OCR] NFL Football:
     let lineToProcess = line;
-    const sportMatch = line.match(/^(?:\[OCR\]\s*)?(?:NCAA Basketball|College Basketball|NCAA Football|College Football|NFL Football|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB)\s*:?\s*/i);
+    
+    // First strip any timestamp prefix: [HH:MM AM/PM EST M/D]
+    let strippedLine = line.replace(/^\[[\d:]+\s*[AP]M(?:\s+EST)?\s*[\d\/]*\]\s*/i, '');
+    
+    const sportMatch = strippedLine.match(/^(?:\[OCR\]\s*)?(?:NCAA\s*Basketball|College\s*Basketball|NCAAB\s*Basketball|NCAA\s*Football|College\s*Football|NFL\s*Football|NBA\s*Basketball|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB|EUROLEAGUE|EURO|TENNIS|ATP|WTA|Challenger|Soccer)\s*:?\s*/i);
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:?\s*$/, '').toLowerCase().trim();
       currentSport = sportMap[sportText] || sportText.toUpperCase();
+      
+      // If this line ONLY has the sport header (no capper before it), mark capper as unknown
+      // This handles orphaned picks like "[timestamp] [OCR] NFL Football:"
+      if (!currentCapper) {
+        currentCapper = 'Unknown';
+      }
 
       // Check if there's a pick on the same line after the sport header
-      const remainingLine = line.slice(sportMatch[0].length).trim();
+      const remainingLine = strippedLine.slice(sportMatch[0].length).trim();
       if (remainingLine && remainingLine.match(/^[•\-\*]/)) {
-        // There's a pick on this line - process the remaining part
         lineToProcess = remainingLine;
       } else {
         continue;
@@ -450,13 +512,20 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
 
     // Check for pick line: • Team +spread (odds) or Team -spread
-    // Pattern: bullet point or dash, team name, spread/ML/total
-    const pickMatch = lineToProcess.match(/^[•\-\*]\s*(.+?)\s*([+-]\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+)\s*(?:\(([^)]+)\))?/i);
+    // Handle formats like: • GOLDEN STATE WARRIORS (-3) over Philadelphia 76ERS (3-UNITS)
+    const pickMatch = lineToProcess.match(/^[•\-\*]\s*(.+?)\s*([+-]?\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+|o[\d.]+|u[\d.]+)\s*(?:\(([^)]*)\))?\s*(?:over\s+.+)?(?:\s*\([^)]*\))?/i);
     if (pickMatch && currentCapper) {
-      const team = pickMatch[1].trim();
-      const betPart = pickMatch[2].trim();
+      let team = pickMatch[1].trim();
+      let betPart = pickMatch[2].trim();
+      
+      // Extract spread from team if it's like "WARRIORS (-3)"
+      const spreadInTeam = team.match(/^(.+?)\s*\(([+-]?\d+\.?\d*)\)\s*$/);
+      if (spreadInTeam) {
+        team = spreadInTeam[1].trim();
+        betPart = spreadInTeam[2];
+      }
+      
       const pick = `${team} ${betPart}`;
-
       const sport = currentSport || 'ALL';
 
       picks.push({
@@ -470,13 +539,12 @@ function parseGoogleDocContent(content: string): RawPick[] {
       continue;
     }
 
-    // Alternative pick format without bullet: Team +spread
-    const altPickMatch = lineToProcess.match(/^([A-Z][A-Za-z\s]+)\s+([+-]\d+\.?\d*|ML)\s*(?:\(|$)/i);
-    if (altPickMatch && currentCapper && !lineToProcess.includes('[') && !lineToProcess.includes(':')) {
+    // Alternative pick format without bullet: Team +spread or Team ML
+    const altPickMatch = lineToProcess.match(/^([A-Z][A-Za-z\s.()]+)\s+([+-]\d+\.?\d*|ML)\s*(?:\(|$)/i);
+    if (altPickMatch && currentCapper && !lineToProcess.includes('[') && !lineToProcess.match(/^\w+:/)) {
       const team = altPickMatch[1].trim();
       const betPart = altPickMatch[2].trim();
       const pick = `${team} ${betPart}`;
-
       const sport = currentSport || 'ALL';
 
       picks.push({
@@ -490,6 +558,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
   }
 
+  console.log(`[GoogleDoc] Parsed ${picks.length} picks from ${new Set(picks.map(p => p.service)).size} cappers`);
   return picks;
 }
 
