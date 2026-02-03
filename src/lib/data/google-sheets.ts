@@ -494,7 +494,9 @@ function parseGoogleDocContent(content: string): RawPick[] {
     const sportMatch = strippedLine.match(/^(?:\[OCR\]\s*)?(?:NCAA\s*Basketball|College\s*Basketball|NCAAB\s*Basketball|NCAA\s*Football|College\s*Football|NFL\s*Football|NBA\s*Basketball|Basketball|Football|NCAA|CFB|CBB|NFL|NBA|NHL|MLB|WNBA|NCAAF|NCAAB|EUROLEAGUE|EURO|TENNIS|ATP|WTA|Challenger|Soccer)\s*:?\s*/i);
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:?\s*$/, '').toLowerCase().trim();
-      currentSport = sportMap[sportText] || sportText.toUpperCase();
+      const newSport = sportMap[sportText] || sportText.toUpperCase();
+      console.log(`[Parser] Sport header detected: "${sportText}" -> ${newSport}`);
+      currentSport = newSport;
       
       // If this line ONLY has the sport header (no capper before it), mark capper as unknown
       // This handles orphaned picks like "[timestamp] [OCR] NFL Football:"
@@ -529,6 +531,11 @@ function parseGoogleDocContent(content: string): RawPick[] {
       
       const pick = `${team} ${betPart}`;
       const sport = currentSport || 'ALL';
+
+      // Debug: Log Seattle picks to trace sport classification
+      if (team.toLowerCase().includes('seattle') || team.toLowerCase().includes('england')) {
+        console.log(`[Parser] Seattle/England pick created: team="${team}", sport="${sport}", capper="${currentCapper}"`);
+      }
 
       picks.push({
         site: 'GoogleDoc',
