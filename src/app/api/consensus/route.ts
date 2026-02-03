@@ -42,15 +42,21 @@ export async function GET(request: Request) {
     // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
     const rawPicks = await getAllPicksFromSources();
 
-    // DEBUG: Log raw picks with Seattle to trace sport classification
-    const seattlePicks = rawPicks.filter(p => p.pick?.toLowerCase().includes('seattle') || p.matchup?.toLowerCase().includes('seattle'));
+    // DEBUG: Log raw picks with Seattle/New England to trace sport classification
+    const seattlePicks = rawPicks.filter(p => {
+      const pickLower = (p.pick || '').toLowerCase();
+      const matchupLower = (p.matchup || '').toLowerCase();
+      return pickLower.includes('seattle') || pickLower.includes('england') || 
+             matchupLower.includes('seattle') || matchupLower.includes('england');
+    });
     const debugSeattle = seattlePicks.map(p => ({
       site: p.site,
       league: p.league,
       pick: p.pick,
+      matchup: p.matchup,
       service: p.service
     }));
-    console.log('[DEBUG] Seattle picks from parser:', debugSeattle);
+    console.log('[DEBUG] Seattle/England picks from parser:', debugSeattle);
 
     // Reclassify NCAAF -> NCAAB when football season is over (no NCAAF games)
     // Teams like Florida, Notre Dame, Auburn play both sports
