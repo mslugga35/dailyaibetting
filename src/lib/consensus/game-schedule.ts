@@ -354,8 +354,11 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     // This catches misclassified NFL picks (e.g., "Seattle" as NCAAB Seattle U)
     if (!nflHasGames) {
       const isNflTeam = NFL_KEYWORDS.some(kw => teamLower.includes(kw));
-      if (isNflTeam) {
-        console.log(`[Schedule] Rejecting NFL team "${team}" (${sport}) - NO NFL games today`);
+      // Also catch "Seattle @ New England" style matchups (NFL game format)
+      const isNflMatchup = teamLower.includes('new england') || 
+                           (teamLower.includes('seattle') && teamLower.includes('@'));
+      if (isNflTeam || isNflMatchup) {
+        console.log(`[Schedule] Rejecting NFL team/matchup "${team}" (${sport}) - NO NFL games today`);
         rejected.push({
           team,
           sport,
