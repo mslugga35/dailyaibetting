@@ -83,27 +83,35 @@ export async function GET(request: Request) {
     const { filtered: espnFiltered, rejected: rejectedPicks } = await filterToTodaysGamesAsync(normalizedPicks);
     console.log(`[Consensus API] ESPN filtered: ${normalizedPicks.length} -> ${espnFiltered.length} picks (${rejectedPicks.length} rejected)`);
 
-    // HOTFIX: Additional filter to remove known bad picks
-    // TODO: Fix root cause in parser
+    // HOTFIX: Aggressive filter to remove bad picks
+    // Filter: NFL picks when 0 games, bad format, known bad patterns
     const nflGames = schedule['NFL'] || 0;
     const todaysPicks = espnFiltered.filter(pick => {
-      // Filter out NFL-related picks when no NFL games
-      if (nflGames === 0) {
-        const team = (pick.team || '').toLowerCase();
-        const nflTeams = ['seahawks', 'patriots', 'new england', 'seattle', 'buffalo', 'bills', 'hunter henry'];
-        if (nflTeams.some(t => team.includes(t))) {
-          console.log(`[HOTFIX] Filtering NFL pick (0 games): ${pick.team}`);
-          return false;
-        }
-      }
-      // Filter out picks with bad formatting
-      if (pick.team?.includes('(') || pick.team?.includes(':')) {
-        console.log(`[HOTFIX] Filtering bad format pick: ${pick.team}`);
+      const teamLower = (pick.team || '').toLowerCase();
+      const origPick = (pick.originalPick || '').toLowerCase();
+      
+      // Always filter picks containing NFL team names (seattle, patriots, etc)
+      const nflPatterns = ['seahawks', 'patriots', 'new england', 'seattle', 'buffalo', 'bills', 'hunter henry', 'nfl'];
+      if (nflPatterns.some(p => teamLower.includes(p) || origPick.includes(p))) {
+        console.log(`[HOTFIX] Filtering NFL-related: ${pick.team}`);
         return false;
       }
+      
+      // Filter picks with @ in team name (matchup format like "Team @ Team")
+      if (teamLower.includes('@') || teamLower.includes(' vs ')) {
+        console.log(`[HOTFIX] Filtering matchup format: ${pick.team}`);
+        return false;
+      }
+      
+      // Filter out picks with bad formatting
+      if (pick.team?.includes('(') || (pick.team?.includes(':') && !pick.team?.match(/^\d/))) {
+        console.log(`[HOTFIX] Filtering bad format: ${pick.team}`);
+        return false;
+      }
+      
       return true;
     });
-    console.log(`[Consensus API] After HOTFIX: ${todaysPicks.length} picks`);
+    console.log(`[Consensus API] After HOTFIX: ${todaysPicks.length} picks (filtered ${espnFiltered.length - todaysPicks.length})`);
 
     // Build consensus from ESPN-filtered picks only
     const rawConsensus = buildConsensus(todaysPicks);
