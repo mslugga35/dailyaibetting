@@ -333,10 +333,39 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
   // Only allow sports we have ESPN endpoints for
   const SUPPORTED_SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB'];
 
+  // NFL team keywords - reject these when NFL has no games
+  // This catches NFL picks that got misclassified as other sports
+  const NFL_KEYWORDS = [
+    'patriots', 'new england', 'seahawks', 'chiefs', 'eagles', 'bills', 'cowboys',
+    '49ers', 'niners', 'packers', 'steelers', 'ravens', 'bengals', 'dolphins',
+    'broncos', 'raiders', 'chargers', 'cardinals', 'falcons', 'lions', 'bears',
+    'vikings', 'saints', 'buccaneers', 'bucs', 'commanders', 'giants', 'jets',
+    'texans', 'colts', 'jaguars', 'titans', 'browns', 'rams', 'panthers'
+  ];
+  const nflHasGames = (gamesCache.games.get('NFL')?.size || 0) > 0;
+
   for (const pick of picks) {
     const team = pick.standardizedTeam || pick.team || '';
     const sport = pick.sport.toUpperCase();
     const capper = pick.capper || 'Unknown';
+    const teamLower = team.toLowerCase();
+
+    // SPECIAL: Reject NFL team names when NFL season has no games
+    // This catches misclassified NFL picks (e.g., "Seattle" as NCAAB Seattle U)
+    if (!nflHasGames) {
+      const isNflTeam = NFL_KEYWORDS.some(kw => teamLower.includes(kw));
+      if (isNflTeam) {
+        console.log(`[Schedule] Rejecting NFL team "${team}" (${sport}) - NO NFL games today`);
+        rejected.push({
+          team,
+          sport,
+          capper,
+          reason: 'NFL_TEAM_NO_GAMES',
+          details: `NFL team detected but no NFL games scheduled`,
+        });
+        continue;
+      }
+    }
 
     // Pass through unsupported sports (soccer, tennis, euroleague, etc.)
     // We can't validate them via ESPN but the picks might still be valid
