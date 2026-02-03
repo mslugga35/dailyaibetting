@@ -44,14 +44,13 @@ export async function GET(request: Request) {
 
     // DEBUG: Log raw picks with Seattle to trace sport classification
     const seattlePicks = rawPicks.filter(p => p.pick?.toLowerCase().includes('seattle') || p.matchup?.toLowerCase().includes('seattle'));
-    if (seattlePicks.length > 0) {
-      console.log('[DEBUG] Seattle picks from parser:', seattlePicks.map(p => ({
-        site: p.site,
-        league: p.league,
-        pick: p.pick,
-        service: p.service
-      })));
-    }
+    const debugSeattle = seattlePicks.map(p => ({
+      site: p.site,
+      league: p.league,
+      pick: p.pick,
+      service: p.service
+    }));
+    console.log('[DEBUG] Seattle picks from parser:', debugSeattle);
 
     // Reclassify NCAAF -> NCAAB when football season is over (no NCAAF games)
     // Teams like Florida, Notre Dame, Auburn play both sports
@@ -121,6 +120,7 @@ export async function GET(request: Request) {
       picksByCapper: picksByCapper,
       allPicks: todaysPicks,
       _sourceCount: sourceCount, // Debug: picks by source
+      _debugSeattle: debugSeattle, // Debug: Seattle picks from parser
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
