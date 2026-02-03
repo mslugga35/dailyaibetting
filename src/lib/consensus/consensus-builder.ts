@@ -210,6 +210,9 @@ export function normalizeCapper(capper: string): string {
     'dimers': 'Dimers',
     'dimers model': 'Dimers',
     'consensus leans': 'Consensus Leans',
+    'exclusive': 'Exclusive',
+    'exclusive play': 'Exclusive',
+    'exclusiveplay': 'Exclusive',
     'ballpark pal': 'Ballpark Pal',
     'ballparkpal': 'Ballpark Pal',
     'lightning bolt': 'Lightning Bolt',
@@ -676,4 +679,222 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
   console.log(`[Consensus] Active sports: ${activeSports.join(', ')}, Total: ${activeConsensus.length}, Fire: ${fireCount}`);
 
   return { topOverall, bySport, fadeThePublic, filteredConsensus: activeConsensus };
+}
+
+/**
+ * Build insights section with additional analysis
+ */
+export interface ConsensusInsights {
+  fireTiers: {
+    nuclear: ConsensusPick[];  // 5+ cappers 🔥🔥🔥
+    hot: ConsensusPick[];      // 4 cappers 🔥🔥
+    warm: ConsensusPick[];     // 3 cappers 🔥
+  };
+  sameGameStacks: {
+    team: string;
+    sport: string;
+    picks: ConsensusPick[];
+    totalCappers: number;
+    signal: string; // "BULLISH" or "MIXED"
+  }[];
+  contrarianAlerts: {
+    game: string;
+    sport: string;
+    heavySide: string;
+    heavyPercent: number;
+    fadeSide: string;
+    warning: string;
+  }[];
+  sportSummary: {
+    sport: string;
+    totalPicks: number;
+    consensusPicks: number;
+    firePicks: number;
+  }[];
+  mostActive: {  // renamed from hotCappers
+    name: string;
+    pickCount: number;
+    sports: string[];
+  }[];
+  fadeAlerts: {  // NEW: potential fades on high-consensus picks
+    pick: ConsensusPick;
+    reason: string;
+    fadePlay: string;
+  }[];
+}
+
+export function buildInsights(
+  consensus: ConsensusPick[],
+  allPicks: NormalizedPick[]
+): ConsensusInsights {
+  // 1. Fire Tiers
+  const fireTiers = {
+    nuclear: consensus.filter(p => p.capperCount >= 5),
+    hot: consensus.filter(p => p.capperCount === 4),
+    warm: consensus.filter(p => p.capperCount === 3),
+  };
+
+  // 2. Same Game Stacks - multiple bet types on same team
+  const teamBets = new Map<string, ConsensusPick[]>();
+  for (const pick of consensus) {
+    // Extract base team name (remove ML, spread, over/under)
+    const baseTeam = pick.bet
+      .replace(/\s+(ML|Over|Under).*$/i, '')
+      .replace(/\s+[+-][\d.]+.*$/, '')
+      .trim();
+    const key = `${baseTeam}|${pick.sport}`;
+    
+    if (!teamBets.has(key)) {
+      teamBets.set(key, []);
+    }
+    teamBets.get(key)!.push(pick);
+  }
+
+  const sameGameStacks = Array.from(teamBets.entries())
+    .filter(([_, picks]) => picks.length >= 2) // Multiple bet types on same team
+    .map(([key, picks]) => {
+      const [team, sport] = key.split('|');
+      const totalCappers = picks.reduce((sum, p) => sum + p.capperCount, 0);
+      const hasML = picks.some(p => p.betType === 'ML' || p.betType === 'SPREAD');
+      const hasOver = picks.some(p => p.betType === 'OVER');
+      const hasUnder = picks.some(p => p.betType === 'UNDER');
+      
+      let signal = 'MIXED';
+      if (hasML && hasOver && !hasUnder) signal = 'BULLISH 📈';
+      if (hasML && hasUnder && !hasOver) signal = 'BEARISH 📉';
+      
+      return { team, sport, picks, totalCappers, signal };
+    })
+    .sort((a, b) => b.totalCappers - a.totalCappers)
+    .slice(0, 5);
+
+  // 3. Contrarian Alerts - when one side is heavily favored
+  const gameMap = new Map<string, { team: string; count: number }[]>();
+  for (const pick of allPicks) {
+    // Group opposing sides
+    const game = pick.matchup || pick.team;
+    if (!gameMap.has(game)) {
+      gameMap.set(game, []);
+    }
+    const existing = gameMap.get(game)!.find(t => t.team === pick.standardizedTeam);
+    if (existing) {
+      existing.count++;
+    } else {
+      gameMap.get(game)!.push({ team: pick.standardizedTeam, count: 1 });
+    }
+  }
+
+  const contrarianAlerts: ConsensusInsights['contrarianAlerts'] = [];
+  for (const [game, sides] of gameMap) {
+    if (sides.length >= 2) {
+      const total = sides.reduce((sum, s) => sum + s.count, 0);
+      const heavySide = sides.sort((a, b) => b.count - a.count)[0];
+      const percent = Math.round((heavySide.count / total) * 100);
+      
+      if (percent >= 75 && total >= 4) {
+        const fadeSide = sides.find(s => s.team !== heavySide.team)?.team || 'Other side';
+        contrarianAlerts.push({
+          game,
+          sport: allPicks.find(p => p.matchup === game)?.sport || 'ALL',
+          heavySide: heavySide.team,
+          heavyPercent: percent,
+          fadeSide,
+          warning: `⚠️ ${percent}% on ${heavySide.team} - potential trap!`,
+        });
+      }
+    }
+  }
+
+  // 4. Sport Summary
+  const sportStats = new Map<string, { total: number; consensus: number; fire: number }>();
+  for (const pick of allPicks) {
+    if (!sportStats.has(pick.sport)) {
+      sportStats.set(pick.sport, { total: 0, consensus: 0, fire: 0 });
+    }
+    sportStats.get(pick.sport)!.total++;
+  }
+  for (const pick of consensus) {
+    if (sportStats.has(pick.sport)) {
+      sportStats.get(pick.sport)!.consensus++;
+      if (pick.isFire) sportStats.get(pick.sport)!.fire++;
+    }
+  }
+
+  const sportSummary = Array.from(sportStats.entries())
+    .map(([sport, stats]) => ({
+      sport,
+      totalPicks: stats.total,
+      consensusPicks: stats.consensus,
+      firePicks: stats.fire,
+    }))
+    .sort((a, b) => b.consensusPicks - a.consensusPicks);
+
+  // 5. Most Active Cappers (renamed from "Hot" - we don't track performance yet)
+  const capperStats = new Map<string, { count: number; sports: Set<string> }>();
+  for (const pick of allPicks) {
+    if (!capperStats.has(pick.capper)) {
+      capperStats.set(pick.capper, { count: 0, sports: new Set() });
+    }
+    capperStats.get(pick.capper)!.count++;
+    capperStats.get(pick.capper)!.sports.add(pick.sport);
+  }
+
+  const mostActive = Array.from(capperStats.entries())
+    .map(([name, stats]) => ({
+      name,
+      pickCount: stats.count,
+      sports: Array.from(stats.sports),
+    }))
+    .sort((a, b) => b.pickCount - a.pickCount)
+    .slice(0, 6);
+
+  // 6. Fade Alerts - High consensus picks that might be public traps
+  // Lower threshold to 4+ cappers and add analysis
+  const fadeAlerts: {
+    pick: ConsensusPick;
+    reason: string;
+    fadePlay: string;
+  }[] = [];
+
+  for (const pick of consensus) {
+    // Flag picks with 4+ cappers as potential public plays
+    if (pick.capperCount >= 4) {
+      let fadePlay = '';
+      let reason = '';
+      
+      if (pick.betType === 'ML') {
+        fadePlay = `Fade ${pick.bet.replace(' ML', '')} / Take opponent`;
+        reason = `${pick.capperCount} cappers on ML - heavy public action`;
+      } else if (pick.betType === 'SPREAD') {
+        const line = pick.line || '';
+        const isPlus = line.startsWith('+');
+        fadePlay = isPlus 
+          ? `Fade the dog - take favorite`
+          : `Fade the favorite - take ${pick.bet.split(' ')[0]} opponent`;
+        reason = `${pick.capperCount} cappers on spread - potential trap`;
+      } else if (pick.betType === 'OVER') {
+        fadePlay = `Take the UNDER instead`;
+        reason = `${pick.capperCount} cappers on Over - books want Over action`;
+      } else if (pick.betType === 'UNDER') {
+        fadePlay = `Take the OVER instead`;
+        reason = `${pick.capperCount} cappers on Under - contrarian Over`;
+      }
+
+      if (fadePlay) {
+        fadeAlerts.push({ pick, reason, fadePlay });
+      }
+    }
+  }
+
+  // Sort by capper count (highest = most fadeable)
+  fadeAlerts.sort((a, b) => b.pick.capperCount - a.pick.capperCount);
+
+  return {
+    fireTiers,
+    sameGameStacks,
+    contrarianAlerts,
+    sportSummary,
+    mostActive, // renamed from hotCappers
+    fadeAlerts, // NEW: potential fades
+  };
 }
