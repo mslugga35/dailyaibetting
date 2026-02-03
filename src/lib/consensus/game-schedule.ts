@@ -303,7 +303,7 @@ interface PickWithCapper {
 /**
  * Rejection reason types for clear logging
  */
-type RejectionReason = 'UNSUPPORTED_SPORT' | 'NO_GAMES_TODAY' | 'TEAM_NOT_PLAYING';
+type RejectionReason = 'UNSUPPORTED_SPORT' | 'NO_GAMES_TODAY' | 'TEAM_NOT_PLAYING' | 'NFL_TEAM_NO_GAMES';
 
 interface RejectedPick {
   team: string;
@@ -395,18 +395,18 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     }
 
     // Check if team is playing today - be LENIENT to avoid missing valid picks
-    const teamLower = team.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const standardized = standardizeTeamName(team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const teamClean = team.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const standardizedClean = standardizeTeamName(team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
 
     // Multiple matching strategies - any match = pass through
-    const isPlaying = sportGames.has(standardized) ||
-                      sportGames.has(teamLower) ||
+    const isPlaying = sportGames.has(standardizedClean) ||
+                      sportGames.has(teamClean) ||
                       [...sportGames].some(t => {
                         const tClean = t.replace(/[^a-z0-9]/g, '');
-                        return tClean.includes(teamLower.slice(0, 4)) ||
-                               teamLower.includes(tClean.slice(0, 4)) ||
-                               tClean.includes(standardized.slice(0, 4)) ||
-                               standardized.includes(tClean.slice(0, 4));
+                        return tClean.includes(teamClean.slice(0, 4)) ||
+                               teamClean.includes(tClean.slice(0, 4)) ||
+                               tClean.includes(standardizedClean.slice(0, 4)) ||
+                               standardizedClean.includes(tClean.slice(0, 4));
                       });
 
     if (isPlaying) {
