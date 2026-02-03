@@ -142,6 +142,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+      _version: '2026-02-03-v3', // Version check for deployment verification
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,
