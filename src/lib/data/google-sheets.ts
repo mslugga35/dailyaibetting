@@ -513,7 +513,9 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
     // Check for pick line: • Team +spread (odds) or Team -spread
     // Handle formats like: • GOLDEN STATE WARRIORS (-3) over Philadelphia 76ERS (3-UNITS)
-    const pickMatch = lineToProcess.match(/^[•\-\*]\s*(.+?)\s*([+-]?\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+|o[\d.]+|u[\d.]+)\s*(?:\(([^)]*)\))?\s*(?:over\s+.+)?(?:\s*\([^)]*\))?/i);
+    // Also handle lines with just leading whitespace (no bullet) - common in Google Doc exports
+    // Match: bullet + content OR whitespace + capital letter starting content
+    const pickMatch = lineToProcess.match(/^(?:[•\-\*]\s*|\s+)([A-Za-z].+?)\s+([+-]?\d+\.?\d*|ML|Over\s*[\d.]+|Under\s*[\d.]+|o[\d.]+|u[\d.]+)\s*(?:\(([^)]*)\))?\s*(?:over\s+.+)?(?:\s*\([^)]*\))?/i);
     if (pickMatch && currentCapper) {
       let team = pickMatch[1].trim();
       let betPart = pickMatch[2].trim();
