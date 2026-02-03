@@ -202,8 +202,8 @@ export function extractTeam(pick: string, matchup: string): string {
  * Handles whitespace issues ("Dave  Price" vs "Dave Price")
  */
 export function normalizeCapper(capper: string): string {
-  // Step 1: Normalize whitespace (collapse multiple spaces, trim)
-  const normalized = capper.trim().replace(/\s+/g, ' ');
+  // Step 1: Normalize whitespace, remove trailing punctuation (commas, periods, etc.)
+  const normalized = capper.trim().replace(/\s+/g, ' ').replace(/[,.:;!?]+$/, '').trim();
 
   // Special entities that count as single cappers (expanded list)
   const specialEntities: Record<string, string> = {
