@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Target, RefreshCw, Loader2, TrendingUp } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
+import { FadeThePublic } from '@/components/picks/FadeThePublic';
 
 export default function ConsensusPage() {
   const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus();
@@ -102,29 +103,75 @@ export default function ConsensusPage() {
         </Card>
       )}
 
-      {/* Main Content */}
+      {/* Main Content - Two Column Layout */}
       {!isLoading && !error && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
-              Consensus Picks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topOverall.length > 0 ? (
-              <ConsensusReport
-                topOverall={topOverall}
-                bySport={bySport}
-              />
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No consensus picks available yet.</p>
-                <p className="text-sm mt-2">Picks update every 5 minutes.</p>
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Mobile: Fade section at top */}
+          <div className="lg:hidden">
+            <FadeThePublic picks={topOverall} />
+          </div>
+          
+          {/* Main Consensus (2/3 width on desktop) */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  Consensus Picks
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {topOverall.length > 0 ? (
+                  <ConsensusReport
+                    topOverall={topOverall}
+                    bySport={bySport}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No consensus picks available yet.</p>
+                    <p className="text-sm mt-2">Picks update every 5 minutes.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Sidebar - Fade the Public (1/3 width on desktop, hidden on mobile - shown at top instead) */}
+          <div className="space-y-6 hidden lg:block">
+            <FadeThePublic picks={topOverall} />
+            
+            {/* Sharp vs Public Indicator */}
+            {topOverall.length > 0 && (
+              <Card className="border-blue-500/30 bg-blue-500/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    📊 Market Insights
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Consensus Picks</span>
+                    <span className="font-bold">{consensusCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Fire Plays (3+)</span>
+                    <span className="font-bold text-orange-500">{firePicksCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Fade Candidates (5+)</span>
+                    <span className="font-bold text-yellow-500">
+                      {topOverall.filter(p => p.capperCount >= 5).length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Max Agreement</span>
+                    <span className="font-bold">{maxAgreement} cappers</span>
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* How It Works */}
