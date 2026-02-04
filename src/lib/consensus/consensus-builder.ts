@@ -1,9 +1,14 @@
-// Consensus Builder - Based on your MASTER_CONSENSUS_RULES
-// Follows exact rules from ConsensusProject
-// Primary date filtering done in google-sheets.ts
-// ESPN API validation available via filterToTodaysGamesAsync
+/**
+ * Consensus Builder
+ * Based on MASTER_CONSENSUS_RULES - Follows exact rules from ConsensusProject
+ * Primary date filtering done in google-sheets.ts
+ * ESPN API validation available via filterToTodaysGamesAsync
+ * @module lib/consensus/consensus-builder
+ */
 
 import { standardizeTeamName, identifySport } from './team-mappings';
+import { getTodayET, getCurrentYearET } from '../utils/date';
+import { logger } from '../utils/logger';
 
 export type BetType = 'ML' | 'SPREAD' | 'OVER' | 'UNDER' | 'F5_ML' | 'PROP';
 
@@ -288,19 +293,12 @@ export function isTodayPick(pickDate: string): boolean {
     return true;
   }
 
-  // Get today's date in Eastern timezone (using reliable Intl.DateTimeFormat)
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(now);
-  const todayStr = `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
+  // Get today's date in Eastern timezone
+  const todayStr = getTodayET();
+  const currentYear = getCurrentYearET();
 
   // Parse pick date - handle various formats
   let pickDateClean = pickDate.split('T')[0];
-  const currentYear = todayStr.split('-')[0];
 
   // Handle MM/DD/YYYY or M/D/YYYY format
   const slashMatch = pickDateClean.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
@@ -412,7 +410,7 @@ export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
 
       // Filter out unsupported sports (soccer, tennis, etc.)
       if (!isSupportedSport(sport)) {
-        console.log(`[Consensus] Filtering out unsupported sport: ${sport} - ${pick.pick}`);
+        logger.debug('Consensus', `Filtering out unsupported sport: ${sport} - ${pick.pick}`);
         return false;
       }
 
@@ -651,7 +649,7 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
 } {
   // Primary filtering already done by google-sheets.ts date filter
   // All picks passed here should be from today's date
-  console.log(`[Consensus] Processing ${consensus.length} picks (pre-filtered by date)`);
+  logger.debug('Consensus', `Processing ${consensus.length} picks (pre-filtered by date)`);
 
   // Include ALL consensus picks (2+ cappers), not just sports with fire picks
   // This ensures NBA/NCAAB with 2-capper consensus still appear
@@ -676,7 +674,7 @@ export function formatConsensusOutput(consensus: ConsensusPick[]): {
 
   const activeSports = Object.keys(bySport);
   const fireCount = activeConsensus.filter(p => p.isFire).length;
-  console.log(`[Consensus] Active sports: ${activeSports.join(', ')}, Total: ${activeConsensus.length}, Fire: ${fireCount}`);
+  logger.info('Consensus', `Active sports: ${activeSports.join(', ')}, Total: ${activeConsensus.length}, Fire: ${fireCount}`);
 
   return { topOverall, bySport, fadeThePublic, filteredConsensus: activeConsensus };
 }

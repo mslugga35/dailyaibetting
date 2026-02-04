@@ -1,7 +1,12 @@
-// Google Sheets Data Fetching
-// Connects to your n8n workflow output
+/**
+ * Google Sheets Data Fetching
+ * Connects to n8n workflow output for picks aggregation
+ * @module lib/data/google-sheets
+ */
 
 import { RawPick } from '../consensus/consensus-builder';
+import { getTodayET, getYesterdayET, getCurrentYearET } from '../utils/date';
+import { logger } from '../utils/logger';
 
 // Google Sheets configuration
 // Document ID from your n8n workflow: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
@@ -11,6 +16,7 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH43
 // Each tab has columns: Site, League, Date, Matchup, Service, Pick, RunDate
 // Duplicates are handled by consensus builder (uses Set for cappers)
 const SHEET_TABS = [
+  'Picks',         // Free cappers pipeline (TG-FreeCapper) - PRIMARY
   'AllPicks',      // Main consolidated tab
   'BoydBets',      // Boyd's Bets source
   'SportsLine',    // SportsLine source
@@ -40,7 +46,7 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch sheet ${sheetName}: ${response.status}`);
+      logger.error('Sheets', `Failed to fetch sheet ${sheetName}: ${response.status}`);
       return [];
     }
 
@@ -50,20 +56,20 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
     // Format: google.visualization.Query.setResponse({...});
     const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);?$/);
     if (!jsonMatch) {
-      console.error(`[${sheetName}] Could not parse Google response`);
+      logger.error('Sheets', `[${sheetName}] Could not parse Google response`);
       return [];
     }
 
     const json = JSON.parse(jsonMatch[1]);
 
     if (!json.table?.rows) {
-      console.log(`[${sheetName}] No rows found`);
+      logger.debug('Sheets', `[${sheetName}] No rows found`);
       return [];
     }
 
     // Get column headers from first row
     const headers = json.table.cols.map((col: { label: string }) => col.label);
-    console.log(`[${sheetName}] Headers: ${headers.join(', ')}, Rows: ${json.table.rows.length}`);
+    logger.debug('Sheets', `[${sheetName}] Headers: ${headers.join(', ')}, Rows: ${json.table.rows.length}`);
 
     // Check if ManualPicks has structured columns (same as AllPicks)
     // Only use freeform parsing if it has a RawText/Text column
@@ -79,31 +85,14 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
         return parseManualPicksSheet(json.table.rows, headers);
       }
       // Otherwise fall through to normal structured processing
-      console.log(`[${sheetName}] Has structured columns, processing as standard sheet`);
+      logger.debug('Sheets', `[${sheetName}] Has structured columns, processing as standard sheet`);
     }
 
-    // Get today's date in Eastern timezone for strict TODAY filter
-    // Use Intl.DateTimeFormat for reliable timezone conversion
-    const now = new Date();
-    const todayParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(now);
-    const todayStr = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
-    console.log(`[${sheetName}] Today (ET): ${todayStr}, UTC: ${now.toISOString()}`);
-
-    // Also get yesterday to warn about stale picks
-    const yesterdayDate = new Date(now);
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterdayParts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(yesterdayDate);
-    const yesterdayStr = `${yesterdayParts.find(p => p.type === 'year')?.value}-${yesterdayParts.find(p => p.type === 'month')?.value}-${yesterdayParts.find(p => p.type === 'day')?.value}`;
+    // Get today's and yesterday's date in Eastern timezone for filtering
+    const todayStr = getTodayET();
+    const yesterdayStr = getYesterdayET();
+    const currentYear = getCurrentYearET();
+    logger.debug('Sheets', `[${sheetName}] Today (ET): ${todayStr}`);
 
     // Map rows to RawPick objects
     const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string | number | null; f?: string } | null)[] }) => {
@@ -115,6 +104,37 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
         if (cell.v === null || cell.v === undefined) return '';
         return String(cell.v);
       });
+
+      // Handle our TG-FreeCapper "Picks" tab format which has different columns:
+      // pick_id, date, time, capper, sport, game, pick, line, odds, units, ...
+      const isPicksTab = sheetName === 'Picks' && headers.includes('capper');
+      
+      if (isPicksTab) {
+        // Map our column names to expected format
+        const capperName = values[headers.indexOf('capper')] || 'Unknown';
+        const sportVal = values[headers.indexOf('sport')] || '';
+        const pickVal = values[headers.indexOf('pick')] || '';
+        const lineVal = values[headers.indexOf('line')] || '';
+        const dateVal = values[headers.indexOf('date')] || '';
+        const gameVal = values[headers.indexOf('game')] || '';
+        const rawText = values[headers.indexOf('raw_text')] || '';
+        
+        // Construct pick string: combine pick, line if available
+        let fullPick = pickVal || rawText?.slice(0, 200) || '';
+        if (lineVal && !fullPick.includes(lineVal)) {
+          fullPick = `${fullPick} ${lineVal}`.trim();
+        }
+        
+        return {
+          site: 'TG-FreeCapper',
+          league: sportVal,
+          date: dateVal,
+          matchup: gameVal,
+          service: capperName,
+          pick: fullPick,
+          runDate: dateVal,
+        };
+      }
 
       // Use Date column first, then RunDate, otherwise empty (will be filtered out)
       const dateValue = values[headers.indexOf('Date')] || values[headers.indexOf('RunDate')] || '';
@@ -144,8 +164,7 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       // Try to parse and compare to today
       let pickDateStr = dateToCheck.split('T')[0];
 
-      // Extract year from todayStr for date parsing
-      const currentYear = todayStr.split('-')[0];
+      // Use the currentYear from shared utility (already extracted above)
 
       // Handle MM/DD/YYYY format
       const slashMatch = pickDateStr.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
@@ -175,16 +194,16 @@ export async function fetchPicksFromSheet(sheetName: string = 'BetFirm'): Promis
       if (!isToday) {
         const isYesterday = pickDateStr === yesterdayStr;
         if (isYesterday) {
-          console.log(`[${sheetName}] REJECTED STALE: "${p.pick}" date=${pickDateStr} (yesterday) - today is ${todayStr}`);
+          logger.debug('Sheets', `[${sheetName}] REJECTED STALE: "${p.pick}" date=${pickDateStr} (yesterday)`);
         } else {
-          console.log(`[${sheetName}] REJECTED: "${p.pick?.slice(0,30)}" date=${pickDateStr} (not today: ${todayStr})`);
+          logger.debug('Sheets', `[${sheetName}] REJECTED: "${p.pick?.slice(0,30)}" date=${pickDateStr}`);
         }
       }
 
       return isToday;
     });
   } catch (error) {
-    console.error(`Error fetching sheet ${sheetName}:`, error);
+    logger.error('Sheets', `Error fetching sheet ${sheetName}:`, error);
     return [];
   }
 }
@@ -348,7 +367,7 @@ export async function fetchPicksFromGoogleDoc(): Promise<RawPick[]> {
   const docId = process.env.GOOGLE_DOC_ID;
 
   if (!docId) {
-    console.warn('GOOGLE_DOC_ID not set, skipping Google Doc fetch');
+    logger.warn('Sheets', 'GOOGLE_DOC_ID not set, skipping Google Doc fetch');
     return [];
   }
 
@@ -361,7 +380,7 @@ export async function fetchPicksFromGoogleDoc(): Promise<RawPick[]> {
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch Google Doc: ${response.status}`);
+      logger.error('Sheets', `Failed to fetch Google Doc: ${response.status}`);
       return [];
     }
 
@@ -371,7 +390,7 @@ export async function fetchPicksFromGoogleDoc(): Promise<RawPick[]> {
     // This will depend on the format of your Google Doc
     return parseGoogleDocContent(text);
   } catch (error) {
-    console.error('Error fetching Google Doc:', error);
+    logger.error('Sheets', 'Error fetching Google Doc:', error);
     return [];
   }
 }
@@ -495,7 +514,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
     if (sportMatch) {
       const sportText = sportMatch[0].replace(/^\[OCR\]\s*/i, '').replace(/:?\s*$/, '').toLowerCase().trim();
       const newSport = sportMap[sportText] || sportText.toUpperCase();
-      console.log(`[Parser] Sport header detected: "${sportText}" -> ${newSport}`);
+      logger.debug('Parser', `Sport header detected: "${sportText}" -> ${newSport}`);
       currentSport = newSport;
       
       // If this line ONLY has the sport header (no capper before it), mark capper as unknown
@@ -534,7 +553,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
       // Debug: Log Seattle picks to trace sport classification
       if (team.toLowerCase().includes('seattle') || team.toLowerCase().includes('england')) {
-        console.log(`[Parser] Seattle/England pick created: team="${team}", sport="${sport}", capper="${currentCapper}"`);
+        logger.debug('Parser', `Seattle/England pick created: team="${team}", sport="${sport}", capper="${currentCapper}"`);
       }
 
       picks.push({
@@ -567,7 +586,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
     }
   }
 
-  console.log(`[GoogleDoc] Parsed ${picks.length} picks from ${new Set(picks.map(p => p.service)).size} cappers`);
+  logger.info('GoogleDoc', `Parsed ${picks.length} picks from ${new Set(picks.map(p => p.service)).size} cappers`);
   return picks;
 }
 
@@ -642,7 +661,7 @@ function processRawPicks(picks: RawPick[]): RawPick[] {
   const originalCount = picks.length;
   const processedCount = processed.length;
   if (processedCount > originalCount) {
-    console.log(`[Parlays] Split ${processedCount - originalCount} parlay legs (${originalCount} -> ${processedCount} picks)`);
+    logger.debug('Parlays', `Split ${processedCount - originalCount} parlay legs (${originalCount} -> ${processedCount} picks)`);
   }
 
   return processed;
@@ -666,8 +685,8 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   for (const p of docPicks) {
     docSports[p.league] = (docSports[p.league] || 0) + 1;
   }
-  console.log(`[DataSources] Sheet: ${sheetPicks.length} picks`, sheetSports);
-  console.log(`[DataSources] Doc: ${docPicks.length} picks`, docSports);
+  logger.debug('DataSources', `Sheet: ${sheetPicks.length} picks`, sheetSports);
+  logger.debug('DataSources', `Doc: ${docPicks.length} picks`, docSports);
 
   // Combine all picks and split parlay legs into individual picks
   const combinedPicks = [...sheetPicks, ...docPicks];
@@ -690,7 +709,7 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
     // Fix NCAAB-only teams
     const isNCAABTeam = ncaabOnlyTeams.some(t => pickText.includes(t) || matchupText.includes(t));
     if (isNCAABTeam && pick.league !== 'NCAAB') {
-      console.log(`[DataSources] Reclassifying ${pick.pick} from ${pick.league} to NCAAB (basketball-only team)`);
+      logger.debug('DataSources', `Reclassifying ${pick.pick} from ${pick.league} to NCAAB (basketball-only team)`);
       pick.league = 'NCAAB';
     }
 
@@ -702,7 +721,7 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
         const month = new Date().getMonth() + 1;
         const isBasketballSeason = month >= 11 || month <= 4;
         const newLeague = isBasketballSeason ? 'NCAAB' : 'NCAAF';
-        console.log(`[DataSources] Reclassifying ${pick.pick} from NFL to ${newLeague} (college team name detected)`);
+        logger.debug('DataSources', `Reclassifying ${pick.pick} from NFL to ${newLeague} (college team name detected)`);
         pick.league = newLeague;
       }
     }

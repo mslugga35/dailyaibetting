@@ -50,9 +50,9 @@ export function EmailCapturePopup() {
     e.preventDefault();
     if (!email) return;
 
-    // TODO: Replace with actual email service (ConvertKit, Beehiiv, etc.)
-    // For now, just log and show success
-    console.log('Email submitted:', email);
+    // NOTE: Email capture demo - stores in localStorage only
+    // Integration with ConvertKit/Beehiiv can be added when ready to collect emails
+    // Email submitted: stored locally for demo purposes
 
     localStorage.setItem('emailSubscribed', 'true');
     setSubmitted(true);
@@ -144,7 +144,7 @@ export function EmailCaptureBanner() {
     e.preventDefault();
     if (!email) return;
 
-    console.log('Email submitted:', email);
+    // Email capture demo - stores in localStorage only
     localStorage.setItem('emailSubscribed', 'true');
     setSubmitted(true);
   };

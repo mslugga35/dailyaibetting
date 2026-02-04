@@ -1,8 +1,13 @@
-// Game Schedule Checker
-// Fetches real-time schedules from ESPN API with fallback logic
-// No hardcoded dates - works automatically every day
+/**
+ * Game Schedule Checker
+ * Fetches real-time schedules from ESPN API with fallback logic
+ * No hardcoded dates - works automatically every day
+ * @module lib/consensus/game-schedule
+ */
 
 import { standardizeTeamName } from './team-mappings';
+import { getTodayET, getYesterdayET, toEasternDate } from '../utils/date';
+import { logger } from '../utils/logger';
 
 interface ESPNEvent {
   id: string;
@@ -23,7 +28,7 @@ interface ESPNResponse {
   events: ESPNEvent[];
 }
 
-// Cache for today's games (refreshes daily)
+/** Cache for today's games (refreshes based on TTL) */
 let gamesCache: {
   date: string;
   games: Map<string, Set<string>>; // sport -> Set of team names
@@ -31,9 +36,10 @@ let gamesCache: {
   yesterdaysTeams?: Set<string>; // For stale pick detection
 } | null = null;
 
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+/** Cache time-to-live: 30 minutes */
+const CACHE_TTL = 30 * 60 * 1000;
 
-// ESPN API endpoints (free, no auth required)
+/** ESPN API endpoints (free, no auth required) */
 const ESPN_ENDPOINTS: Record<string, string> = {
   NFL: 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard',
   NBA: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard',
@@ -42,53 +48,6 @@ const ESPN_ENDPOINTS: Record<string, string> = {
   NCAAF: 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard',
   NCAAB: 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard',
 };
-
-// Get today's date in Eastern timezone (using reliable Intl.DateTimeFormat)
-function getTodayET(): string {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(now);
-  return `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
-}
-
-// Get yesterday's date in Eastern timezone (using reliable Intl.DateTimeFormat)
-function getYesterdayET(): string {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(yesterday);
-  return `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}-${parts.find(p => p.type === 'day')?.value}`;
-}
-
-/**
- * Convert UTC date string to Eastern timezone date (YYYY-MM-DD)
- */
-function toEasternDate(utcDateStr: string): string {
-  try {
-    const date = new Date(utcDateStr);
-    // Format in Eastern timezone
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).formatToParts(date);
-    const year = parts.find(p => p.type === 'year')?.value;
-    const month = parts.find(p => p.type === 'month')?.value;
-    const day = parts.find(p => p.type === 'day')?.value;
-    return `${year}-${month}-${day}`;
-  } catch {
-    return utcDateStr.split('T')[0];
-  }
-}
 
 /**
  * Fetch today's games from ESPN API
@@ -109,7 +68,7 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
     });
 
     if (!response.ok) {
-      console.warn(`[Schedule] ESPN ${sport} API returned ${response.status}`);
+      logger.warn('Schedule', `ESPN ${sport} API returned ${response.status}`);
       return [];
     }
 
@@ -135,10 +94,10 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
       }
     }
 
-    console.log(`[Schedule] ESPN ${sport}: ${teams.length / 3} teams playing today (${today})`);
+    logger.debug('Schedule', `ESPN ${sport}: ${teams.length / 3} teams playing today (${today})`);
     return teams;
   } catch (error) {
-    console.error(`[Schedule] ESPN ${sport} fetch error:`, error);
+    logger.error('Schedule', `ESPN ${sport} fetch error:`, error);
     return [];
   }
 }
@@ -194,7 +153,7 @@ async function loadGamesCache(): Promise<void> {
     return;
   }
 
-  console.log('[Schedule] Refreshing games cache from ESPN...');
+  logger.debug('Schedule', 'Refreshing games cache from ESPN...');
 
   const todaysGames = new Map<string, Set<string>>();
   const yesterdaysTeams = new Set<string>();
@@ -227,7 +186,7 @@ async function loadGamesCache(): Promise<void> {
   // Store yesterday's teams for filtering
   gamesCache.yesterdaysTeams = yesterdaysTeams;
 
-  console.log('[Schedule] Cache updated:',
+  logger.debug('Schedule', 'Cache updated:',
     Object.fromEntries([...todaysGames.entries()].map(([k, v]) => [k, v.size / 3]))
   );
 }
@@ -323,7 +282,7 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
   await loadGamesCache();
 
   if (!gamesCache || gamesCache.games.size === 0) {
-    console.warn('[Schedule] No cache available, passing all picks through');
+    logger.warn('Schedule', 'No cache available, passing all picks through');
     return { filtered: picks, rejected: [] };
   }
 
@@ -335,11 +294,13 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 
   // NFL team keywords - reject these when NFL has no games
   // This catches NFL picks that got misclassified as other sports
+  // NOTE: 'bucs' excluded - too easy to confuse with NBA 'Bucks'
+  // NOTE: 'bears', 'lions', 'giants', 'cardinals' excluded - overlap with MLB/other
   const NFL_KEYWORDS = [
     'patriots', 'new england', 'seahawks', 'chiefs', 'eagles', 'bills', 'cowboys',
     '49ers', 'niners', 'packers', 'steelers', 'ravens', 'bengals', 'dolphins',
-    'broncos', 'raiders', 'chargers', 'cardinals', 'falcons', 'lions', 'bears',
-    'vikings', 'saints', 'buccaneers', 'bucs', 'commanders', 'giants', 'jets',
+    'broncos', 'raiders', 'chargers', 'falcons', 
+    'vikings', 'saints', 'buccaneers', 'tampa bay bucs', 'commanders', 'jets',
     'texans', 'colts', 'jaguars', 'titans', 'browns', 'rams', 'panthers'
   ];
   const nflHasGames = (gamesCache.games.get('NFL')?.size || 0) > 0;
@@ -352,13 +313,16 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 
     // SPECIAL: Reject NFL team names when NFL season has no games
     // This catches misclassified NFL picks (e.g., "Seattle" as NCAAB Seattle U)
-    if (!nflHasGames) {
+    // EXCEPTION: Skip this check for NBA picks with "bucks" - don't confuse with "bucs"
+    if (!nflHasGames && sport !== 'NBA') {
       const isNflTeam = NFL_KEYWORDS.some(kw => teamLower.includes(kw));
       // Also catch "Seattle @ New England" style matchups (NFL game format)
       const isNflMatchup = teamLower.includes('new england') || 
                            (teamLower.includes('seattle') && teamLower.includes('@'));
-      if (isNflTeam || isNflMatchup) {
-        console.log(`[Schedule] Rejecting NFL team/matchup "${team}" (${sport}) - NO NFL games today`);
+      // Don't reject if it looks like "bucks" (Milwaukee NBA), not "bucs" (Tampa NFL)
+      const looksLikeBucks = teamLower.includes('bucks') || teamLower.includes('milwaukee');
+      if ((isNflTeam || isNflMatchup) && !looksLikeBucks) {
+        logger.debug('Schedule', `Rejecting NFL team/matchup "${team}" (${sport}) - NO NFL games today`);
         rejected.push({
           team,
           sport,
@@ -373,17 +337,27 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     // Pass through unsupported sports (soccer, tennis, euroleague, etc.)
     // We can't validate them via ESPN but the picks might still be valid
     if (!SUPPORTED_SPORTS.includes(sport)) {
-      console.log(`[Schedule] Passing through ${sport} pick: ${team} (no ESPN validation available)`);
+      logger.debug('Schedule', `Passing through ${sport} pick: ${team} (no ESPN validation available)`);
       filtered.push(pick);
       continue;
     }
 
-    // Check if sport has games today - STRICT for major sports with no games
+    // Check if sport has games today
+    // LENIENT for college sports (NCAAB/NCAAF) - 350+ schools, naming chaos
+    // STRICT for pro sports (NFL/NBA/MLB/NHL) - easy to verify
+    const LENIENT_SPORTS = ['NCAAB', 'NCAAF', 'CBB', 'CFB'];
+    const isCollegeSport = LENIENT_SPORTS.includes(sport);
+    
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      // For major sports, if ESPN says 0 games, REJECT the pick
-      // This catches stale/future picks like "NFL" picks when season is over
-      console.log(`[Schedule] Rejecting ${team} (${sport}) - NO ${sport} games today per ESPN`);
+      if (isCollegeSport) {
+        // College: Pass through even if ESPN shows 0 games (might be data lag)
+        logger.debug('Schedule', `Passing through ${team} (${sport}) - college sport, can't verify`);
+        filtered.push(pick);
+        continue;
+      }
+      // Pro sports: REJECT if ESPN says 0 games
+      logger.debug('Schedule', `Rejecting ${team} (${sport}) - NO ${sport} games today per ESPN`);
       rejected.push({
         team,
         sport,
@@ -414,7 +388,7 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     } else {
       // FAIL OPEN: If we can't confirm team isn't playing, pass it through
       // Better to show a pick that might be stale than miss a valid consensus
-      console.log(`[Schedule] Can't confirm ${team} (${sport}) - passing through anyway`);
+      logger.debug('Schedule', `Can't confirm ${team} (${sport}) - passing through anyway`);
       filtered.push(pick);
       // Still log it but don't reject
       // rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule` });
@@ -423,7 +397,7 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 
   // Log summary with rejection breakdown
   if (rejected.length > 0) {
-    console.log(`\n[Schedule] ⚠ Filtered out ${rejected.length} picks:`);
+    logger.info('Schedule', `Filtered out ${rejected.length} picks:`);
 
     // Group by reason for cleaner output
     const byReason = rejected.reduce((acc, r) => {
@@ -433,18 +407,18 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     }, {} as Record<RejectionReason, RejectedPick[]>);
 
     for (const [reason, picks] of Object.entries(byReason)) {
-      console.log(`  ${reason}: ${picks.length} picks`);
+      logger.debug('Schedule', `  ${reason}: ${picks.length} picks`);
       // Show first 3 examples for each reason
       for (const p of picks.slice(0, 3)) {
-        console.log(`    - ${p.team} (${p.sport}) from ${p.capper}: ${p.details}`);
+        logger.debug('Schedule', `    - ${p.team} (${p.sport}) from ${p.capper}: ${p.details}`);
       }
       if (picks.length > 3) {
-        console.log(`    ... and ${picks.length - 3} more`);
+        logger.debug('Schedule', `    ... and ${picks.length - 3} more`);
       }
     }
   }
 
-  console.log(`[Schedule] ESPN Validation: ${picks.length} -> ${filtered.length} picks (${rejected.length} filtered)`);
+  logger.info('Schedule', `ESPN Validation: ${picks.length} -> ${filtered.length} picks (${rejected.length} filtered)`);
   return { filtered, rejected };
 }
 
