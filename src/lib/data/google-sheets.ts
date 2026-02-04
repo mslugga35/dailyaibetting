@@ -7,6 +7,7 @@
 import { RawPick } from '../consensus/consensus-builder';
 import { getTodayET, getYesterdayET, getCurrentYearET } from '../utils/date';
 import { logger } from '../utils/logger';
+import { fetchPicksFromSupabase } from './supabase-picks';
 
 // Google Sheets configuration
 // Document ID from your n8n workflow: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
@@ -671,9 +672,10 @@ function processRawPicks(picks: RawPick[]): RawPick[] {
  * Get all picks from all sources
  */
 export async function getAllPicksFromSources(): Promise<RawPick[]> {
-  const [sheetPicks, docPicks] = await Promise.all([
+  const [sheetPicks, docPicks, supabasePicks] = await Promise.all([
     fetchAllPicks(),
     fetchPicksFromGoogleDoc(),
+    fetchPicksFromSupabase(), // Free cappers from Telegram via Supabase
   ]);
 
   // Debug: log pick counts by source and sport
@@ -685,11 +687,16 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   for (const p of docPicks) {
     docSports[p.league] = (docSports[p.league] || 0) + 1;
   }
+  const supabaseSports: Record<string, number> = {};
+  for (const p of supabasePicks) {
+    supabaseSports[p.league] = (supabaseSports[p.league] || 0) + 1;
+  }
   logger.debug('DataSources', `Sheet: ${sheetPicks.length} picks`, sheetSports);
   logger.debug('DataSources', `Doc: ${docPicks.length} picks`, docSports);
+  logger.debug('DataSources', `Supabase (FreeCappers): ${supabasePicks.length} picks`, supabaseSports);
 
   // Combine all picks and split parlay legs into individual picks
-  const combinedPicks = [...sheetPicks, ...docPicks];
+  const combinedPicks = [...sheetPicks, ...docPicks, ...supabasePicks];
   const allPicks = processRawPicks(combinedPicks);
 
   // Fix sport misclassification for known college teams
