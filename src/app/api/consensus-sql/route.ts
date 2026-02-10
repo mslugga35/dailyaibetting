@@ -1,7 +1,16 @@
 /**
- * Consensus SQL API Route
- * Calls Supabase RPC `get_betting_consensus()` for centralized consensus
- * This replaces the JS consensus builder with SQL-based logic
+ * Consensus SQL API Route (EXPERIMENTAL)
+ *
+ * Alternative to /api/consensus — calls Supabase RPC `get_betting_consensus()`
+ * for server-side SQL consensus instead of the JS consensus builder.
+ *
+ * Requires deploying: dailyai-picks-local/sql/consensus-ultra-v3.sql
+ * to the Supabase SQL editor. If the RPC function doesn't exist yet,
+ * this endpoint will return a 500 error.
+ *
+ * The primary /api/consensus route uses JS-based consensus and is the
+ * production endpoint used by the frontend.
+ *
  * @module app/api/consensus-sql
  */
 

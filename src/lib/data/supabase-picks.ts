@@ -1,6 +1,17 @@
 /**
  * Supabase Picks Data Fetching
- * Fetches free capper picks from hb_picks/hb_cappers tables
+ *
+ * Fetches today's picks from hb_picks (joined with hb_cappers for names)
+ * and converts them to RawPick format for the consensus builder.
+ *
+ * Data sources that feed hb_picks:
+ *   - Discord bot → parse-worker (source_type = 'discord')
+ *   - Google Sheets → sheets-to-supabase.py → parse-worker (source_type = 'sheets')
+ *
+ * Note: Picks from Google Sheets appear in BOTH this Supabase query AND the
+ * Google Sheets fetch (via getAllPicksFromSources). The consensus builder
+ * deduplicates by capper + team + bet_type, so consensus counts stay accurate.
+ *
  * @module lib/data/supabase-picks
  */
 

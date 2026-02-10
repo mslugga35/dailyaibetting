@@ -1,6 +1,17 @@
 /**
  * Consensus API Route
- * Aggregates picks from multiple sources, builds consensus, and returns insights
+ *
+ * Aggregates picks from Google Sheets, Google Doc, and Supabase (hb_picks),
+ * normalizes them, validates against ESPN schedule, builds consensus, and
+ * returns structured insights.
+ *
+ * Query params:
+ *   ?sport=NBA        - Filter consensus by sport
+ *   ?minCappers=2     - Minimum capper agreement (default: 2)
+ *
+ * Data flow:
+ *   getAllPicksFromSources() → normalizePicks() → ESPN filter → buildConsensus()
+ *
  * @module app/api/consensus
  */
 
@@ -16,7 +27,7 @@ import {
 import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consensus/game-schedule';
 import { logger } from '@/lib/utils/logger';
 
-// Group picks by capper for the All Picks view
+/** Group picks by capper name for the All Picks view. */
 function groupPicksByCapper(picks: NormalizedPick[]): Record<string, NormalizedPick[]> {
   const grouped: Record<string, NormalizedPick[]> = {};
   for (const pick of picks) {
@@ -29,7 +40,7 @@ function groupPicksByCapper(picks: NormalizedPick[]): Record<string, NormalizedP
 }
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 0; // Disable static generation
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
@@ -37,134 +48,95 @@ export async function GET(request: Request) {
     const sport = searchParams.get('sport');
     const minCappers = parseInt(searchParams.get('minCappers') || '2');
 
-    // Get today's ESPN schedule
+    // --- Step 1: ESPN schedule (for sport reclassification) ---
     const schedule = await getTodaysScheduleSummary();
-    logger.debug('Consensus API', 'ESPN Schedule:', schedule);
-
-    // Check if sports have games today (for reclassification)
     const ncaafHasGames = (schedule['NCAAF'] || 0) > 0;
     const ncaabHasGames = (schedule['NCAAB'] || 0) > 0;
-    logger.debug('Consensus API', `NCAAF games: ${schedule['NCAAF'] || 0}, NCAAB games: ${schedule['NCAAB'] || 0}`);
+    const nflHasGames = (schedule['NFL'] || 0) > 0;
 
-    // Fetch all picks from data sources (pre-filtered by date in google-sheets.ts)
+    // --- Step 2: Fetch picks from all data sources ---
     const rawPicks = await getAllPicksFromSources();
 
-    // Debug: Track Seattle/New England picks for sport classification debugging
-    const seattlePicks = rawPicks.filter(p => {
-      const pickLower = (p.pick || '').toLowerCase();
-      const matchupLower = (p.matchup || '').toLowerCase();
-      return pickLower.includes('seattle') || pickLower.includes('england') || 
-             matchupLower.includes('seattle') || matchupLower.includes('england');
-    });
-    const debugSeattle = seattlePicks.map(p => ({
-      site: p.site,
-      league: p.league,
-      pick: p.pick,
-      matchup: p.matchup,
-      service: p.service
-    }));
-    logger.debug('Consensus API', 'Seattle/England picks from parser:', debugSeattle);
-
-    // Reclassify NCAAF -> NCAAB when football season is over (no NCAAF games)
-    // Teams like Florida, Notre Dame, Auburn play both sports
+    // Reclassify NCAAF → NCAAB when football season is over
     if (!ncaafHasGames && ncaabHasGames) {
       for (const pick of rawPicks) {
         if (pick.league === 'NCAAF' || pick.league === 'CFB') {
-          logger.debug('Consensus API', `Reclassifying ${pick.pick} from NCAAF to NCAAB`);
           pick.league = 'NCAAB';
         }
       }
     }
 
-    // Count by source for debugging
-    const sourceCount: Record<string, number> = {};
-    for (const p of rawPicks) {
-      sourceCount[p.site] = (sourceCount[p.site] || 0) + 1;
-    }
-
-    // Normalize picks
+    // --- Step 3: Normalize and validate ---
     const normalizedPicks = normalizePicks(rawPicks);
 
-    // CRITICAL: Filter picks using ESPN API BEFORE building consensus
-    // This ensures only teams actually playing today are included
-    const { filtered: espnFiltered, rejected: rejectedPicks } = await filterToTodaysGamesAsync(normalizedPicks);
-    logger.debug('Consensus API', `ESPN filtered: ${normalizedPicks.length} -> ${espnFiltered.length} picks (${rejectedPicks.length} rejected)`);
+    // ESPN filter: remove teams not playing today
+    const { filtered: espnFiltered } = await filterToTodaysGamesAsync(normalizedPicks);
 
-    // HOTFIX: Aggressive filter to remove bad picks
-    // Filter: NFL picks when 0 games, bad format, known bad patterns
-    const nflGames = schedule['NFL'] || 0;
+    // Cleanup filter: remove malformed picks that slip through ESPN validation
     const todaysPicks = espnFiltered.filter(pick => {
       const teamLower = (pick.team || '').toLowerCase();
-      const origPick = (pick.originalPick || '').toLowerCase();
-      
-      // Always filter picks containing NFL team names (seattle, patriots, etc)
-      const nflPatterns = ['seahawks', 'patriots', 'new england', 'seattle', 'buffalo', 'bills', 'hunter henry', 'nfl'];
-      if (nflPatterns.some(p => teamLower.includes(p) || origPick.includes(p))) {
-        logger.debug('HOTFIX', `Filtering NFL-related: ${pick.team}`);
-        return false;
+
+      // Only filter NFL team names when there are no NFL games today
+      if (!nflHasGames) {
+        const nflTeams = ['seahawks', 'patriots', 'bills', '49ers', 'chiefs', 'eagles',
+          'cowboys', 'ravens', 'bengals', 'dolphins', 'jets', 'steelers', 'browns',
+          'titans', 'colts', 'jaguars', 'texans', 'broncos', 'raiders', 'chargers',
+          'packers', 'vikings', 'bears', 'lions', 'saints', 'falcons', 'panthers',
+          'buccaneers', 'rams', 'cardinals', 'commanders', 'giants'];
+        if (pick.sport === 'NFL' || nflTeams.some(t => teamLower === t)) {
+          return false;
+        }
       }
-      
-      // Filter picks with @ in team name (matchup format like "Team @ Team")
+
+      // Filter malformed team names (matchup format leaked into team field)
       if (teamLower.includes('@') || teamLower.includes(' vs ')) {
-        logger.debug('HOTFIX', `Filtering matchup format: ${pick.team}`);
         return false;
       }
-      
-      // Filter out picks with bad formatting
+
+      // Filter picks with unresolved parentheses or stray colons
       if (pick.team?.includes('(') || (pick.team?.includes(':') && !pick.team?.match(/^\d/))) {
-        logger.debug('HOTFIX', `Filtering bad format: ${pick.team}`);
         return false;
       }
-      
+
       return true;
     });
-    logger.debug('Consensus API', `After HOTFIX: ${todaysPicks.length} picks (filtered ${espnFiltered.length - todaysPicks.length})`);
 
-    // Build consensus from ESPN-filtered picks only
+    // --- Step 4: Build consensus ---
     const rawConsensus = buildConsensus(todaysPicks);
-
-    // Format output
     const formatted = formatConsensusOutput(rawConsensus);
 
-    // Use filtered consensus
     let consensus = formatted.filteredConsensus;
 
-    // Filter by sport if specified
+    // Apply query filters
     if (sport && sport !== 'ALL') {
       consensus = consensus.filter(p => p.sport === sport.toUpperCase());
     }
-
-    // Filter by minimum capper count
     consensus = consensus.filter(p => p.capperCount >= minCappers);
 
-    // Group picks by capper for All Picks view (today's games only)
+    // Group picks by capper for the All Picks view
     const picksByCapper = groupPicksByCapper(todaysPicks);
     const capperCount = Object.keys(picksByCapper).length;
 
-    // Build insights section
+    // Build insights (fire tiers, stacks, contrarian alerts)
     const insights = buildInsights(rawConsensus, todaysPicks);
 
-    // Summary logging
-    logger.info('Consensus API', `Raw: ${rawPicks.length}, Today's Picks: ${todaysPicks.length}, Cappers: ${capperCount}, Consensus: ${formatted.filteredConsensus.length}`);
+    logger.info('Consensus API', `Raw: ${rawPicks.length}, Filtered: ${todaysPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}`);
 
     return NextResponse.json({
       success: true,
-      _version: '2026-02-03-v3', // Version check for deployment verification
       timestamp: new Date().toISOString(),
       date: new Date().toISOString().split('T')[0],
       totalPicks: todaysPicks.length,
       normalizedCount: todaysPicks.length,
-      capperCount: capperCount,
+      capperCount,
       consensusCount: consensus.length,
-      consensus: consensus,
+      consensus,
       topOverall: formatted.topOverall,
       bySport: formatted.bySport,
       fadeThePublic: formatted.fadeThePublic,
-      insights: insights, // NEW: Fire tiers, stacks, contrarian alerts
-      picksByCapper: picksByCapper,
+      insights,
+      picksByCapper,
       allPicks: todaysPicks,
-      _sourceCount: sourceCount, // Debug: picks by source
-      _debugSeattle: debugSeattle, // Debug: Seattle picks from parser
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
