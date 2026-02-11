@@ -104,6 +104,10 @@ export default function RootLayout({
         <WebsiteJsonLd />
         <FAQJsonLd />
         <GoogleAnalytics />
+        {/* Google AdSense */}
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" />
+        {/* Impact.com Verification */}
+        <meta name="impact-site-verification" content="27678012-a389-4e37-a055-37d59ed4ebf1" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
