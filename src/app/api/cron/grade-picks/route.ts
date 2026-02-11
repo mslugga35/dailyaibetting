@@ -1,7 +1,7 @@
 // Cron Endpoint: Auto-Grade Picks
 // Triggered by Vercel Cron or external scheduler.
 // Grades pending consensus picks using ESPN scores.
-// Schedule: Every 3 hours (see vercel.json)
+// Schedule: Daily at 6 AM UTC (see vercel.json)
 
 import { NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -47,21 +47,20 @@ type GradeResult = 'WIN' | 'LOSS' | 'PUSH' | 'PENDING';
 
 // ============ SUPABASE ============
 
-let supabase: SupabaseClient | null = null;
-
 function getSupabase(): SupabaseClient | null {
-  if (supabase) return supabase;
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    console.warn('SUPABASE_SERVICE_ROLE_KEY not set, grading may fail with insufficient permissions');
+  }
+  const finalKey = key || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !key) {
+  if (!url || !finalKey) {
     console.warn('Supabase not configured');
     return null;
   }
 
-  supabase = createClient(url, key);
-  return supabase;
+  return createClient(url, finalKey);
 }
 
 // ============ TEAM STANDARDIZATION (simplified) ============
@@ -277,8 +276,7 @@ export async function GET(request: Request) {
     const cronSecret = process.env.CRON_SECRET;
     
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      // Allow manual triggers without auth for now
-      console.log('No auth header, allowing anyway');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     const db = getSupabase();

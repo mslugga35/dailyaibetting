@@ -265,7 +265,7 @@ Since you have the scrape.txt guide:
 - FireCrawl free tier: 500 requests/month (enough for testing)
 - Google Sheets: Currently 671 rows in AllPicks
 - Consensus reads from: AllPicks tab (FIXED)
-- Master Picks runs on webhook: https://mslugga35.app.n8n.cloud/webhook/dailyai-doc-update
+- Master Picks runs on webhook: <N8N_DOC_UPDATE_WEBHOOK - see .env.local>
 
 **Last Updated:** 2025-12-30
 **Next Review:** After first new scraper is deployed

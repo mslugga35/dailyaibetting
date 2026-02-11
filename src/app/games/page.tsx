@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, Target, ChevronRight } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
-import { ConfidenceBadge, getConfidenceTier } from '@/components/ConfidenceBadge';
+import { ConfidenceBadge } from '@/components/ConfidenceBadge';
 import Link from 'next/link';
 
 interface GameSummary {

@@ -27,11 +27,24 @@ interface GradingStats {
 }
 
 export default function GradingAdminPage() {
+  const [password, setPassword] = useState('');
+  const [isAuthed, setIsAuthed] = useState(false);
   const [picks, setPicks] = useState<Pick[]>([]);
   const [stats, setStats] = useState<GradingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [grading, setGrading] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+
+  if (!isAuthed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <form onSubmit={(e) => { e.preventDefault(); if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) setIsAuthed(true); }} className="space-y-4">
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Admin password" className="px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white" />
+          <button type="submit" className="px-4 py-2 bg-emerald-600 rounded text-white ml-2">Enter</button>
+        </form>
+      </div>
+    );
+  }
 
   const fetchPicks = async () => {
     setLoading(true);

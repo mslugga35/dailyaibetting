@@ -12,7 +12,7 @@
        ▼
 ┌──────────────────────────────────────────────┐
 │  Google Sheets                               │
-│  ID: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI │
+│  ID: <GOOGLE_SHEET_ID - see .env.local> │
 │                                              │
 │  Current Tabs:                               │
 │  - Daily_Capper_Picks (website reads this)   │
@@ -140,7 +140,7 @@ If you have an AllPicks tab that aggregates everything:
 
 1. **Create SportsCapping Tab**
    ```
-   Open Google Sheets: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
+   Open Google Sheets: <GOOGLE_SHEET_ID - see .env.local>
    Create new tab: "SportsCapping"
    Add headers: Site | League | Date | Matchup | Service | Pick | RunDate
    ```
@@ -343,7 +343,7 @@ https://dailyaibetting.com/api/picks?capper=Sal+Michaels
   "pages": 2,
   "picksPerPage": 25,
   "totalPicks": 50,
-  "googleSheet": "1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI",
+  "googleSheet": "<GOOGLE_SHEET_ID - see .env.local>",
   "sheetTab": "SportsCapping",  // Change to "Daily_Capper_Picks" for production
   "deduplication": true,
   "errorHandling": true

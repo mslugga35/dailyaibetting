@@ -3,12 +3,11 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Flame, Snowflake, Users, TrendingUp } from 'lucide-react';
+import { Flame, Snowflake } from 'lucide-react';
 import { ConsensusPick } from '@/types';
 
 interface MatchupViewProps {
   picks: ConsensusPick[];
-  allPicks?: any[]; // Raw picks with capper details
 }
 
 interface CapperCard {

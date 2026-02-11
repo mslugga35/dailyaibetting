@@ -7,7 +7,7 @@ import { useConsensus } from '@/lib/hooks/use-consensus';
 import { MatchupView } from '@/components/picks/MatchupView';
 
 export default function MatchupsPage() {
-  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus();
+  const { topOverall, bySport, isLoading, error, refetch } = useConsensus();
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

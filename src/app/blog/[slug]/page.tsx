@@ -142,7 +142,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         {/* Article Content */}
         <div
           className="prose prose-invert max-w-none mb-8"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: post.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+\s*=/gi, 'data-removed=') }}
         />
 
         {/* Tags */}

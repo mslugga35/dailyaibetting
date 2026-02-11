@@ -31,9 +31,9 @@
      - Covers: covers.com/picks ✅
 
 4. **FireCrawl MCP Installation**
-   - ✅ Installed FireCrawl MCP with API key: fc-6608990abeb24e0899df7c391a54403b
+   - ✅ Installed FireCrawl MCP with API key: <FIRECRAWL_API_KEY - see .env.local>
    - Modified config: C:\Users\mpmmo\.claude.json
-   - Command used: `claude mcp add firecrawl -s user -- env FIRECRAWL_API_KEY=fc-6608990abeb24e0899df7c391a54403b npx -y firecrawl-mcp`
+   - Command used: `claude mcp add firecrawl -s user -- env FIRECRAWL_API_KEY=<FIRECRAWL_API_KEY - see .env.local> npx -y firecrawl-mcp`
 
 5. **Documentation Created**
    - [SCRAPING_STRATEGY.md](C:\Users\mpmmo\DirectoryWebsites\Sites\dailyaibetting\SCRAPING_STRATEGY.md) - Comprehensive implementation plan
@@ -157,20 +157,20 @@ const html = (typeof $json === 'string') ? $json : ($json.data || '');
 ## 🔑 Important Context
 
 ### Google Sheets
-- **Sheet ID:** 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
+- **Sheet ID:** <GOOGLE_SHEET_ID - see .env.local>
 - **Spreadsheet Name:** "Daily_Capper_Picks"
 - **Tab Name (main):** "AllPicks"
 - **Current Rows:** 671 in AllPicks
 
 ### FireCrawl
-- **API Key:** fc-6608990abeb24e0899df7c391a54403b
+- **API Key:** <FIRECRAWL_API_KEY - see .env.local>
 - **Free Tier:** 500 requests/month
 - **Installed:** Yes (requires restart to load)
 - **Skill Doc:** C:\Users\mpmmo\.claude\skills\firecrawl-expert\skill.md
 
 ### n8n Instance
 - **URL:** https://mslugga35.app.n8n.cloud
-- **Master Picks Webhook:** https://mslugga35.app.n8n.cloud/webhook/dailyai-doc-update
+- **Master Picks Webhook:** <N8N_DOC_UPDATE_WEBHOOK - see .env.local>
 
 ---
 

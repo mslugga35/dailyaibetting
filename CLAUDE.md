@@ -77,10 +77,10 @@ Local Scraper (PM2) ─────┘
 
 ### Primary Data Sources
 
-1. **Google Doc** (ID: `1QAUgTvFZq3PlA25vznkly8CHb4uNsIRYEZ0oXCitKxo`)
+1. **Google Doc** (ID: `<GOOGLE_DOC_ID - see .env.local>`)
    - Contains latest picks from multiple cappers
 
-2. **Google Sheets** (ID: `1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI`)
+2. **Google Sheets** (ID: `<GOOGLE_SHEET_ID - see .env.local>`)
    - Populated by **local scraper** (replaced n8n to save executions)
    - Tabs: BetFirm, BoydsBets, Dimers, Covers, SportsLine, AllPicks
    - Columns: Site, League, Date, Matchup, Service, Pick, RunDate
@@ -115,14 +115,14 @@ Copy `.env.example` to `.env.local`:
 
 ```bash
 # Required
-GOOGLE_SHEET_ID=1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
-GOOGLE_DOC_ID=1QAUgTvFZq3PlA25vznkly8CHb4uNsIRYEZ0oXCitKxo
+GOOGLE_SHEET_ID=<GOOGLE_SHEET_ID - see .env.local>
+GOOGLE_DOC_ID=<GOOGLE_DOC_ID - see .env.local>
 
 # Optional
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
-N8N_WEBHOOK_URL=https://mslugga35.app.n8n.cloud/webhook/dailyaibetting
+N8N_WEBHOOK_URL=<N8N_WEBHOOK_URL - see .env.local>
 ```
 
 ## API Endpoints
