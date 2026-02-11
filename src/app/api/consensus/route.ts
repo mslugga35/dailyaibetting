@@ -52,7 +52,6 @@ export async function GET(request: Request) {
     const schedule = await getTodaysScheduleSummary();
     const ncaafHasGames = (schedule['NCAAF'] || 0) > 0;
     const ncaabHasGames = (schedule['NCAAB'] || 0) > 0;
-    const nflHasGames = (schedule['NFL'] || 0) > 0;
 
     // --- Step 2: Fetch picks from all data sources ---
     const rawPicks = await getAllPicksFromSources();
@@ -73,20 +72,9 @@ export async function GET(request: Request) {
     const { filtered: espnFiltered } = await filterToTodaysGamesAsync(normalizedPicks);
 
     // Cleanup filter: remove malformed picks that slip through ESPN validation
+    // (NFL filtering already handled by filterToTodaysGamesAsync in game-schedule.ts)
     const todaysPicks = espnFiltered.filter(pick => {
       const teamLower = (pick.team || '').toLowerCase();
-
-      // Only filter NFL team names when there are no NFL games today
-      if (!nflHasGames) {
-        const nflTeams = ['seahawks', 'patriots', 'bills', '49ers', 'chiefs', 'eagles',
-          'cowboys', 'ravens', 'bengals', 'dolphins', 'jets', 'steelers', 'browns',
-          'titans', 'colts', 'jaguars', 'texans', 'broncos', 'raiders', 'chargers',
-          'packers', 'vikings', 'bears', 'lions', 'saints', 'falcons', 'panthers',
-          'buccaneers', 'rams', 'cardinals', 'commanders', 'giants'];
-        if (pick.sport === 'NFL' || nflTeams.some(t => teamLower === t)) {
-          return false;
-        }
-      }
 
       // Filter malformed team names (matchup format leaked into team field)
       if (teamLower.includes('@') || teamLower.includes(' vs ')) {

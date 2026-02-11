@@ -1,12 +1,19 @@
 /**
- * Game Schedule Checker
- * Fetches real-time schedules from ESPN API with fallback logic
- * No hardcoded dates - works automatically every day
+ * ESPN Game Schedule Validator
+ *
+ * Fetches today's schedules from ESPN's free API and validates consensus
+ * picks against real game data. Pro sports (NBA/NFL/MLB/NHL) are fail-closed
+ * (rejected if team not in schedule), college sports fail-open (350+ schools).
+ *
+ * Exports:
+ *   filterToTodaysGamesAsync() - Main filter: validates picks against ESPN
+ *   getTodaysScheduleSummary() - Debug: returns {sport: teamCount} map
+ *
  * @module lib/consensus/game-schedule
  */
 
 import { standardizeTeamName } from './team-mappings';
-import { getTodayET, getYesterdayET, toEasternDate } from '../utils/date';
+import { getTodayET, toEasternDate } from '../utils/date';
 import { logger } from '../utils/logger';
 
 interface ESPNEvent {
@@ -31,9 +38,8 @@ interface ESPNResponse {
 /** Cache for today's games (refreshes based on TTL) */
 let gamesCache: {
   date: string;
-  games: Map<string, Set<string>>; // sport -> Set of team names
+  games: Map<string, Set<string>>; // sport -> Set of team names (3 per team: display, short, abbreviation)
   fetchedAt: number;
-  yesterdaysTeams?: Set<string>; // For stale pick detection
 } | null = null;
 
 /** Cache time-to-live: 30 minutes */
@@ -103,78 +109,26 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
 }
 
 /**
- * Fetch yesterday's games from ESPN API (to filter out stale picks)
- */
-async function fetchYesterdaysGamesFromESPN(sport: string): Promise<string[]> {
-  const endpoint = ESPN_ENDPOINTS[sport];
-  if (!endpoint) return [];
-
-  try {
-    const yesterday = getYesterdayET();
-    const url = `${endpoint}?dates=${yesterday.replace(/-/g, '')}`;
-
-    const response = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
-
-    if (!response.ok) return [];
-
-    const data: ESPNResponse = await response.json();
-    const teams: string[] = [];
-
-    for (const event of data.events || []) {
-      for (const competition of event.competitions || []) {
-        for (const competitor of competition.competitors || []) {
-          const team = competitor.team;
-          if (team) {
-            teams.push(team.displayName);
-            teams.push(team.shortDisplayName);
-            teams.push(team.abbreviation);
-          }
-        }
-      }
-    }
-
-    return teams;
-  } catch (error) {
-    return [];
-  }
-}
-
-/**
- * Load all games for today and yesterday (for filtering)
+ * Load today's games into cache from ESPN (all sports in parallel).
+ * Cache refreshes after CACHE_TTL (30 min) or on date change.
  */
 async function loadGamesCache(): Promise<void> {
   const today = getTodayET();
 
-  // Check if cache is still valid
   if (gamesCache && gamesCache.date === today && Date.now() - gamesCache.fetchedAt < CACHE_TTL) {
     return;
   }
 
   logger.debug('Schedule', 'Refreshing games cache from ESPN...');
 
-  const todaysGames = new Map<string, Set<string>>();
-  const yesterdaysTeams = new Set<string>();
-
-  // Fetch all sports in parallel
   const sports = Object.keys(ESPN_ENDPOINTS);
-  const [todayResults, yesterdayResults] = await Promise.all([
-    Promise.all(sports.map(sport => fetchTodaysGamesFromESPN(sport).then(teams => ({ sport, teams })))),
-    Promise.all(sports.map(sport => fetchYesterdaysGamesFromESPN(sport).then(teams => ({ sport, teams })))),
-  ]);
+  const results = await Promise.all(
+    sports.map(sport => fetchTodaysGamesFromESPN(sport).then(teams => ({ sport, teams })))
+  );
 
-  // Process today's games
-  for (const { sport, teams } of todayResults) {
+  const todaysGames = new Map<string, Set<string>>();
+  for (const { sport, teams } of results) {
     todaysGames.set(sport, new Set(teams.map(t => t.toLowerCase())));
-  }
-
-  // Process yesterday's games (for stale pick detection)
-  for (const { teams } of yesterdayResults) {
-    for (const team of teams) {
-      yesterdaysTeams.add(team.toLowerCase());
-    }
   }
 
   gamesCache = {
@@ -183,70 +137,11 @@ async function loadGamesCache(): Promise<void> {
     fetchedAt: Date.now(),
   };
 
-  // Store yesterday's teams for filtering
-  gamesCache.yesterdaysTeams = yesterdaysTeams;
-
   logger.debug('Schedule', 'Cache updated:',
     Object.fromEntries([...todaysGames.entries()].map(([k, v]) => [k, v.size / 3]))
   );
 }
 
-/**
- * Check if a team is playing today
- */
-export async function isTeamPlayingToday(team: string, sport: string): Promise<boolean> {
-  await loadGamesCache();
-
-  if (!gamesCache) return true; // Fail open if cache fails
-
-  const sportGames = gamesCache.games.get(sport);
-  if (!sportGames || sportGames.size === 0) {
-    // No games found for sport - might be API issue, fail open
-    return true;
-  }
-
-  const standardized = standardizeTeamName(team, sport).toLowerCase();
-  const teamLower = team.toLowerCase();
-
-  // Check if team matches any playing today
-  return sportGames.has(standardized) ||
-         sportGames.has(teamLower) ||
-         [...sportGames].some(t => t.includes(teamLower) || teamLower.includes(t));
-}
-
-/**
- * Check if a game already happened (team played yesterday but not today)
- */
-export function hasGameAlreadyHappened(team: string, sport: string): boolean {
-  // This is now handled by the date filter in google-sheets.ts
-  // We only check if the pick's date matches today
-  return false;
-}
-
-/**
- * Check if any games are scheduled today for a sport
- */
-export async function hasSportGamesToday(sport: string): Promise<boolean> {
-  await loadGamesCache();
-
-  if (!gamesCache) return true; // Fail open
-
-  const sportGames = gamesCache.games.get(sport);
-  return sportGames ? sportGames.size > 0 : true; // Fail open for unknown sports
-}
-
-/**
- * Filter consensus picks to only include games playing today
- * Uses ESPN API for real schedules, falls back to passing all picks through
- */
-export function filterToTodaysGames<T extends { team?: string; standardizedTeam?: string; sport: string }>(
-  picks: T[]
-): T[] {
-  // For now, return all picks - the date filter in google-sheets.ts handles the primary filtering
-  // This function can be enhanced to do async ESPN validation if needed
-  // The key is that we don't want to block on API calls in the sync filter
-  return picks;
-}
 
 /**
  * Extended pick type with optional capper field for better logging
@@ -262,7 +157,7 @@ interface PickWithCapper {
 /**
  * Rejection reason types for clear logging
  */
-type RejectionReason = 'UNSUPPORTED_SPORT' | 'NO_GAMES_TODAY' | 'TEAM_NOT_PLAYING' | 'NFL_TEAM_NO_GAMES';
+type RejectionReason = 'NO_GAMES_TODAY' | 'TEAM_NOT_PLAYING' | 'NFL_TEAM_NO_GAMES';
 
 interface RejectedPick {
   team: string;
@@ -423,16 +318,6 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 }
 
 /**
- * Simple async filter (backwards compatible - returns only filtered picks)
- */
-export async function filterToTodaysGamesAsyncSimple<T extends PickWithCapper>(
-  picks: T[]
-): Promise<T[]> {
-  const { filtered } = await filterToTodaysGamesAsync(picks);
-  return filtered;
-}
-
-/**
  * Get today's game schedule summary (for debugging)
  */
 export async function getTodaysScheduleSummary(): Promise<Record<string, number>> {
@@ -448,10 +333,3 @@ export async function getTodaysScheduleSummary(): Promise<Record<string, number>
   return summary;
 }
 
-/**
- * Synchronous version for backwards compatibility
- * Returns empty object - use async version for real data
- */
-export function getTodaysScheduleSummarySync(): Record<string, string[]> {
-  return {};
-}
