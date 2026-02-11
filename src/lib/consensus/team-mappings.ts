@@ -427,19 +427,20 @@ export function standardizeTeamName(team: string, sport: string): string {
 
   // PRIORITY 2: Check longer names - sort by longest variation first
   // This ensures "Georgia Southern" matches before "Georgia"
-  const sortedEntries = Object.entries(sportMappings).sort((a, b) => {
-    const maxLenA = Math.max(...a[1].map(v => v.length));
-    const maxLenB = Math.max(...b[1].map(v => v.length));
-    return maxLenB - maxLenA;
-  });
+  // Find ALL matching entries and pick the one with the longest matching variation.
+  // This prevents "Arizona" from beating "Arizona State" when input is "Arizona St Sun Devils"
+  // — "Arizona State" matches a 13-char variation vs "Arizona" at 7-char.
+  let bestMatch: { name: string; matchLen: number } | null = null;
 
-  for (const [standardName, variations] of sortedEntries) {
-    if (variations.some(v => teamLower.includes(v.toLowerCase()))) {
-      return standardName;
+  for (const [standardName, variations] of Object.entries(sportMappings)) {
+    for (const v of variations) {
+      if (teamLower.includes(v.toLowerCase()) && (!bestMatch || v.length > bestMatch.matchLen)) {
+        bestMatch = { name: standardName, matchLen: v.length };
+      }
     }
   }
 
-  return teamTrimmed;
+  return bestMatch ? bestMatch.name : teamTrimmed;
 }
 
 /**

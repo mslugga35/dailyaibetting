@@ -157,8 +157,14 @@ async function fetchTodaysGamesFromSupabase(): Promise<Map<string, Set<string>>>
       const sport = sportMap[game.sport] || game.sport;
       if (!games.has(sport)) games.set(sport, new Set());
       const teams = games.get(sport)!;
+      // Add raw Odds API names (e.g., "nebraska cornhuskers")
       teams.add(game.home_team.toLowerCase());
       teams.add(game.away_team.toLowerCase());
+      // Add standardized names (e.g., "nebraska") for exact matching against picks
+      const homeStd = standardizeTeamName(game.home_team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const awayStd = standardizeTeamName(game.away_team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (homeStd) teams.add(homeStd);
+      if (awayStd) teams.add(awayStd);
     }
 
     const summary = [...games.entries()].map(([s, t]) => `${s}:${t.size / 2}`).join(', ');
@@ -341,34 +347,39 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
       continue;
     }
 
-    // Check if team is playing today - be LENIENT to avoid missing valid picks
+    // Check if team is playing today
     const teamClean = team.toLowerCase().replace(/[^a-z0-9]/g, '');
     const standardizedClean = standardizeTeamName(team, sport).toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // Multiple matching strategies - any match = pass through
-    const isPlaying = sportGames.has(standardizedClean) ||
-                      sportGames.has(teamClean) ||
-                      [...sportGames].some(t => {
-                        const tClean = t.replace(/[^a-z0-9]/g, '');
-                        return tClean.includes(teamClean.slice(0, 4)) ||
-                               teamClean.includes(tClean.slice(0, 4)) ||
-                               tClean.includes(standardizedClean.slice(0, 4)) ||
-                               standardizedClean.includes(tClean.slice(0, 4));
-                      });
+    // Strategy 1: Exact match on standardized name (most reliable)
+    // The game set includes both raw ("nebraska cornhuskers") and standardized ("nebraska")
+    const isExactMatch = sportGames.has(standardizedClean) || sportGames.has(teamClean);
 
-    if (isPlaying) {
+    // Strategy 2: Fuzzy match (for ESPN abbreviations like "PUR" matching "purdue")
+    // ONLY used for pro sports (ESPN has reliable full coverage)
+    // NOT used for college sports (too many false positives: "Arizona" → "Arizona State")
+    const isFuzzyMatch = !isExactMatch && [...sportGames].some(t => {
+      const tClean = t.replace(/[^a-z0-9]/g, '');
+      return tClean.includes(teamClean.slice(0, 4)) ||
+             teamClean.includes(tClean.slice(0, 4)) ||
+             tClean.includes(standardizedClean.slice(0, 4)) ||
+             standardizedClean.includes(tClean.slice(0, 4));
+    });
+
+    const hasComprehensiveData = sportGames.size >= 20;
+
+    if (isExactMatch) {
+      // Team found in schedule (exact standardized match)
       filtered.push(pick);
-    } else if (isCollegeSport && sportGames.size < 20) {
-      // College with sparse schedule data (ESPN only): fail open
-      // With Supabase hb_games merged in, we typically have 50+ teams
+    } else if (isFuzzyMatch && !isCollegeSport) {
+      // Pro sports with fuzzy match (ESPN abbreviations)
       filtered.push(pick);
-    } else if (isCollegeSport) {
-      // College with comprehensive data (Supabase): fail closed
-      logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's comprehensive ${sport} schedule (${sportGames.size} teams)`);
-      rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule (${sportGames.size} teams tracked)` });
+    } else if (isCollegeSport && !hasComprehensiveData) {
+      // College with sparse ESPN data: fail open
+      filtered.push(pick);
     } else {
-      // Pro sports (NBA/NFL/MLB/NHL): fail closed — ESPN covers all teams
-      logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's ${sport} schedule`);
+      // No match: reject (both college with comprehensive data AND pro sports)
+      logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's schedule (${sportGames.size} entries, exact: std="${standardizedClean}" raw="${teamClean}")`);
       rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule` });
     }
   }
