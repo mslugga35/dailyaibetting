@@ -68,28 +68,36 @@ dailyaibetting/
 ## Data Flow
 
 ```
-Google Doc (every 5 min) ─┐
-                          ├──► API Routes ──► Consensus Builder ──► Frontend
-n8n → Google Sheets ──────┘
+Google Doc ──────────────┐
+                         ├──► Google Sheets ──► API Routes ──► Consensus Builder ──► Frontend
+Local Scraper (PM2) ─────┘
+        ↓
+   ESPN Validation (filters stale picks)
 ```
 
 ### Primary Data Sources
 
 1. **Google Doc** (ID: `1QAUgTvFZq3PlA25vznkly8CHb4uNsIRYEZ0oXCitKxo`)
-   - Updated every 5 minutes
    - Contains latest picks from multiple cappers
 
 2. **Google Sheets** (ID: `1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI`)
-   - Populated by n8n workflow
-   - Tabs: BetFirm, BoydsBets, Dimers, Covers, SportsLine
+   - Populated by **local scraper** (replaced n8n to save executions)
+   - Tabs: BetFirm, BoydsBets, Dimers, Covers, SportsLine, AllPicks
    - Columns: Site, League, Date, Matchup, Service, Pick, RunDate
+
+3. **Local Scraper** (`C:\Users\mpmmo\dailyai-picks-local\`)
+   - Node.js script running via PM2
+   - Scrapes BetFirm + Google Doc
+   - **ESPN Validation**: Filters out stale picks (teams not playing today)
+   - Start: `pm2 start ecosystem.config.js`
 
 ## Related Projects
 
 | Project | Location | Purpose |
 |---------|----------|---------|
+| **dailyai-picks-local** | `C:\Users\mpmmo\dailyai-picks-local\` | **LOCAL SCRAPER** - replaces n8n |
 | ConsensusProject | `C:\Users\mpmmo\ConsensusProject\` | Python consensus builder + rules |
-| n8n-unified-sports-picks | `C:\Users\mpmmo\n8n-unified-sports-picks\` | n8n workflow for scraping |
+| n8n-unified-sports-picks | `C:\Users\mpmmo\n8n-unified-sports-picks\` | OLD n8n workflow (deprecated) |
 | capperbetsautomation | `C:\Users\mpmmo\capperbetsautomation\` | Picks aggregator specification |
 | ConsensusAutomation | `C:\Users\mpmmo\ConsensusAutomation\` | Python consensus analysis |
 | SportsBettingAutomation | `C:\Users\mpmmo\SportsBettingAutomation\` | Web scrapers |

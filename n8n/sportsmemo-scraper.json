@@ -1,0 +1,266 @@
+{
+  "name": "DailyAI Betting - SportsMemo Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12,18,0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://www.sportsmemo.com/free-sports-picks",
+        "options": {
+          "timeout": 30000,
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            }
+          ]
+        }
+      },
+      "id": "fetch-page",
+      "name": "Fetch SportsMemo Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "function normalizeSport(sport) {\n  const sportMap = {\n    'CBB': 'NCAAB',\n    'CFB': 'NCAAF',\n    'NBA': 'NBA',\n    'NFL': 'NFL',\n    'NHL': 'NHL',\n    'MLB': 'MLB'\n  };\n  return sportMap[sport] || sport;\n}\n\nfunction clean(s) {\n  return (s || '')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&#039;/g, \"'\")\n    .replace(/&amp;/g, '&')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction parseDate(dateStr) {\n  const match = dateStr.match(/(\\w+)\\s+(\\d+),\\s+(\\d{4})/);\n  if (match) {\n    const months = {\n      'January': 'Jan', 'February': 'Feb', 'March': 'Mar', 'April': 'Apr',\n      'May': 'May', 'June': 'Jun', 'July': 'Jul', 'August': 'Aug',\n      'September': 'Sep', 'October': 'Oct', 'November': 'Nov', 'December': 'Dec'\n    };\n    const month = months[match[1]] || match[1];\n    return `${month} ${match[2]}, ${match[3]}`;\n  }\n  return dateStr;\n}\n\nfunction parseRunDate(dateStr) {\n  const match = dateStr.match(/(\\w+)\\s+(\\d+),\\s+(\\d{4})/);\n  if (match) {\n    const months = {\n      'January': '01', 'February': '02', 'March': '03', 'April': '04',\n      'May': '05', 'June': '06', 'July': '07', 'August': '08',\n      'September': '09', 'October': '10', 'November': '11', 'December': '12'\n    };\n    const month = months[match[1]];\n    const day = match[2].padStart(2, '0');\n    return `${match[3]}-${month}-${day}`;\n  }\n  return new Date().toISOString().split('T')[0];\n}\n\nconst html = $input.item.json.data;\nconst picks = [];\n\nconst containerPattern = /<div class=\"plays-column-inner sports-picks-inner-text-column[^\"]*\">([\\s\\S]*?)<\\/div>\\s*<\\/div>\\s*(?=<div class=\"plays-column-inner|<div class=\"plays-main-content\">|$)/gi;\n\nlet match;\nwhile ((match = containerPattern.exec(html)) !== null) {\n  const container = match[1];\n\n  const capperMatch = container.match(/<h3><a[^>]*>([^<]+)<\\/a><\\/h3>/);\n  if (!capperMatch) continue;\n  const capper = clean(capperMatch[1]);\n\n  const eventMatch = container.match(/<p><strong>Event:<\\/strong>\\s*([^<]+)/);\n  if (!eventMatch) continue;\n  const event = clean(eventMatch[1]);\n\n  const sportMatch = container.match(/<p><strong>Sport\\/League:\\s*<\\/strong>\\s*(\\w+)/);\n  if (!sportMatch) continue;\n  const rawSport = clean(sportMatch[1]);\n  const sport = normalizeSport(rawSport);\n\n  const dateMatch = container.match(/<p><strong>Date\\/Time:\\s*<\\/strong>\\s*([^<]+)/);\n  if (!dateMatch) continue;\n  const rawDate = clean(dateMatch[1]);\n  const date = parseDate(rawDate);\n  const runDate = parseRunDate(rawDate);\n\n  const pickMatch = container.match(/<h3 class=\"orange\"><strong>Free[^:]*:\\s*<\\/strong>\\s*([^<]+)<\\/h3>/);\n  if (!pickMatch) continue;\n  const pick = clean(pickMatch[1]);\n\n  const matchup = event.replace(/\\(\\d+\\)\\s*/g, '').trim();\n\n  picks.push({\n    Site: 'SportsMemo',\n    League: sport,\n    Date: date,\n    Matchup: matchup,\n    Service: capper,\n    Pick: pick,\n    RunDate: runDate\n  });\n}\n\nreturn picks.map(pick => ({ json: pick }));"
+      },
+      "id": "parse-picks",
+      "name": "Parse SportsMemo Picks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst seen = new Set();\nconst unique = [];\n\nfor (const item of items) {\n  const key = `${item.json.Service}|${item.json.League}|${item.json.Pick}`;\n  if (!seen.has(key)) {\n    seen.add(key);\n    unique.push(item);\n  }\n}\n\nreturn unique;"
+      },
+      "id": "deduplicate",
+      "name": "Deduplicate Picks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.Site }}",
+              "operation": "equals",
+              "value2": "SportsMemo"
+            }
+          ]
+        }
+      },
+      "id": "has-picks",
+      "name": "Has Picks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI",
+          "mode": "list",
+          "cachedResultName": "DailyAI Betting - Picks Data"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SportsMemo",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site": "={{ $json.Site }}",
+            "League": "={{ $json.League }}",
+            "Date": "={{ $json.Date }}",
+            "Matchup": "={{ $json.Matchup }}",
+            "Service": "={{ $json.Service }}",
+            "Pick": "={{ $json.Pick }}",
+            "RunDate": "={{ $json.RunDate }}"
+          }
+        },
+        "options": {
+          "cellFormat": "USER_ENTERED",
+          "useAppend": true
+        }
+      },
+      "id": "save-to-sheets",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1250, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "existing-google-oauth",
+          "name": "Google Sheets - DailyAI Betting"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({\n  success: true,\n  timestamp: new Date().toISOString(),\n  picks_extracted: $json.length || 0,\n  message: 'SportsMemo scraper completed successfully'\n}) }}"
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({\n  success: false,\n  timestamp: new Date().toISOString(),\n  picks_extracted: 0,\n  message: 'No picks found - page structure may have changed'\n}) }}"
+      },
+      "id": "no-picks-response",
+      "name": "No Picks Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {},
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [650, 500]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch SportsMemo Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch SportsMemo Page": {
+      "main": [
+        [
+          {
+            "node": "Parse SportsMemo Picks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse SportsMemo Picks": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Picks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Picks": {
+      "main": [
+        [
+          {
+            "node": "Has Picks?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Picks?": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Picks Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "",
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-12-29T23:00:00.000Z",
+      "updatedAt": "2025-12-29T23:00:00.000Z",
+      "id": "scraper",
+      "name": "scraper"
+    },
+    {
+      "createdAt": "2025-12-29T23:00:00.000Z",
+      "updatedAt": "2025-12-29T23:00:00.000Z",
+      "id": "sports-picks",
+      "name": "sports-picks"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-12-29T23:00:00.000Z",
+  "versionId": "1"
+}

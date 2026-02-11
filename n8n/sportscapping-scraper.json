@@ -1,0 +1,240 @@
+{
+  "name": "DailyAI Betting - SportsCapping Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "triggerAtHour": 8 },
+            { "triggerAtHour": 14 },
+            { "triggerAtHour": 20 }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "3x Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [100, 500]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\"pages\":[{\"url\":\"https://www.sportscapping.com/free-picks.html\",\"pageNum\":1},{\"url\":\"https://www.sportscapping.com/free-picks.html?limitstart=25\",\"pageNum\":2}]}",
+        "options": {}
+      },
+      "id": "page-config",
+      "name": "SportsCapping Pages",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [350, 400]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages",
+        "options": {}
+      },
+      "id": "split-pages",
+      "name": "Split Pages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [550, 400]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        },
+        "continueOnFail": true
+      },
+      "id": "fetch-page",
+      "name": "Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [750, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SPORTSCAPPING.COM PARSER V2 - CORRECT STRUCTURE\n// Based on actual HTML analysis:\n// - Container: .free-pick-col\n// - Handicapper: h3 tag\n// - Sport: .free-pick-sport\n// - Matchup: .free-pick-game (after pipe)\n// - Pick: .free-pick-green > b tag\n// - Date: .free-pick-time\n\nconst html = $json.data || '';\nconst pageNum = $json.pageNum || 1;\n\n// Get today's date in NY timezone\nfunction todayNY() {\n  const opts = { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' };\n  const parts = new Intl.DateTimeFormat('en-CA', opts).formatToParts(new Date());\n  return `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;\n}\n\nconst runDate = todayNY();\nconst picks = [];\n\n// Clean text helper\nfunction clean(s) {\n  return (s || '')\n    .replace(/<[^>]+>/g, '')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .replace(/&frac12;/g, '.5')\n    .replace(/&frac14;/g, '.25')\n    .replace(/&frac34;/g, '.75')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// Normalize sport names to match website format\nfunction normalizeSport(sport) {\n  const sportMap = {\n    'NCAA-B': 'NCAAB',\n    'NCAA-F': 'NCAAF',\n    'CFB': 'NCAAF',\n    'CBB': 'NCAAB'\n  };\n  return sportMap[sport] || sport;\n}\n\n// Parse date string like \"Dec 29 '25, 7:00 PM\"\nfunction parseDate(dateStr) {\n  if (!dateStr) return 'TODAY';\n  const dateMatch = dateStr.match(/([A-Z][a-z]{2})\\s+(\\d{1,2})\\s+'(\\d{2})/i);\n  if (dateMatch) {\n    const [, month, day, year] = dateMatch;\n    return `${month} ${day}, 20${year}`;\n  }\n  return 'TODAY';\n}\n\n// Find all pick containers: <div class=\"free-pick-col\">\nconst pickPattern = /<div class=\"free-pick-col\">([\\s\\S]*?)<\\/div><!--end free pick -->/gi;\nlet match;\nlet count = 0;\n\nwhile ((match = pickPattern.exec(html)) !== null) {\n  count++;\n  const pickHtml = match[1];\n\n  // Extract handicapper name from <h3> tag\n  const handicapperMatch = pickHtml.match(/<h3>([^<]+)<\\/h3>/);\n  const handicapper = handicapperMatch ? clean(handicapperMatch[1]) : 'SportsCapping';\n\n  // Extract sport from .free-pick-sport span\n  const sportMatch = pickHtml.match(/<span class=\"free-pick-sport\">([^<]+)<\\/span>/);\n  let sport = sportMatch ? clean(sportMatch[1]) : 'ALL';\n  \n  // Normalize sport name (NCAA-B → NCAAB, etc.)\n  sport = normalizeSport(sport);\n\n  // Extract matchup from .free-pick-game (after the pipe |)\n  const matchupMatch = pickHtml.match(/<div class=\"free-pick-game\">[\\s\\S]*?\\|\\s*([^<]+)<\\/div>/);\n  const matchup = matchupMatch ? clean(matchupMatch[1]) : '';\n\n  // Extract pick from .free-pick-green alert box > <b> tag\n  const pickMatch = pickHtml.match(/<div class=\"alert alert-success free-pick-green\">[\\s\\S]*?<b>([^<]+)<\\/b>/);\n  const pick = pickMatch ? clean(pickMatch[1]) : '';\n\n  // Extract date/time from .free-pick-time\n  const dateMatch = pickHtml.match(/<div class=\"free-pick-time\">([^<]+)<\\/div>/);\n  const dateStr = dateMatch ? clean(dateMatch[1]) : '';\n  const date = parseDate(dateStr);\n\n  // Only add if we have a valid pick\n  if (pick && handicapper) {\n    picks.push({\n      Site: 'SportsCapping',\n      League: sport,\n      Date: date,\n      Matchup: matchup,\n      Service: handicapper,\n      Pick: pick,\n      RunDate: runDate,\n      PageNum: pageNum\n    });\n  }\n}\n\nconsole.log(`SportsCapping Page ${pageNum}: Found ${picks.length} picks`);\n\nreturn picks.map(p => ({ json: p }));"
+      },
+      "id": "parse-picks",
+      "name": "Parse SportsCapping Picks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [950, 400]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "aggregate-all",
+      "name": "Aggregate All Picks",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [1150, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// DEDUPLICATE PICKS\nconst allPicks = $input.first().json.data || [];\nconst seen = new Set();\nconst deduped = [];\n\nfor (const pick of allPicks) {\n  const key = `${pick.Service}|${pick.League}|${pick.Pick}`.toLowerCase();\n  if (!seen.has(key)) {\n    seen.add(key);\n    deduped.push(pick);\n  }\n}\n\nconsole.log(`Deduped: ${allPicks.length} → ${deduped.length} picks`);\n\nreturn deduped.map(p => ({ json: p }));"
+      },
+      "id": "dedupe",
+      "name": "Deduplicate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1350, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "has-picks",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": { "type": "object", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-picks",
+      "name": "Has Picks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1550, 400]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "SportsCapping",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Site": "={{ $json.Site }}",
+            "League": "={{ $json.League }}",
+            "Date": "={{ $json.Date }}",
+            "Matchup": "={{ $json.Matchup }}",
+            "Service": "={{ $json.Service }}",
+            "Pick": "={{ $json.Pick }}",
+            "RunDate": "={{ $json.RunDate }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1750, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "no-picks",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": { "type": "object", "operation": "empty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "error-check",
+      "name": "No Picks Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1550, 600]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.error('⚠️ SportsCapping scraper found 0 picks - possible parsing issue or site structure changed');\nthrow new Error('No picks extracted from SportsCapping.com - check parser logic');"
+      },
+      "id": "error-alert",
+      "name": "Alert: Parser Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1750, 700]
+    }
+  ],
+  "connections": {
+    "3x Daily Schedule": {
+      "main": [[{ "node": "SportsCapping Pages", "type": "main", "index": 0 }]]
+    },
+    "Manual Trigger": {
+      "main": [[{ "node": "SportsCapping Pages", "type": "main", "index": 0 }]]
+    },
+    "SportsCapping Pages": {
+      "main": [[{ "node": "Split Pages", "type": "main", "index": 0 }]]
+    },
+    "Split Pages": {
+      "main": [[{ "node": "Fetch Page", "type": "main", "index": 0 }]]
+    },
+    "Fetch Page": {
+      "main": [[{ "node": "Parse SportsCapping Picks", "type": "main", "index": 0 }]]
+    },
+    "Parse SportsCapping Picks": {
+      "main": [[{ "node": "Aggregate All Picks", "type": "main", "index": 0 }]]
+    },
+    "Aggregate All Picks": {
+      "main": [[{ "node": "Deduplicate", "type": "main", "index": 0 }]]
+    },
+    "Deduplicate": {
+      "main": [[{ "node": "Has Picks?", "type": "main", "index": 0 }]]
+    },
+    "Has Picks?": {
+      "main": [
+        [{ "node": "Save to Google Sheets", "type": "main", "index": 0 }],
+        [{ "node": "No Picks Found?", "type": "main", "index": 0 }]
+      ]
+    },
+    "No Picks Found?": {
+      "main": [
+        [{ "node": "Alert: Parser Failed", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
