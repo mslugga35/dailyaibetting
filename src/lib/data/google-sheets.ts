@@ -411,6 +411,7 @@ function parseGoogleDocContent(content: string): RawPick[] {
 
   let currentCapper = '';
   let currentSport = '';
+  let currentPickDate = ''; // Track date from timestamp lines
   // Use Eastern timezone for today's date (reliable Intl.DateTimeFormat)
   const now = new Date();
   const todayParts = new Intl.DateTimeFormat('en-CA', {
@@ -420,6 +421,22 @@ function parseGoogleDocContent(content: string): RawPick[] {
     day: '2-digit'
   }).formatToParts(now);
   const today = `${todayParts.find(p => p.type === 'year')?.value}-${todayParts.find(p => p.type === 'month')?.value}-${todayParts.find(p => p.type === 'day')?.value}`;
+  const todayMonth = parseInt(todayParts.find(p => p.type === 'month')?.value || '0');
+  const todayDay = parseInt(todayParts.find(p => p.type === 'day')?.value || '0');
+
+  /** Extract M/D from timestamp and check if it's today */
+  function extractDateFromTimestamp(line: string): boolean {
+    const tsMatch = line.match(/\[[\d:]+\s*[AP]M(?:\s+EST)?\s*(\d{1,2})\/(\d{1,2})\]/i);
+    if (tsMatch) {
+      const month = parseInt(tsMatch[1]);
+      const day = parseInt(tsMatch[2]);
+      currentPickDate = `${month}/${day}`;
+      if (month !== todayMonth || day !== todayDay) {
+        return false; // Not today's pick
+      }
+    }
+    return true; // No date found or matches today
+  }
 
   // Sport name mapping - handle various formats
   const sportMap: Record<string, string> = {
@@ -488,6 +505,12 @@ function parseGoogleDocContent(content: string): RawPick[] {
     if (timestampCapperMatch) {
       const capperName = timestampCapperMatch[1].trim();
       if (!sportMap[capperName.toLowerCase()] && capperName.length > 1) {
+        const isToday = extractDateFromTimestamp(line);
+        if (!isToday) {
+          logger.debug('GoogleDoc', `Skipping stale capper "${capperName}" (date: ${currentPickDate}, today: ${todayMonth}/${todayDay})`);
+          currentCapper = ''; // Clear capper so their picks are skipped
+          continue;
+        }
         currentCapper = capperName;
         continue;
       }
@@ -499,6 +522,12 @@ function parseGoogleDocContent(content: string): RawPick[] {
       const capperName = plainCapperMatch[1].trim();
       // Skip collage lists (comma separated)
       if (!capperName.includes(',') && !capperName.includes('&') && !sportMap[capperName.toLowerCase()]) {
+        const isToday = extractDateFromTimestamp(line);
+        if (!isToday) {
+          logger.debug('GoogleDoc', `Skipping stale capper "${capperName}" (date: ${currentPickDate}, today: ${todayMonth}/${todayDay})`);
+          currentCapper = '';
+          continue;
+        }
         currentCapper = capperName;
         continue;
       }
