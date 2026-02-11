@@ -278,7 +278,7 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     Duke: ['Duke', 'Blue Devils', 'DUKE'],
     'Florida State': ['Florida State', 'Seminoles', 'FSU', 'Fla St', 'Noles'],
     Louisville: ['Louisville', 'Cardinals', 'Lou', 'LOU', 'UL'],
-    'Miami (FL)': ['Miami Hurricanes', 'Miami', 'Hurricanes', 'MIA', 'UM', 'Canes', 'Miami FL', 'The U'],
+    'Miami (FL)': ['Miami Hurricanes', 'Miami Florida', 'Miami', 'Hurricanes', 'MIA', 'UM', 'Canes', 'Miami FL', 'The U', 'FL'],
     'NC State': ['NC State', 'Wolfpack', 'NCST', 'NCS', 'North Carolina State'],
     'North Carolina': ['North Carolina', 'Tar Heels', 'UNC', 'Carolina'],
     'Notre Dame': ['Notre Dame', 'Irish', 'ND', 'Fighting Irish'],

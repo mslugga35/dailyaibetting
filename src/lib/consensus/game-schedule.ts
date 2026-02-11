@@ -15,6 +15,7 @@
 import { standardizeTeamName } from './team-mappings';
 import { getTodayET, toEasternDate } from '../utils/date';
 import { logger } from '../utils/logger';
+import { createClient } from '@supabase/supabase-js';
 
 interface ESPNEvent {
   id: string;
@@ -109,7 +110,68 @@ async function fetchTodaysGamesFromESPN(sport: string): Promise<string[]> {
 }
 
 /**
- * Load today's games into cache from ESPN (all sports in parallel).
+ * Fetch today's games from Supabase hb_games table (populated by The Odds API).
+ * Returns a comprehensive schedule including ALL NCAAB/NCAAF games (not just 6 featured).
+ */
+async function fetchTodaysGamesFromSupabase(): Promise<Map<string, Set<string>>> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    logger.debug('Schedule', 'Supabase not configured, skipping hb_games check');
+    return new Map();
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const todayStr = getTodayET();
+
+    // Compute tomorrow's date for range query
+    const [y, m, d] = todayStr.split('-').map(Number);
+    const tomorrow = new Date(y, m - 1, d + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('hb_games')
+      .select('sport, home_team, away_team')
+      .gte('commence_time', `${todayStr}T04:00:00Z`)   // midnight ET ≈ 4am UTC (safe buffer)
+      .lt('commence_time', `${tomorrowStr}T06:00:00Z`); // 1am ET next day
+
+    if (error || !data) {
+      logger.warn('Schedule', `Supabase hb_games error: ${error?.message || 'no data'}`);
+      return new Map();
+    }
+
+    // Map Odds API sport keys to our standard format
+    const sportMap: Record<string, string> = {
+      'basketball_ncaab': 'NCAAB',
+      'basketball_nba': 'NBA',
+      'americanfootball_nfl': 'NFL',
+      'americanfootball_ncaaf': 'NCAAF',
+      'icehockey_nhl': 'NHL',
+      'baseball_mlb': 'MLB',
+    };
+
+    const games = new Map<string, Set<string>>();
+    for (const game of data) {
+      const sport = sportMap[game.sport] || game.sport;
+      if (!games.has(sport)) games.set(sport, new Set());
+      const teams = games.get(sport)!;
+      teams.add(game.home_team.toLowerCase());
+      teams.add(game.away_team.toLowerCase());
+    }
+
+    const summary = [...games.entries()].map(([s, t]) => `${s}:${t.size / 2}`).join(', ');
+    logger.debug('Schedule', `Supabase hb_games: ${data.length} games (${summary})`);
+    return games;
+  } catch (err) {
+    logger.error('Schedule', 'Supabase fetch error:', err);
+    return new Map();
+  }
+}
+
+/**
+ * Load today's games into cache from ESPN + Supabase (all in parallel).
  * Cache refreshes after CACHE_TTL (30 min) or on date change.
  */
 async function loadGamesCache(): Promise<void> {
@@ -119,16 +181,31 @@ async function loadGamesCache(): Promise<void> {
     return;
   }
 
-  logger.debug('Schedule', 'Refreshing games cache from ESPN...');
+  logger.debug('Schedule', 'Refreshing games cache from ESPN + Supabase...');
 
-  const sports = Object.keys(ESPN_ENDPOINTS);
-  const results = await Promise.all(
-    sports.map(sport => fetchTodaysGamesFromESPN(sport).then(teams => ({ sport, teams })))
-  );
+  // Fetch from both sources in parallel
+  const [espnResults, supabaseGames] = await Promise.all([
+    Promise.all(
+      Object.keys(ESPN_ENDPOINTS).map(sport =>
+        fetchTodaysGamesFromESPN(sport).then(teams => ({ sport, teams }))
+      )
+    ),
+    fetchTodaysGamesFromSupabase(),
+  ]);
 
+  // Start with ESPN data
   const todaysGames = new Map<string, Set<string>>();
-  for (const { sport, teams } of results) {
+  for (const { sport, teams } of espnResults) {
     todaysGames.set(sport, new Set(teams.map(t => t.toLowerCase())));
+  }
+
+  // Merge Supabase data (adds comprehensive college sports coverage)
+  for (const [sport, teams] of supabaseGames) {
+    if (!todaysGames.has(sport)) todaysGames.set(sport, new Set());
+    const existing = todaysGames.get(sport)!;
+    for (const team of teams) {
+      existing.add(team);
+    }
   }
 
   gamesCache = {
@@ -137,9 +214,10 @@ async function loadGamesCache(): Promise<void> {
     fetchedAt: Date.now(),
   };
 
-  logger.debug('Schedule', 'Cache updated:',
-    Object.fromEntries([...todaysGames.entries()].map(([k, v]) => [k, v.size / 3]))
+  const summary = Object.fromEntries(
+    [...todaysGames.entries()].map(([k, v]) => [k, v.size])
   );
+  logger.debug('Schedule', 'Cache updated (ESPN+Supabase):', summary);
 }
 
 
@@ -280,9 +358,14 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 
     if (isPlaying) {
       filtered.push(pick);
-    } else if (isCollegeSport) {
-      // College: fail open — ESPN doesn't cover all 350+ schools
+    } else if (isCollegeSport && sportGames.size < 20) {
+      // College with sparse schedule data (ESPN only): fail open
+      // With Supabase hb_games merged in, we typically have 50+ teams
       filtered.push(pick);
+    } else if (isCollegeSport) {
+      // College with comprehensive data (Supabase): fail closed
+      logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's comprehensive ${sport} schedule (${sportGames.size} teams)`);
+      rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule (${sportGames.size} teams tracked)` });
     } else {
       // Pro sports (NBA/NFL/MLB/NHL): fail closed — ESPN covers all teams
       logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's ${sport} schedule`);
