@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -105,7 +106,7 @@ export default function RootLayout({
         <FAQJsonLd />
         <GoogleAnalytics />
         {/* Google AdSense */}
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" />
+        <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" strategy="lazyOnload" />
         {/* Impact.com Verification */}
         <meta name="impact-site-verification" content="27678012-a389-4e37-a055-37d59ed4ebf1" />
       </head>
