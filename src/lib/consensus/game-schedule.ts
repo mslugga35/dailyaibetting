@@ -385,13 +385,13 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
 
     if (isPlaying) {
       filtered.push(pick);
-    } else {
-      // FAIL OPEN: If we can't confirm team isn't playing, pass it through
-      // Better to show a pick that might be stale than miss a valid consensus
-      logger.debug('Schedule', `Can't confirm ${team} (${sport}) - passing through anyway`);
+    } else if (isCollegeSport) {
+      // College: fail open — ESPN doesn't cover all 350+ schools
       filtered.push(pick);
-      // Still log it but don't reject
-      // rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule` });
+    } else {
+      // Pro sports (NBA/NFL/MLB/NHL): fail closed — ESPN covers all teams
+      logger.debug('Schedule', `Rejecting ${team} (${sport}) - not in today's ${sport} schedule`);
+      rejected.push({ team, sport, capper, reason: 'TEAM_NOT_PLAYING', details: `${team} not found in today's ${sport} schedule` });
     }
   }
 

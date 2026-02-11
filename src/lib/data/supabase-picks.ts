@@ -16,6 +16,7 @@
  */
 
 import { RawPick } from '../consensus/consensus-builder';
+import { identifySport } from '../consensus/team-mappings';
 import { getTodayET } from '../utils/date';
 import { logger } from '../utils/logger';
 import { createClient } from '@supabase/supabase-js';
@@ -102,7 +103,15 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
         'tennis': 'TENNIS',
         'other': 'OTHER',
       };
-      const sport = sportMap[(pick.sport || '').toLowerCase()] || 'OTHER';
+      let sport = sportMap[(pick.sport || '').toLowerCase()] || 'OTHER';
+
+      // Cross-check: if sport is NBA but team is a college team, fix it
+      if ((sport === 'NBA' || sport === 'OTHER') && pick.team) {
+        const detected = identifySport(pick.team);
+        if (detected && detected !== sport) {
+          sport = detected;
+        }
+      }
 
       return {
         site: 'FreeCappers',
