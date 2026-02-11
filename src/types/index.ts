@@ -120,6 +120,9 @@ export interface ConsensusAPIResponse {
   timestamp: string;
   date: string;
   totalPicks: number;
+  normalizedCount?: number;
+  capperCount?: number;
+  consensusCount?: number;
   consensus: ConsensusPick[];
   topOverall: ConsensusPick[];
   bySport: Record<string, ConsensusPick[]>;

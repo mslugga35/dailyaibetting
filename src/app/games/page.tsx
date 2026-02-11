@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Calendar, Target, ChevronRight } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
+import { ConfidenceBadge, getConfidenceTier } from '@/components/ConfidenceBadge';
 import Link from 'next/link';
 
 interface GameSummary {
@@ -126,26 +127,22 @@ export default function GamesPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div>
-                              <div className="font-semibold text-lg">
+                              <div className="font-semibold text-lg flex items-center gap-2">
                                 {game.team1} vs {game.team2}
+                                {game.maxCappers >= 2 && (
+                                  <ConfidenceBadge capperCount={game.maxCappers} size="sm" />
+                                )}
                               </div>
                               <div className="text-sm text-muted-foreground flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">{game.sport}</Badge>
                                 <span>{game.pickCount} picks</span>
-                                {game.firePickCount > 0 && (
-                                  <span className="text-orange-400">
-                                    🔥 {game.firePickCount} fire
-                                  </span>
-                                )}
+                                <span className="text-muted-foreground">
+                                  {game.maxCappers} cappers agree
+                                </span>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            {game.maxCappers >= 3 && (
-                              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-                                {game.maxCappers} cappers
-                              </Badge>
-                            )}
                             <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           </div>
                         </div>

@@ -40,4 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# debug/test artifacts
+nul
+scrape.txt
+/test-*.js
+/scripts/
+n8n/*.html
