@@ -39,6 +39,19 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     const todayStr = getTodayET();
     
+    // Calculate tomorrow for ET-aligned range
+    const todayDate = new Date(todayStr + 'T12:00:00Z');
+    const tomorrowDate = new Date(todayDate);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+    
+    // ET-aligned range: 5am UTC today to 5am UTC tomorrow
+    // This captures picks from midnight ET to midnight ET
+    const utcStart = `${todayStr}T05:00:00Z`;
+    const utcEnd = `${tomorrowStr}T04:59:59Z`;
+    
+    logger.debug('Supabase', `Fetching picks for ET day ${todayStr}: ${utcStart} to ${utcEnd}`);
+    
     // Fetch today's picks with capper names
     const { data: picks, error } = await supabase
       .from('hb_picks')
@@ -54,8 +67,8 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
         created_at,
         capper:hb_cappers(name)
       `)
-      .gte('created_at', `${todayStr}T00:00:00`)
-      .lte('created_at', `${todayStr}T23:59:59`);
+      .gte('created_at', utcStart)
+      .lte('created_at', utcEnd);
 
     if (error) {
       logger.error('Supabase', `Failed to fetch picks: ${error.message}`);
