@@ -359,13 +359,14 @@ const UNSUPPORTED_SPORTS = ['SOCCER', 'TENNIS', 'ATP', 'WTA', 'UFC', 'MMA', 'GOL
 
 /**
  * Check if sport is supported (has ESPN endpoint)
+ * Note: 'OTHER' is allowed through so consensus can still group unknown-sport picks
  */
 export function isSupportedSport(sport: string): boolean {
   const upper = sport.toUpperCase();
   // Filter out explicitly unsupported sports
   if (UNSUPPORTED_SPORTS.includes(upper)) return false;
-  // Only allow supported sports
-  return SUPPORTED_SPORTS.includes(upper);
+  // Allow supported sports + OTHER (unknown sport picks still count for consensus)
+  return SUPPORTED_SPORTS.includes(upper) || upper === 'OTHER' || upper === 'ALL';
 }
 
 /**
@@ -391,7 +392,7 @@ export function isInSeason(sport: string): boolean {
     case 'NCAAB':
       return month >= 11 || month <= 4;
     default:
-      return false; // Unknown sports filtered out
+      return true; // Unknown/OTHER sports pass through for consensus
   }
 }
 

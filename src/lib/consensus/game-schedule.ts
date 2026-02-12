@@ -313,8 +313,8 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
       }
     }
 
-    // Pass through unsupported sports (soccer, tennis, euroleague, etc.)
-    // We can't validate them via ESPN but the picks might still be valid
+    // Pass through unsupported/unknown sports (soccer, tennis, euroleague, OTHER, etc.)
+    // We can't validate them via ESPN but the picks still count for consensus
     if (!SUPPORTED_SPORTS.includes(sport)) {
       logger.debug('Schedule', `Passing through ${sport} pick: ${team} (no ESPN validation available)`);
       filtered.push(pick);
