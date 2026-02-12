@@ -16,9 +16,11 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1dZe1s-yLHYvrLQEAlP0gGCVAFNbH43
 // Sheet names (tabs) - AllPicks + all source tabs
 // Each tab has columns: Site, League, Date, Matchup, Service, Pick, RunDate
 // Duplicates are handled by consensus builder (uses Set for cappers)
+// Only website scraper tabs — Telegram/free capper picks now come from
+// Supabase (HiddenBag Discord pipeline), not Google Sheets.
 const SHEET_TABS = [
-  'Picks',         // Free cappers pipeline (TG-FreeCapper) - PRIMARY
-  'AllPicks',      // Main consolidated tab
+  // 'Picks',      // DISABLED - was TG-FreeCapper pipeline, now via Supabase
+  'AllPicks',      // Main consolidated tab (website scrapers write here)
   'BoydBets',      // Boyd's Bets source
   'SportsLine',    // SportsLine source
   'Pickswise',     // Pickswise source
@@ -701,11 +703,12 @@ function processRawPicks(picks: RawPick[]): RawPick[] {
  * Get all picks from all sources
  */
 export async function getAllPicksFromSources(): Promise<RawPick[]> {
-  const [sheetPicks, docPicks, supabasePicks] = await Promise.all([
+  const [sheetPicks, supabasePicks] = await Promise.all([
     fetchAllPicks(),
-    fetchPicksFromGoogleDoc(),
-    fetchPicksFromSupabase(), // Free cappers from Telegram via Supabase
+    // fetchPicksFromGoogleDoc(), // DISABLED - TG free cappers now come via Supabase/Discord
+    fetchPicksFromSupabase(), // HiddenBag Discord cappers via Supabase
   ]);
+  const docPicks: RawPick[] = []; // Empty - doc source disabled
 
   // Debug: log pick counts by source and sport
   const sheetSports: Record<string, number> = {};
