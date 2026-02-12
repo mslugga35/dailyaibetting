@@ -39,15 +39,16 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     const todayStr = getTodayET();
     
-    // Calculate tomorrow for ET-aligned range
+    // Calculate tomorrow for wide range
     const todayDate = new Date(todayStr + 'T12:00:00Z');
     const tomorrowDate = new Date(todayDate);
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
     
-    // ET-aligned range: 5am UTC today to 5am UTC tomorrow
-    // This captures picks from midnight ET to midnight ET
-    const utcStart = `${todayStr}T05:00:00Z`;
+    // Wide range: midnight UTC today to 5am UTC tomorrow
+    // Picks for today's games may be posted the night before (ET evening = UTC early morning)
+    // The consensus builder handles dedup, so slightly wider is better than missing picks
+    const utcStart = `${todayStr}T00:00:00Z`;
     const utcEnd = `${tomorrowStr}T04:59:59Z`;
     
     logger.debug('Supabase', `Fetching picks for ET day ${todayStr}: ${utcStart} to ${utcEnd}`);
