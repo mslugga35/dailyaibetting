@@ -127,7 +127,15 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     'Mississippi State': ['Mississippi State Bulldogs', 'Mississippi State', 'MSU', 'Miss State'],
     'Fresno State': ['Fresno State Bulldogs', 'Fresno State', 'Fresno'],
     'Louisiana Tech': ['Louisiana Tech Bulldogs', 'Louisiana Tech', 'La Tech'],
-    'South Carolina State': ['South Carolina State Bulldogs', 'South Carolina State', 'SC State'],
+    'South Carolina State': ['South Carolina State', 'South Carolina State Bulldogs', 'SC State'],
+    
+    // FIX: Problematic mappings identified in API
+    'Stanford': ['Stanford', 'Stanford Cardinal', 'Cardinal'],
+    'Boston University': ['Boston University', 'Boston U', 'BU Terriers'],
+    'Texas A&M Corpus Christi': ['Texas A&M Corpus Christi', 'Texas A&M Corpus', 'TAMUCC', 'Islanders'],
+    'Marshall': ['Marshall', 'Marshall Thundering Herd', 'Thundering Herd'],
+    'Dayton': ['Dayton', 'Dayton Flyers', 'Flyers'],
+    'Northern Iowa': ['Northern Iowa', 'UNI', 'Panthers', 'Northern Iowa Panthers'],
     
     // More NCAAB teams
     Auburn: ['Auburn', 'Tigers', 'Auburn Tigers'],
@@ -217,6 +225,26 @@ function normalizeForMatch(name: string): string {
 }
 
 /**
+ * Clean team name by removing common prefixes that interfere with matching
+ */
+function cleanTeamName(name: string): string {
+  if (!name) return name;
+  
+  let cleaned = name.trim();
+  
+  // Remove common prefixes that cause mismatches
+  cleaned = cleaned.replace(/^(OF THE DAY|PICK OF THE DAY|POTD|BET LABS?)\s+/i, '');
+  cleaned = cleaned.replace(/^(LIVE|TONIGHT|TODAY)\s+/i, '');
+  
+  // Remove betting info suffixes
+  cleaned = cleaned.replace(/\s+[-+]\d+\.?\d*\s+[-+]\d+\s+at\s+\w+.*$/i, ''); // "Team -4½ -118 at DraftKings"
+  cleaned = cleaned.replace(/\s+[-+]\d+\.?\d*\s+at\s+\w+.*$/i, ''); // "Team +4 at Buckeye"
+  cleaned = cleaned.replace(/\s+at\s+\w+.*$/i, ''); // "Team at Sportsbook"
+  
+  return cleaned.trim();
+}
+
+/**
  * Enhanced team standardization with fuzzy matching
  * 
  * Priority order:
@@ -229,7 +257,9 @@ function normalizeForMatch(name: string): string {
 export function standardizeTeamName(input: string, sport?: string): string {
   if (!input || input.trim() === '') return input;
   
-  const cleanInput = normalizeForMatch(input);
+  // First clean the input to remove problematic prefixes/suffixes
+  const cleanedInput = cleanTeamName(input);
+  const cleanInput = normalizeForMatch(cleanedInput);
   const inputWords = cleanInput.split(/\s+/);
   
   // Filter to only search relevant sport(s)
@@ -247,10 +277,12 @@ export function standardizeTeamName(input: string, sport?: string): string {
       }
     }
     
-    // Stage 2: Input contains canonical name
+    // Stage 2: Input contains canonical name (STRICT - no partial matches)
     for (const [canonical, aliases] of Object.entries(teamMappings[sportKey])) {
       const canonicalNorm = normalizeForMatch(canonical);
-      if (cleanInput.includes(canonicalNorm) || canonicalNorm.includes(cleanInput)) {
+      // Only exact match or input starts with canonical (avoid "South Carolina State" → "North Carolina")
+      if (cleanInput === canonicalNorm || 
+          (cleanInput.startsWith(canonicalNorm + ' ') && canonicalNorm.length >= 4)) {
         return canonical;
       }
     }
@@ -265,7 +297,9 @@ export function standardizeTeamName(input: string, sport?: string): string {
           continue;
         }
         
-        if (cleanInput.includes(aliasNorm) || aliasNorm.includes(cleanInput)) {
+        // STRICT matching - only exact or input starts with alias
+        if (cleanInput === aliasNorm || 
+            (cleanInput.startsWith(aliasNorm + ' ') && aliasNorm.length >= 4)) {
           return canonical;
         }
       }
@@ -308,5 +342,6 @@ export function identifySport(teamName: string): string {
   }
   
   return 'OTHER';
-}/ /   F o r c e   r e b u i l d   0 2 / 1 6 / 2 0 2 6   1 4 : 3 2 : 4 1  
+}/ /   F o r c e   r e b u i l d   0 2 / 1 6 / 2 0 2 6   1 4 : 3 2 : 4 1 
+ 
  
