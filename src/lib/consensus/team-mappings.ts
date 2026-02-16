@@ -278,9 +278,13 @@ export function standardizeTeamName(input: string, sport?: string): string {
     }
     
     // Stage 2: Input contains canonical name (STRICT - no partial matches)
-    for (const [canonical, aliases] of Object.entries(teamMappings[sportKey])) {
+    // Sort by canonical name length (longest first) to match specific names before generic ones
+    const sortedEntries = Object.entries(teamMappings[sportKey])
+      .sort(([a], [b]) => b.length - a.length);
+    
+    for (const [canonical, aliases] of sortedEntries) {
       const canonicalNorm = normalizeForMatch(canonical);
-      // Only exact match or input starts with canonical (avoid "South Carolina State" → "North Carolina")
+      // Only exact match or input starts with canonical
       if (cleanInput === canonicalNorm || 
           (cleanInput.startsWith(canonicalNorm + ' ') && canonicalNorm.length >= 4)) {
         return canonical;
