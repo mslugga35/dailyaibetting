@@ -322,14 +322,11 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     }
 
     // Check if sport has games today
-    // LENIENT for college sports (NCAAB/NCAAF) - 350+ schools, naming chaos
-    // STRICT for pro sports (NFL/NBA/MLB/NHL) - easy to verify
-    const LENIENT_SPORTS = ['NCAAB', 'NCAAF', 'CBB', 'CFB'];
-    const isCollegeSport = LENIENT_SPORTS.includes(sport);
-    
+    // STRICT validation for ALL sports - prevents stale picks from showing
+    // Fixed: Previously had lenient logic for college sports that allowed stale picks
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      // BOTH college and pro: REJECT if ESPN says 0 games
+      // REJECT if ESPN shows no games for this sport today
       // This prevents showing consensus for games not happening today
       logger.debug('Schedule', `Rejecting ${team} (${sport}) - NO ${sport} games today per ESPN`);
       rejected.push({

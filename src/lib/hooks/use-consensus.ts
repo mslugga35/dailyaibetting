@@ -50,9 +50,10 @@ export function useConsensus(options: UseConsensusOptions = {}): UseConsensusRes
       if (sport) params.set('sport', sport);
       if (minCappers) params.set('minCappers', minCappers.toString());
 
+      // Add timestamp to prevent cache issues - forces fresh API calls
       const url = `/api/consensus?${params.toString()}&t=${Date.now()}`;
 
-      // Create an AbortController for timeout
+      // Create an AbortController for timeout (30s max)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
