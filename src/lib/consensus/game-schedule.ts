@@ -329,13 +329,8 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     
     const sportGames = gamesCache.games.get(sport);
     if (!sportGames || sportGames.size === 0) {
-      if (isCollegeSport) {
-        // College: Pass through even if ESPN shows 0 games (might be data lag)
-        logger.debug('Schedule', `Passing through ${team} (${sport}) - college sport, can't verify`);
-        filtered.push(pick);
-        continue;
-      }
-      // Pro sports: REJECT if ESPN says 0 games
+      // BOTH college and pro: REJECT if ESPN says 0 games
+      // This prevents showing consensus for games not happening today
       logger.debug('Schedule', `Rejecting ${team} (${sport}) - NO ${sport} games today per ESPN`);
       rejected.push({
         team,
