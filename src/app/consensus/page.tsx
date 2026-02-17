@@ -2,10 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Target, RefreshCw, Loader2, TrendingUp } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Target, RefreshCw, Loader2, TrendingUp, Lock } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { FadeThePublic } from '@/components/picks/FadeThePublic';
+import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
+import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 
 export default function ConsensusPage() {
   const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus();
@@ -115,9 +118,15 @@ export default function ConsensusPage() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Consensus Picks
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" />
+                    Consensus Picks
+                  </span>
+                  <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
+                    <Lock className="h-3 w-3" />
+                    Free Preview
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -173,6 +182,16 @@ export default function ConsensusPage() {
           </div>
         </div>
       )}
+
+      {/* HiddenBag Upgrade CTA */}
+      <div className="mt-8">
+        <HiddenBagCTA />
+      </div>
+
+      {/* Free vs Pro */}
+      <div className="mt-8">
+        <ComparisonTable />
+      </div>
 
       {/* How It Works */}
       <Card className="mt-12">

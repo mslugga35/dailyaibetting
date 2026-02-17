@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
-import { Brain, Target } from 'lucide-react';
+import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
+import { ComparisonTable } from '@/components/monetization/ComparisonTable';
+import { Brain, Target, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 
@@ -112,12 +115,18 @@ export default async function HomePage() {
 
       {/* Main Content */}
       {data && (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                Today&apos;s Consensus
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-primary" />
+                  Today&apos;s Consensus
+                </span>
+                <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
+                  <Lock className="h-3 w-3" />
+                  Free Preview
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -134,6 +143,12 @@ export default async function HomePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* HiddenBag Upgrade CTA */}
+          <HiddenBagCTA />
+
+          {/* Free vs Pro */}
+          <ComparisonTable />
         </div>
       )}
     </div>

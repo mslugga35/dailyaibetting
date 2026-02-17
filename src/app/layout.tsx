@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
-import { EmailCapturePopup } from "@/components/monetization/EmailCapture";
+import { ProPopup } from "@/components/monetization/ProPopup";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import "./globals.css";
@@ -121,7 +121,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
-        <EmailCapturePopup />
+        <ProPopup />
       </body>
     </html>
   );

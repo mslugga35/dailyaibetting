@@ -24,7 +24,8 @@ import {
   ChevronDown,
   Zap,
   BarChart3,
-  Brain
+  Brain,
+  Crown
 } from 'lucide-react';
 
 const sports = [
@@ -101,6 +102,15 @@ export function Header() {
             <span className="text-xs">Live</span>
           </Badge>
 
+          {/* Upgrade to Pro */}
+          <Button size="sm" className="hidden sm:flex gap-1.5 bg-primary hover:bg-primary/90" asChild>
+            <a href="https://thehiddenbag.com" target="_blank" rel="noopener noreferrer">
+              <Crown className="h-4 w-4" />
+              <span className="hidden md:inline">Upgrade to Pro</span>
+              <span className="md:hidden">Pro</span>
+            </a>
+          </Button>
+
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
@@ -152,6 +162,16 @@ export function Header() {
                       </Link>
                     </Button>
                   ))}
+                </div>
+
+                {/* Pro Upgrade */}
+                <div className="pt-4 border-t">
+                  <Button className="w-full gap-2" asChild>
+                    <a href="https://thehiddenbag.com" target="_blank" rel="noopener noreferrer">
+                      <Crown className="h-4 w-4" />
+                      Upgrade to HiddenBag Pro
+                    </a>
+                  </Button>
                 </div>
 
               </div>

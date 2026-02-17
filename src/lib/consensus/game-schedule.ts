@@ -358,6 +358,7 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
              standardizedClean.includes(tClean.slice(0, 4));
     });
 
+    const isCollegeSport = sport.includes('NCAA');
     const hasComprehensiveData = sportGames.size >= 20;
 
     if (isExactMatch) {

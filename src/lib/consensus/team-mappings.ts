@@ -117,10 +117,9 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     Kentucky: ['Kentucky', 'UK', 'Wildcats', 'Kentucky Wildcats'],
     Kansas: ['Kansas', 'KU', 'Jayhawks', 'Kansas Jayhawks'],
     Gonzaga: ['Gonzaga', 'Zags', 'Bulldogs', 'Gonzaga Bulldogs'],
-    
+
     // FIX: Specific Bulldogs teams (most important fix!)
     Butler: ['Butler', 'Butler Bulldogs', 'Butler University'],  // Only Butler = Butler
-    'Gonzaga': ['Gonzaga Bulldogs', 'Gonzaga'],  // Gonzaga Bulldogs = Gonzaga
     'Yale': ['Yale', 'Yale Bulldogs', 'Yale University'],  // Yale Bulldogs = Yale  
     'Drake': ['Drake', 'Drake Bulldogs', 'Drake University'],  // Drake Bulldogs = Drake
     'Georgia': ['Georgia Bulldogs', 'Georgia', 'UGA'],  // Georgia Bulldogs = Georgia
@@ -346,6 +345,4 @@ export function identifySport(teamName: string): string {
   }
   
   return 'OTHER';
-}/ /   F o r c e   r e b u i l d   0 2 / 1 6 / 2 0 2 6   1 4 : 3 2 : 4 1 
- 
- 
+}
