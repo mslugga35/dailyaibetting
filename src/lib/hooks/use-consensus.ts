@@ -50,7 +50,7 @@ export function useConsensus(options: UseConsensusOptions = {}): UseConsensusRes
       if (sport) params.set('sport', sport);
       if (minCappers) params.set('minCappers', minCappers.toString());
 
-      const url = `/api/consensus?${params.toString()}`;
+      const url = `/api/consensus?${params.toString()}&t=${Date.now()}`;
 
       // Create an AbortController for timeout
       const controller = new AbortController();
