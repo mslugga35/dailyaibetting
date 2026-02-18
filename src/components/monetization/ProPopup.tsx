@@ -19,11 +19,6 @@ export function ProPopup() {
       return; // Don't show if shown in last 24h
     }
 
-    // Check if email popup has already been shown (avoid double popups)
-    if (localStorage.getItem('email-popup-shown')) {
-      return;
-    }
-
     let scrollTriggered = false;
     let exitTriggered = false;
 
