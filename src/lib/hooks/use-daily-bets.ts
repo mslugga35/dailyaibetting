@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { DailyBetsOutput } from '@/lib/daily-bets/daily-bets-builder';
 
-export function useDailyBets() {
-  const [data, setData] = useState<DailyBetsOutput | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function useDailyBets(initialData?: DailyBetsOutput | null) {
+  const [data, setData] = useState<DailyBetsOutput | null>(initialData ?? null);
+  const [isLoading, setIsLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDailyBets = useCallback(async () => {

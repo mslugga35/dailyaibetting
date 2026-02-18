@@ -8,6 +8,7 @@ interface UseConsensusOptions {
   minCappers?: number;
   refreshInterval?: number;
   date?: 'today' | 'yesterday';
+  initialData?: ConsensusAPIResponse | null;
 }
 
 interface UseConsensusResult {
@@ -27,10 +28,10 @@ interface UseConsensusResult {
 }
 
 export function useConsensus(options: UseConsensusOptions = {}): UseConsensusResult {
-  const { sport, minCappers = 2, refreshInterval = 300000, date = 'today' } = options;
+  const { sport, minCappers = 2, refreshInterval = 300000, date = 'today', initialData } = options;
 
-  const [data, setData] = useState<ConsensusAPIResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<ConsensusAPIResponse | null>(initialData ?? null);
+  const [isLoading, setIsLoading] = useState(!initialData);
   const [error, setError] = useState<Error | null>(null);
 
   const isMountedRef = useRef(true);
