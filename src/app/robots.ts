@@ -6,11 +6,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/admin/'],
+        disallow: ['/api/', '/admin/', '/_next/'],
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
+        disallow: ['/_next/'],
       },
     ],
     sitemap: 'https://dailyaibetting.com/sitemap.xml',
