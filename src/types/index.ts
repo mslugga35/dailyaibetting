@@ -113,6 +113,21 @@ export interface ConsensusPick {
   cappers: string[];
   isFire: boolean; // 3+ cappers = 🔥
   confidence: number;
+  /** W/L/P grade — only present on yesterday's picks */
+  result?: 'W' | 'L' | 'P' | null;
+}
+
+export interface YesterdayStats {
+  wins: number;
+  losses: number;
+  pushes: number;
+  winRate: number;
+  totalGraded: number;
+  fireWins: number;
+  fireLosses: number;
+  fireWinRate: number;
+  fireTotal: number;
+  gamesWithScores?: number;
 }
 
 export interface ConsensusAPIResponse {
@@ -123,12 +138,14 @@ export interface ConsensusAPIResponse {
   normalizedCount?: number;
   capperCount?: number;
   consensusCount?: number;
+  isYesterday?: boolean;
   consensus: ConsensusPick[];
   topOverall: ConsensusPick[];
   bySport: Record<string, ConsensusPick[]>;
-  fadeThePublic: ConsensusPick[];
+  fadeThePublic?: ConsensusPick[];
   picksByCapper?: Record<string, NormalizedPick[]>;
   allPicks?: NormalizedPick[];
+  stats?: YesterdayStats;
 }
 
 export interface NormalizedPick {

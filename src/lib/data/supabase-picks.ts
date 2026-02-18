@@ -17,13 +17,55 @@
 
 import { RawPick } from '../consensus/consensus-builder';
 import { identifySport } from '../consensus/team-mappings';
-import { getTodayET } from '../utils/date';
+import { getTodayET, getYesterdayET } from '../utils/date';
 import { logger } from '../utils/logger';
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+/** Map hb_picks sport values to consensus-builder standard format */
+const HB_SPORT_MAP: Record<string, string> = {
+  'nba': 'NBA', 'nfl': 'NFL', 'nhl': 'NHL', 'mlb': 'MLB',
+  'ncaab': 'NCAAB', 'ncaaf': 'NCAAF', 'soccer': 'SOCCER',
+  'tennis': 'TENNIS', 'other': 'OTHER',
+};
+
+/** Convert an hb_picks row into a RawPick for the consensus builder */
+function hbPickToRawPick(pick: any, dateStr: string): RawPick {
+  const capperName = pick.capper?.name || 'Unknown';
+  let pickText = pick.team || '';
+  if (pick.line) {
+    const line = parseFloat(pick.line);
+    if (!isNaN(line)) {
+      if (pick.pick_type === 'spread') {
+        pickText = `${pick.team} ${line > 0 ? '+' : ''}${line}`;
+      } else if (pick.pick_type === 'over' || pick.pick_type === 'under') {
+        pickText = `${pick.team} ${pick.pick_type} ${Math.abs(line)}`;
+      }
+    }
+  }
+  if (pick.pick_type === 'moneyline' || pick.pick_type === 'ml') {
+    pickText = `${pick.team} ML`;
+  }
+
+  let sport = HB_SPORT_MAP[(pick.sport || '').toLowerCase()] || 'OTHER';
+  if ((sport === 'NBA' || sport === 'OTHER') && pick.team) {
+    const detected = identifySport(pick.team);
+    if (detected && detected !== sport) sport = detected;
+  }
+
+  return {
+    site: 'FreeCappers',
+    league: sport,
+    date: dateStr,
+    matchup: pick.team || '',
+    service: capperName,
+    pick: pickText,
+    runDate: dateStr,
+  };
+}
 
 /**
  * Fetch picks from Supabase hb_picks table
@@ -83,60 +125,7 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
 
     logger.info('Supabase', `Fetched ${picks.length} picks from hb_picks`);
 
-    // Convert to RawPick format
-    const rawPicks: RawPick[] = picks.map((pick: any) => {
-      // Get capper name from joined table
-      const capperName = pick.capper?.name || 'Unknown';
-      
-      // Build pick text from team + line
-      let pickText = pick.team || '';
-      if (pick.line) {
-        // Add line for spreads/totals
-        const line = parseFloat(pick.line);
-        if (!isNaN(line)) {
-          if (pick.pick_type === 'spread') {
-            pickText = `${pick.team} ${line > 0 ? '+' : ''}${line}`;
-          } else if (pick.pick_type === 'over' || pick.pick_type === 'under') {
-            pickText = `${pick.team} ${pick.pick_type} ${Math.abs(line)}`;
-          }
-        }
-      }
-      if (pick.pick_type === 'moneyline' || pick.pick_type === 'ml') {
-        pickText = `${pick.team} ML`;
-      }
-
-      // Map sport to standard format
-      const sportMap: Record<string, string> = {
-        'nba': 'NBA',
-        'nfl': 'NFL',
-        'nhl': 'NHL',
-        'mlb': 'MLB',
-        'ncaab': 'NCAAB',
-        'ncaaf': 'NCAAF',
-        'soccer': 'SOCCER',
-        'tennis': 'TENNIS',
-        'other': 'OTHER',
-      };
-      let sport = sportMap[(pick.sport || '').toLowerCase()] || 'OTHER';
-
-      // Cross-check: if sport is NBA but team is a college team, fix it
-      if ((sport === 'NBA' || sport === 'OTHER') && pick.team) {
-        const detected = identifySport(pick.team);
-        if (detected && detected !== sport) {
-          sport = detected;
-        }
-      }
-
-      return {
-        site: 'FreeCappers',
-        league: sport,
-        date: todayStr,
-        matchup: pick.team || '',
-        service: capperName,
-        pick: pickText,
-        runDate: todayStr,
-      };
-    });
+    const rawPicks: RawPick[] = picks.map((pick: any) => hbPickToRawPick(pick, todayStr));
 
     // Log sport breakdown
     const sportCounts: Record<string, number> = {};
@@ -148,6 +137,43 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
     return rawPicks;
   } catch (error) {
     logger.error('Supabase', `Exception fetching picks: ${error}`);
+    return [];
+  }
+}
+
+/**
+ * Fetch yesterday's picks from Supabase hb_picks table
+ */
+export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return [];
+
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const yesterdayStr = getYesterdayET();
+
+    const yesterdayDate = new Date(yesterdayStr + 'T12:00:00Z');
+    const nextDay = new Date(yesterdayDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+
+    const utcStart = `${yesterdayStr}T00:00:00Z`;
+    const utcEnd = `${nextDay.toISOString().split('T')[0]}T04:59:59Z`;
+
+    const { data: picks, error } = await supabase
+      .from('hb_picks')
+      .select(`
+        id, sport, team, pick_type, line, odds, units, posted_at, created_at,
+        capper:hb_cappers(name)
+      `)
+      .gte('created_at', utcStart)
+      .lte('created_at', utcEnd);
+
+    if (error || !picks || picks.length === 0) return [];
+
+    logger.info('Supabase', `Fetched ${picks.length} yesterday picks from hb_picks`);
+
+    return picks.map((pick: any) => hbPickToRawPick(pick, yesterdayStr));
+  } catch (error) {
+    logger.error('Supabase', `Exception fetching yesterday picks: ${error}`);
     return [];
   }
 }

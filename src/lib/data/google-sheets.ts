@@ -7,7 +7,7 @@
 import { RawPick } from '../consensus/consensus-builder';
 import { getTodayET, getYesterdayET, getCurrentYearET } from '../utils/date';
 import { logger } from '../utils/logger';
-import { fetchPicksFromSupabase } from './supabase-picks';
+import { fetchPicksFromSupabase, fetchYesterdayPicksFromSupabase } from './supabase-picks';
 
 // Google Sheets configuration
 // Document ID from your n8n workflow: 1dZe1s-yLHYvrLQEAlP0gGCVAFNbH433lV82iHzp-_BI
@@ -360,6 +360,97 @@ export async function fetchAllPicks(): Promise<RawPick[]> {
   }
 
   return allPicks;
+}
+
+/**
+ * Fetch yesterday's picks from a specific sheet tab
+ * Same as fetchPicksFromSheet but filters to yesterday's date
+ */
+export async function fetchYesterdayPicksFromSheet(sheetName: string): Promise<RawPick[]> {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 3600 }, // Cache longer for yesterday's data
+    });
+
+    if (!response.ok) return [];
+
+    const text = await response.text();
+    const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);?$/);
+    if (!jsonMatch) return [];
+
+    const json = JSON.parse(jsonMatch[1]);
+    if (!json.table?.rows) return [];
+
+    const headers = json.table.cols.map((col: { label: string }) => col.label);
+    const yesterdayStr = getYesterdayET();
+    const currentYear = getCurrentYearET();
+
+    const picks: RawPick[] = json.table.rows.map((row: { c: ({ v: string | number | null; f?: string } | null)[] }) => {
+      const values = row.c.map(cell => {
+        if (!cell) return '';
+        if (cell.f) return cell.f;
+        if (cell.v === null || cell.v === undefined) return '';
+        return String(cell.v);
+      });
+
+      const dateValue = values[headers.indexOf('Date')] || values[headers.indexOf('RunDate')] || '';
+
+      return {
+        site: values[headers.indexOf('Site')] || sheetName,
+        league: values[headers.indexOf('League')] || '',
+        date: dateValue,
+        matchup: values[headers.indexOf('Matchup')] || '',
+        service: values[headers.indexOf('Service')] || sheetName,
+        pick: values[headers.indexOf('Pick')] || '',
+        runDate: values[headers.indexOf('RunDate')] || '',
+      };
+    });
+
+    return picks.filter(p => {
+      if (!p.pick) return false;
+      const dateToCheck = p.runDate || p.date;
+      if (!dateToCheck) return false;
+
+      let pickDateStr = dateToCheck.split('T')[0];
+
+      const slashMatch = pickDateStr.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+      if (slashMatch) {
+        const month = slashMatch[1].padStart(2, '0');
+        const day = slashMatch[2].padStart(2, '0');
+        const year = slashMatch[3] ? (slashMatch[3].length === 2 ? '20' + slashMatch[3] : slashMatch[3]) : currentYear;
+        pickDateStr = `${year}-${month}-${day}`;
+      }
+
+      const monthNameMatch = pickDateStr.match(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(\d{1,2})/i);
+      if (monthNameMatch) {
+        const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+        const monthAbbr = pickDateStr.slice(0, 3).toLowerCase();
+        const monthNum = monthNames.indexOf(monthAbbr) + 1;
+        if (monthNum > 0) {
+          const day = monthNameMatch[1].padStart(2, '0');
+          pickDateStr = `${currentYear}-${String(monthNum).padStart(2, '0')}-${day}`;
+        }
+      }
+
+      return pickDateStr === yesterdayStr;
+    });
+  } catch (error) {
+    logger.error('Sheets', `Error fetching yesterday's picks from ${sheetName}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all yesterday's picks from all sheet tabs
+ */
+export async function fetchAllYesterdayPicks(): Promise<RawPick[]> {
+  const results = await Promise.all(
+    SHEET_TABS.map(tab => fetchYesterdayPicksFromSheet(tab))
+  );
+  return results.flat();
 }
 
 /**
@@ -767,4 +858,19 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
   }
 
   return allPicks;
+}
+
+/**
+ * Get yesterday's picks from all sources
+ */
+export async function getAllYesterdayPicksFromSources(): Promise<RawPick[]> {
+  const [sheetPicks, supabasePicks] = await Promise.all([
+    fetchAllYesterdayPicks(),
+    fetchYesterdayPicksFromSupabase(),
+  ]);
+
+  logger.debug('DataSources', `Yesterday — Sheet: ${sheetPicks.length}, Supabase: ${supabasePicks.length}`);
+
+  const combinedPicks = [...sheetPicks, ...supabasePicks];
+  return processRawPicks(combinedPicks);
 }

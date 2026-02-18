@@ -396,51 +396,59 @@ export function isInSeason(sport: string): boolean {
   }
 }
 
+/** Convert a filtered RawPick into a NormalizedPick */
+function rawToNormalized(pick: RawPick, index: number): NormalizedPick {
+  const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
+  const sport = normalizeSport(rawSport);
+  const team = extractTeam(pick.pick, pick.matchup);
+  const standardizedTeam = standardizeTeamName(team, sport);
+  const { betType, line } = parseBetType(pick.pick);
+
+  return {
+    id: `${pick.site}-${index}`,
+    capper: normalizeCapper(pick.service),
+    team,
+    standardizedTeam,
+    betType,
+    line,
+    sport,
+    matchup: pick.matchup,
+    originalPick: pick.pick,
+    date: pick.date,
+  };
+}
+
+/** Resolve sport string for a raw pick */
+function resolveSport(pick: RawPick): string {
+  return normalizeSport(pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER');
+}
+
 /**
- * Normalize picks from raw data
+ * Normalize picks without date filtering (for yesterday/historical).
+ * Used when data is already pre-filtered by date at the fetch level.
+ */
+export function normalizePicksNoDateFilter(rawPicks: RawPick[]): NormalizedPick[] {
+  return rawPicks
+    .filter(pick => isSupportedSport(resolveSport(pick)))
+    .map(rawToNormalized);
+}
+
+/**
+ * Normalize picks from raw data (today only, in-season sports).
  */
 export function normalizePicks(rawPicks: RawPick[]): NormalizedPick[] {
   return rawPicks
     .filter(pick => {
-      // Filter today's picks only
       if (!isTodayPick(pick.date)) return false;
-
-      // Normalize and filter in-season sports
-      const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
-      const sport = normalizeSport(rawSport);
-
-      // Filter out unsupported sports (soccer, tennis, etc.)
+      const sport = resolveSport(pick);
       if (!isSupportedSport(sport)) {
         logger.debug('Consensus', `Filtering out unsupported sport: ${sport} - ${pick.pick}`);
         return false;
       }
-
       if (!isInSeason(sport)) return false;
-
       return true;
     })
-    .map((pick, index) => {
-      // Normalize sport name (NCAA-F -> NCAAF, etc.)
-      const rawSport = pick.league?.toUpperCase() || identifySport(pick.matchup) || 'OTHER';
-      const sport = normalizeSport(rawSport);
-
-      const team = extractTeam(pick.pick, pick.matchup);
-      const standardizedTeam = standardizeTeamName(team, sport);
-      const { betType, line } = parseBetType(pick.pick);
-
-      return {
-        id: `${pick.site}-${index}`,
-        capper: normalizeCapper(pick.service),
-        team,
-        standardizedTeam,
-        betType,
-        line,
-        sport,
-        matchup: pick.matchup,
-        originalPick: pick.pick,
-        date: pick.date,
-      };
-    });
+    .map(rawToNormalized);
 }
 
 /**

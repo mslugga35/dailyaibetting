@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
-import { Brain, Target, Lock } from 'lucide-react';
+import { Brain, Target, Lock, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 
@@ -141,6 +141,22 @@ export default async function HomePage() {
                   <p className="text-sm mt-2">Picks update every 5 minutes.</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Yesterday's Results Link */}
+          <Card className="border-emerald-500/20 bg-emerald-500/5">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Trophy className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <p className="font-semibold">Yesterday&apos;s Results</p>
+                  <p className="text-sm text-muted-foreground">See how consensus picks performed with W/L grades</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/consensus?tab=yesterday">View Results</Link>
+              </Button>
             </CardContent>
           </Card>
 

@@ -1,24 +1,20 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Target, RefreshCw, Loader2, TrendingUp, Lock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Target, Loader2, TrendingUp, Lock, Trophy } from 'lucide-react';
 import { useConsensus } from '@/lib/hooks/use-consensus';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
+import { YesterdayResults } from '@/components/picks/YesterdayResults';
 import { FadeThePublic } from '@/components/picks/FadeThePublic';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 
-export default function ConsensusPage() {
-  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus();
-
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+function TodayTab() {
+  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus({ date: 'today' });
 
   const totalPicks = data?.totalPicks || 0;
   const consensusCount = data?.consensus?.length || 0;
@@ -28,36 +24,8 @@ export default function ConsensusPage() {
     : 0;
 
   return (
-    <div className="container px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <Target className="h-5 w-5" />
-              <span className="text-sm font-medium">Consensus Picks</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Today&apos;s Consensus Plays
-            </h1>
-            <p className="text-muted-foreground">
-              {today} &middot; Picks where 2+ cappers agree
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => refetch()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Quick Stats - Only show if we have real data */}
+    <>
+      {/* Quick Stats */}
       {totalPicks > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
@@ -87,7 +55,6 @@ export default function ConsensusPage() {
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -95,7 +62,6 @@ export default function ConsensusPage() {
         </div>
       )}
 
-      {/* Error State */}
       {error && !isLoading && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Unable to load consensus picks. Please try refreshing.</p>
@@ -106,15 +72,12 @@ export default function ConsensusPage() {
         </Card>
       )}
 
-      {/* Main Content - Two Column Layout */}
       {!isLoading && !error && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Mobile: Fade section at top */}
           <div className="lg:hidden">
             <FadeThePublic picks={topOverall} />
           </div>
-          
-          {/* Main Consensus (2/3 width on desktop) */}
+
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
@@ -131,10 +94,7 @@ export default function ConsensusPage() {
               </CardHeader>
               <CardContent>
                 {topOverall.length > 0 ? (
-                  <ConsensusReport
-                    topOverall={topOverall}
-                    bySport={bySport}
-                  />
+                  <ConsensusReport topOverall={topOverall} bySport={bySport} />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No consensus picks available yet.</p>
@@ -144,17 +104,14 @@ export default function ConsensusPage() {
               </CardContent>
             </Card>
           </div>
-          
-          {/* Sidebar - Fade the Public (1/3 width on desktop, hidden on mobile - shown at top instead) */}
+
           <div className="space-y-6 hidden lg:block">
             <FadeThePublic picks={topOverall} />
-            
-            {/* Sharp vs Public Indicator */}
             {topOverall.length > 0 && (
               <Card className="border-blue-500/30 bg-blue-500/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
-                    📊 Market Insights
+                    Market Insights
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -182,6 +139,102 @@ export default function ConsensusPage() {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function YesterdayTab() {
+  const { consensus, bySport, isLoading, error, refetch, data, yesterdayStats } = useConsensus({ date: 'yesterday' });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading yesterday&apos;s results...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-muted-foreground">Unable to load yesterday&apos;s results.</p>
+        <p className="text-xs text-muted-foreground mt-2">{error.message}</p>
+        <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+          Try Again
+        </Button>
+      </Card>
+    );
+  }
+
+  return (
+    <YesterdayResults
+      consensus={consensus}
+      stats={yesterdayStats || { wins: 0, losses: 0, pushes: 0, winRate: 0, totalGraded: 0, fireWins: 0, fireLosses: 0, fireWinRate: 0, fireTotal: 0 }}
+      date={data?.date || ''}
+      bySport={bySport}
+    />
+  );
+}
+
+export default function ConsensusPage() {
+  const [activeTab, setActiveTab] = useState('today');
+
+  // Read ?tab= from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab === 'yesterday') setActiveTab('yesterday');
+  }, []);
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  return (
+    <div className="container px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-primary mb-2">
+              <Target className="h-5 w-5" />
+              <span className="text-sm font-medium">Consensus Picks</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              {activeTab === 'today' ? "Today\u0027s Consensus Plays" : "Yesterday\u0027s Results"}
+            </h1>
+            <p className="text-muted-foreground">
+              {today} &middot; Picks where 2+ cappers agree
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="today" className="gap-2">
+            <Target className="h-4 w-4" />
+            Today&apos;s Picks
+          </TabsTrigger>
+          <TabsTrigger value="yesterday" className="gap-2">
+            <Trophy className="h-4 w-4" />
+            Yesterday&apos;s Results
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="today" className="mt-6">
+          <TodayTab />
+        </TabsContent>
+
+        <TabsContent value="yesterday" className="mt-6">
+          <YesterdayTab />
+        </TabsContent>
+      </Tabs>
 
       {/* HiddenBag Upgrade CTA */}
       <div className="mt-8">
