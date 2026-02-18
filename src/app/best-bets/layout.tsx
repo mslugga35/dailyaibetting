@@ -29,6 +29,11 @@ export const metadata: Metadata = {
     description: 'Our highest-confidence plays ranked by expert consensus agreement.',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Best Bets Today | DailyAI Betting',
+    description: 'Highest-confidence plays ranked by expert consensus agreement.',
+  },
   alternates: {
     canonical: 'https://dailyaibetting.com/best-bets',
   },

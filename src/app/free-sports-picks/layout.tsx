@@ -28,6 +28,11 @@ export const metadata: Metadata = {
     description: 'AI-powered consensus picks from professional cappers. NFL, NBA, MLB, NHL, and college sports.',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Free Sports Picks Today | DailyAI Betting',
+    description: 'Free expert picks across NFL, NBA, MLB, NHL, and college sports. No signup needed.',
+  },
   alternates: {
     canonical: 'https://dailyaibetting.com/free-sports-picks',
   },
