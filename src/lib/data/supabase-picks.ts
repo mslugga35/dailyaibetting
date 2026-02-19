@@ -43,24 +43,30 @@ const SOURCE_SITE_MAP: Record<string, string> = {
 /** Convert an hb_picks row into a RawPick for the consensus builder */
 function hbPickToRawPick(pick: any, dateStr: string): RawPick {
   const capperName = pick.capper?.name || 'Unknown';
-  let pickText = pick.team || '';
+  const teamName = pick.team || '';
+  const opponentName = pick.opponent || '';
+
+  // For over/under with "Total" as team, use opponent for game context
+  const displayTeam = (teamName === 'Total' && opponentName) ? opponentName : teamName;
+
+  let pickText = displayTeam;
   if (pick.line) {
     const line = parseFloat(pick.line);
     if (!isNaN(line)) {
       if (pick.pick_type === 'spread') {
-        pickText = `${pick.team} ${line > 0 ? '+' : ''}${line}`;
+        pickText = `${displayTeam} ${line > 0 ? '+' : ''}${line}`;
       } else if (pick.pick_type === 'over' || pick.pick_type === 'under') {
-        pickText = `${pick.team} ${pick.pick_type} ${Math.abs(line)}`;
+        pickText = `${displayTeam} ${pick.pick_type} ${Math.abs(line)}`;
       }
     }
   }
   if (pick.pick_type === 'moneyline' || pick.pick_type === 'ml') {
-    pickText = `${pick.team} ML`;
+    pickText = `${displayTeam} ML`;
   }
 
   let sport = HB_SPORT_MAP[(pick.sport || '').toLowerCase()] || 'OTHER';
-  if ((sport === 'NBA' || sport === 'OTHER') && pick.team) {
-    const detected = identifySport(pick.team);
+  if ((sport === 'NBA' || sport === 'OTHER') && displayTeam) {
+    const detected = identifySport(displayTeam);
     if (detected && detected !== sport) sport = detected;
   }
 
@@ -70,7 +76,7 @@ function hbPickToRawPick(pick: any, dateStr: string): RawPick {
     site,
     league: sport,
     date: dateStr,
-    matchup: pick.team || '',
+    matchup: displayTeam,
     service: capperName,
     pick: pickText,
     runDate: dateStr,
@@ -112,6 +118,7 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
         id,
         sport,
         team,
+        opponent,
         pick_type,
         line,
         odds,
@@ -172,7 +179,7 @@ export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
     const { data: picks, error } = await supabase
       .from('hb_picks')
       .select(`
-        id, sport, team, pick_type, line, odds, units, source, posted_at, created_at,
+        id, sport, team, opponent, pick_type, line, odds, units, source, posted_at, created_at,
         capper:hb_cappers(name)
       `)
       .gte('created_at', utcStart)
