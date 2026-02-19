@@ -794,33 +794,18 @@ function processRawPicks(picks: RawPick[]): RawPick[] {
  * Get all picks from all sources
  */
 export async function getAllPicksFromSources(): Promise<RawPick[]> {
-  const [sheetPicks, supabasePicks] = await Promise.all([
-    fetchAllPicks(),
-    // fetchPicksFromGoogleDoc(), // DISABLED - TG free cappers now come via Supabase/Discord
-    fetchPicksFromSupabase(), // HiddenBag Discord cappers via Supabase
-  ]);
-  const docPicks: RawPick[] = []; // Empty - doc source disabled
+  // Single source of truth: all picks (scraped + Discord) now live in Supabase
+  const supabasePicks = await fetchPicksFromSupabase();
 
   // Debug: log pick counts by source and sport
-  const sheetSports: Record<string, number> = {};
-  for (const p of sheetPicks) {
-    sheetSports[p.league] = (sheetSports[p.league] || 0) + 1;
-  }
-  const docSports: Record<string, number> = {};
-  for (const p of docPicks) {
-    docSports[p.league] = (docSports[p.league] || 0) + 1;
-  }
   const supabaseSports: Record<string, number> = {};
   for (const p of supabasePicks) {
     supabaseSports[p.league] = (supabaseSports[p.league] || 0) + 1;
   }
-  logger.debug('DataSources', `Sheet: ${sheetPicks.length} picks`, sheetSports);
-  logger.debug('DataSources', `Doc: ${docPicks.length} picks`, docSports);
-  logger.debug('DataSources', `Supabase (FreeCappers): ${supabasePicks.length} picks`, supabaseSports);
+  logger.debug('DataSources', `Supabase: ${supabasePicks.length} picks`, supabaseSports);
 
-  // Combine all picks and split parlay legs into individual picks
-  const combinedPicks = [...sheetPicks, ...docPicks, ...supabasePicks];
-  const allPicks = processRawPicks(combinedPicks);
+  // Split parlay legs into individual picks
+  const allPicks = processRawPicks(supabasePicks);
 
   // Fix sport misclassification for known college teams
   // Teams like Liberty, Gonzaga, etc. should always be NCAAB (basketball)
@@ -864,13 +849,10 @@ export async function getAllPicksFromSources(): Promise<RawPick[]> {
  * Get yesterday's picks from all sources
  */
 export async function getAllYesterdayPicksFromSources(): Promise<RawPick[]> {
-  const [sheetPicks, supabasePicks] = await Promise.all([
-    fetchAllYesterdayPicks(),
-    fetchYesterdayPicksFromSupabase(),
-  ]);
+  // Single source of truth: all picks now live in Supabase
+  const supabasePicks = await fetchYesterdayPicksFromSupabase();
 
-  logger.debug('DataSources', `Yesterday — Sheet: ${sheetPicks.length}, Supabase: ${supabasePicks.length}`);
+  logger.debug('DataSources', `Yesterday — Supabase: ${supabasePicks.length}`);
 
-  const combinedPicks = [...sheetPicks, ...supabasePicks];
-  return processRawPicks(combinedPicks);
+  return processRawPicks(supabasePicks);
 }

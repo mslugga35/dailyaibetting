@@ -1,16 +1,15 @@
 /**
- * Supabase Picks Data Fetching
+ * Supabase Picks Data Fetching — Single Source of Truth
  *
  * Fetches today's picks from hb_picks (joined with hb_cappers for names)
  * and converts them to RawPick format for the consensus builder.
  *
- * Data sources that feed hb_picks:
- *   - Discord bot → parse-worker (source_type = 'discord')
- *   - Google Sheets → sheets-to-supabase.py → parse-worker (source_type = 'sheets')
+ * All picks now flow through hb_picks regardless of origin:
+ *   - Discord cappers: bot → parse-worker → hb_picks (source = 'discord')
+ *   - Website scrapers: dailyai-picks-local → hb_picks (source = 'scrape')
+ *   - Legacy sheets:   sheets-to-supabase → parse-worker → hb_picks (source = 'sheets')
  *
- * Note: Picks from Google Sheets appear in BOTH this Supabase query AND the
- * Google Sheets fetch (via getAllPicksFromSources). The consensus builder
- * deduplicates by capper + team + bet_type, so consensus counts stay accurate.
+ * The `source` column on each pick determines the site label shown on the website.
  *
  * @module lib/data/supabase-picks
  */
@@ -30,6 +29,15 @@ const HB_SPORT_MAP: Record<string, string> = {
   'nba': 'NBA', 'nfl': 'NFL', 'nhl': 'NHL', 'mlb': 'MLB',
   'ncaab': 'NCAAB', 'ncaaf': 'NCAAF', 'soccer': 'SOCCER',
   'tennis': 'TENNIS', 'other': 'OTHER',
+};
+
+/** Map hb_picks.source to display site label */
+const SOURCE_SITE_MAP: Record<string, string> = {
+  'scrape': 'Scraper',
+  'discord': 'FreeCappers',
+  'sheets': 'FreeCappers',
+  'manual': 'Manual',
+  'telegram': 'FreeCappers',
 };
 
 /** Convert an hb_picks row into a RawPick for the consensus builder */
@@ -56,8 +64,10 @@ function hbPickToRawPick(pick: any, dateStr: string): RawPick {
     if (detected && detected !== sport) sport = detected;
   }
 
+  const site = SOURCE_SITE_MAP[pick.source] || 'FreeCappers';
+
   return {
-    site: 'FreeCappers',
+    site,
     league: sport,
     date: dateStr,
     matchup: pick.team || '',
@@ -106,6 +116,7 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
         line,
         odds,
         units,
+        source,
         posted_at,
         created_at,
         capper:hb_cappers(name)
@@ -161,7 +172,7 @@ export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
     const { data: picks, error } = await supabase
       .from('hb_picks')
       .select(`
-        id, sport, team, pick_type, line, odds, units, posted_at, created_at,
+        id, sport, team, pick_type, line, odds, units, source, posted_at, created_at,
         capper:hb_cappers(name)
       `)
       .gte('created_at', utcStart)
