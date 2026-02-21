@@ -564,7 +564,7 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
         sport: pick.sport,
         matchup: pick.matchup,
         betType: pick.betType,
-        line: lineForKey || pick.line, // Use rounded line for totals
+        line: lineForKey || pick.line,
         team: teamForKey, // Use normalized team for totals
       });
     }

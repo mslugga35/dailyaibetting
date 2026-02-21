@@ -239,7 +239,7 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     'Maryland': ['Maryland', 'Maryland Terrapins', 'Terps', 'MD'],
     'Maryland Eastern Shore': ['Maryland Eastern Shore', 'Maryland Eastern Shore Hawks', 'MD Eastern', 'UMES'],
     'Massachusetts': ['Massachusetts', 'Massachusetts Minutemen', 'UMass', 'UMass Amherst'],
-    'Memphis': ['Memphis', 'Memphis Tigers'],
+    'Memphis': ['Memphis Tigers'],
     'Merrimack': ['Merrimack', 'Merrimack Warriors'],
     'Miami (OH)': ['Miami OH', 'Miami (OH)', 'Miami Ohio', 'Miami-OH', 'Miami RedHawks', 'RedHawks'],
     'Michigan': ['Michigan', 'Michigan Wolverines', 'Wolverines', 'Mich'],
