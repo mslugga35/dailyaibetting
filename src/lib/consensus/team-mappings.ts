@@ -109,110 +109,291 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     Commanders: ['Commanders', 'Washington', 'WAS', 'WSH', 'Commies'],
   },
 
-  // ENHANCED NCAAB section - Fix the "Bulldogs" problem
+  // NCAAB — 281 teams from parse-worker's team-aliases.mjs
+  // Generic mascots (Tigers, Eagles, Bears, etc.) removed as standalone aliases
+  // Pro sport conflicts (Cavaliers, Spurs, Charlotte, Memphis, Flyers, Thunder) omitted
   NCAAB: {
-    // Major programs with precise matching
-    'North Carolina': ['North Carolina', 'UNC', 'Tar Heels', 'North Carolina Tar Heels'],
-    Duke: ['Duke', 'Blue Devils', 'Duke Blue Devils'],
-    Kentucky: ['Kentucky', 'UK', 'Wildcats', 'Kentucky Wildcats'],
-    Kansas: ['Kansas', 'KU', 'Jayhawks', 'Kansas Jayhawks'],
-    Gonzaga: ['Gonzaga', 'Zags', 'Bulldogs', 'Gonzaga Bulldogs'],
-
-    // FIX: Specific Bulldogs teams (most important fix!)
-    Butler: ['Butler', 'Butler Bulldogs', 'Butler University'],  // Only Butler = Butler
-    'Yale': ['Yale', 'Yale Bulldogs', 'Yale University'],  // Yale Bulldogs = Yale  
-    'Drake': ['Drake', 'Drake Bulldogs', 'Drake University'],  // Drake Bulldogs = Drake
-    'Georgia': ['Georgia Bulldogs', 'Georgia', 'UGA'],  // Georgia Bulldogs = Georgia
-    'Mississippi State': ['Mississippi State Bulldogs', 'Mississippi State', 'MSU', 'Miss State'],
-    'Fresno State': ['Fresno State Bulldogs', 'Fresno State', 'Fresno'],
-    'Louisiana Tech': ['Louisiana Tech Bulldogs', 'Louisiana Tech', 'La Tech'],
+    'Abilene Christian': ['Abilene Christian', 'Abilene Christian Wildcats', 'ACU', 'AB Christian'],
+    'Air Force': ['Air Force', 'Air Force Falcons', 'AF'],
+    'Akron': ['Akron', 'Akron Zips', 'AKR'],
+    'Alabama': ['Alabama', 'Alabama Crimson Tide', 'Bama', 'Crimson Tide'],
+    'Albany': ['Albany', 'Albany Great Danes', 'UAlbany'],
+    'Appalachian State': ['Appalachian State', 'Appalachian State Mountaineers', 'App State', 'App St'],
+    'Arizona': ['Arizona', 'Arizona Wildcats', 'Zona', 'Ariz'],
+    'Arizona State': ['Arizona State', 'Arizona State Sun Devils', 'Arizona St', 'ASU'],
+    'Arkansas': ['Arkansas', 'Arkansas Razorbacks', 'Razorbacks', 'ARK'],
+    'Arkansas State': ['Arkansas State', 'Arkansas State Red Wolves', 'A-State', 'Arkansas St'],
+    'Auburn': ['Auburn', 'Auburn Tigers', 'AUB'],
+    'BYU': ['BYU', 'BYU Cougars'],
+    'Ball State': ['Ball State', 'Ball State Cardinals', 'Ball'],
+    'Baylor': ['Baylor', 'Baylor Bears'],
+    'Belmont': ['Belmont', 'Belmont Bruins'],
+    'Bethune-Cookman': ['Bethune-Cookman', 'Bethune-Cookman Wildcats', 'Bethune Cookman'],
+    'Binghamton': ['Binghamton', 'Binghamton Bearcats', 'Bing'],
+    'Boise State': ['Boise State', 'Boise State Broncos', 'Boise St', 'BSU'],
+    'Boston College': ['Boston College', 'Boston College Eagles', 'BC'],
+    'Boston University': ['Boston University', 'Boston University Terriers', 'Boston U'],
+    'Bowling Green': ['Bowling Green', 'Bowling Green Falcons', 'BGSU'],
+    'Bradley': ['Bradley', 'Bradley Braves', 'Brad'],
+    'Brown': ['Brown', 'Brown Bears'],
+    'Bryant': ['Bryant', 'Bryant Bulldogs'],
+    'Bucknell': ['Bucknell', 'Bucknell Bison'],
+    'Buffalo': ['Buffalo', 'Buffalo Bulls', 'Buff'],
+    'Butler': ['Butler', 'Butler Bulldogs'],
+    'Cal State Bakersfield': ['Cal State Bakersfield', 'Cal State Bakersfield Roadrunners', 'CS Bakersfield', 'CSUB'],
+    'Cal State Fullerton': ['Cal State Fullerton', 'Cal State Fullerton Titans', 'CS Fullerton', 'CSUF', 'Fullerton'],
+    'Cal State Northridge': ['Cal State Northridge', 'Cal State Northridge Matadors', 'CSUN'],
+    'California': ['California', 'California Golden Bears', 'Cal'],
+    'California Baptist': ['California Baptist', 'California Baptist Lancers', 'Cal Baptist', 'CBU'],
+    'Campbell': ['Campbell', 'Campbell Fighting Camels'],
+    'Canisius': ['Canisius', 'Canisius Golden Griffins', 'CAN'],
+    'Central Connecticut': ['Central Connecticut', 'Central Connecticut Blue Devils', 'Central Conn', 'CCSU'],
+    'Central Michigan': ['Central Michigan', 'Central Michigan Chippewas', 'CMU'],
+    'Charleston': ['Charleston', 'Charleston Cougars', 'College of Charleston'],
+    'Charleston Southern': ['Charleston Southern', 'Charleston Southern Buccaneers'],
+    'Charlotte': ['Charlotte 49ers', 'Charlotte U', 'CLT'],
+    'Chicago State': ['Chicago State', 'Chicago State Cougars', 'Chicago St'],
+    'Cincinnati': ['Cincinnati', 'Cincinnati Bearcats', 'Bearcats'],
+    'Citadel': ['Citadel', 'Citadel Bulldogs', 'The Citadel'],
+    'Clemson': ['Clemson', 'Clemson Tigers', 'Clem'],
+    'Cleveland State': ['Cleveland State', 'Cleveland State Vikings'],
+    'Coastal Carolina': ['Coastal Carolina', 'Coastal Carolina Chanticleers', 'CCU'],
+    'Colgate': ['Colgate', 'Colgate Raiders'],
+    'Colorado': ['Colorado', 'Colorado Buffaloes', 'Buffs', 'Colo'],
+    'Colorado State': ['Colorado State', 'Colorado State Rams', 'Colorado St', 'CSU'],
+    'Coppin State': ['Coppin State', 'Coppin State Eagles'],
+    'Cornell': ['Cornell', 'Cornell Big Red'],
+    'Creighton': ['Creighton', 'Creighton Bluejays', 'Bluejays', 'Creigh'],
+    'Davidson': ['Davidson', 'Davidson Wildcats'],
+    'Dayton': ['Dayton', 'Dayton Flyers'],
+    'DePaul': ['DePaul', 'DePaul Blue Demons'],
+    'Delaware': ['Delaware', 'Delaware Blue Hens'],
+    'Drake': ['Drake', 'Drake Bulldogs', 'Drke'],
+    'Drexel': ['Drexel', 'Drexel Dragons', 'Dragons'],
+    'Duke': ['Duke', 'Duke Blue Devils', 'Blue Devils'],
+    'Duquesne': ['Duquesne', 'Duquesne Dukes'],
+    'East Carolina': ['East Carolina', 'East Carolina Pirates', 'ECU'],
+    'East Tennessee State': ['East Tennessee State', 'East Tennessee State Buccaneers', 'ETSU', 'East Tennessee'],
+    'Eastern Illinois': ['Eastern Illinois', 'Eastern Illinois Panthers', 'EIU', 'E Illinois'],
+    'Eastern Kentucky': ['Eastern Kentucky', 'Eastern Kentucky Colonels', 'EKU'],
+    'Eastern Michigan': ['Eastern Michigan', 'Eastern Michigan Eagles', 'EMU', 'E Michigan'],
+    'Eastern Washington': ['Eastern Washington', 'Eastern Washington Eagles', 'EWU', 'E Washington'],
+    'Elon': ['Elon', 'Elon Phoenix'],
+    'Evansville': ['Evansville', 'Evansville Purple Aces'],
+    'FIU': ['FIU', 'FIU Panthers', 'Florida International', 'Florida Intl'],
+    'Florida': ['Florida', 'Florida Gators', 'Gators'],
+    'Florida Atlantic': ['Florida Atlantic', 'Florida Atlantic Owls', 'FAU'],
+    'Florida State': ['Florida State', 'Florida State Seminoles', 'FSU', 'Florida St', 'Seminoles'],
+    'Fresno State': ['Fresno State', 'Fresno State Bulldogs', 'Fresno St', 'Fres'],
+    'Furman': ['Furman', 'Furman Paladins'],
+    'Gardner-Webb': ['Gardner-Webb', 'Gardner-Webb Runnin Bulldogs', 'Gardner Webb'],
+    'George Washington': ['George Washington', 'George Washington Colonials', 'GW', 'GWU'],
+    'Georgetown': ['Georgetown', 'Georgetown Hoyas', 'Hoyas'],
+    'Georgia': ['Georgia', 'Georgia Bulldogs', 'UGA'],
+    'Georgia Southern': ['Georgia Southern', 'Georgia Southern Eagles', 'GA Southern'],
+    'Georgia State': ['Georgia State', 'Georgia State Panthers', 'GA State'],
+    'Georgia Tech': ['Georgia Tech', 'Georgia Tech Yellow Jackets', 'GT'],
+    'Gonzaga': ['Gonzaga', 'Gonzaga Bulldogs', 'Zags', 'Gonz'],
+    'Grand Canyon': ['Grand Canyon', 'Grand Canyon Antelopes', 'GCU'],
+    'Hampton': ['Hampton', 'Hampton Pirates'],
+    'Harvard': ['Harvard', 'Harvard Crimson', 'Harv'],
+    "Hawai'i": ["Hawai'i", "Hawai'i Rainbow Warriors", 'Hawaii'],
+    'High Point': ['High Point', 'High Point Panthers'],
+    'Hofstra': ['Hofstra', 'Hofstra Pride'],
+    'Houston': ['Houston', 'Houston Cougars'],
+    'Houston Christian': ['Houston Christian', 'Houston Christian Huskies', 'HCU', 'HCOU'],
+    'IU Indianapolis': ['IU Indianapolis', 'IU Indianapolis Jaguars', 'IU Indy', 'IUPUI'],
+    'Idaho': ['Idaho', 'Idaho Vandals'],
+    'Idaho State': ['Idaho State', 'Idaho State Bengals', 'Idaho St'],
+    'Illinois': ['Illinois', 'Illinois Fighting Illini', 'Illini', 'ILL'],
+    'Illinois State': ['Illinois State', 'Illinois State Redbirds', 'IL State', 'ILST'],
+    'Indiana': ['Indiana', 'Indiana Hoosiers', 'Hoosiers', 'IU'],
+    'Indiana State': ['Indiana State', 'Indiana State Sycamores', 'Indiana St', 'IND State', 'IND St'],
+    'Iona': ['Iona', 'Iona Gaels'],
+    'Iowa': ['Iowa', 'Iowa Hawkeyes', 'Hawkeyes'],
+    'Iowa State': ['Iowa State', 'Iowa State Cyclones', 'Iowa St', 'Cyclones', 'ISU'],
+    'Jacksonville': ['Jacksonville', 'Jacksonville Dolphins', 'JVille'],
+    'Jacksonville State': ['Jacksonville State', 'Jacksonville State Gamecocks', 'Jax State', 'JKST'],
+    'James Madison': ['James Madison', 'James Madison Dukes', 'JMU'],
+    'Kansas': ['Kansas', 'Kansas Jayhawks', 'KU', 'Jayhawks'],
+    'Kansas State': ['Kansas State', 'Kansas State Wildcats', 'Kansas St', 'K-State', 'KSU'],
+    'Kennesaw State': ['Kennesaw State', 'Kennesaw State Owls', 'Kennesaw St'],
+    'Kent State': ['Kent State', 'Kent State Golden Flashes', 'Kent St', 'Kent'],
+    'Kentucky': ['Kentucky', 'Kentucky Wildcats', 'UK'],
+    'LIU': ['LIU', 'LIU Sharks', 'Long Island'],
+    'LSU': ['LSU', 'LSU Tigers'],
+    'La Salle': ['La Salle', 'La Salle Explorers', 'LaSalle'],
+    'Liberty': ['Liberty', 'Liberty Flames'],
+    'Lindenwood': ['Lindenwood', 'Lindenwood Lions'],
+    'Lipscomb': ['Lipscomb', 'Lipscomb Bisons'],
+    'Little Rock': ['Little Rock', 'Little Rock Trojans', 'Arkansas Little Rock', 'UALR'],
+    'Long Beach State': ['Long Beach State', 'Long Beach State Beach', 'Long Beach St', 'LBSU'],
+    'Longwood': ['Longwood', 'Longwood Lancers'],
+    'Louisville': ['Louisville', 'Louisville Cardinals', 'LOU'],
+    'Loyola Chicago': ['Loyola Chicago', 'Loyola Chicago Ramblers', 'Ramblers', 'LoyChI'],
+    'Loyola Marymount': ['Loyola Marymount', 'Loyola Marymount Lions', 'LMU'],
+    'Manhattan': ['Manhattan', 'Manhattan Jaspers'],
+    'Marist': ['Marist', 'Marist Red Foxes'],
+    'Marquette': ['Marquette', 'Marquette Golden Eagles', 'Marq'],
+    'Marshall': ['Marshall', 'Marshall Thundering Herd'],
+    'Maryland': ['Maryland', 'Maryland Terrapins', 'Terps', 'MD'],
+    'Maryland Eastern Shore': ['Maryland Eastern Shore', 'Maryland Eastern Shore Hawks', 'MD Eastern', 'UMES'],
+    'Massachusetts': ['Massachusetts', 'Massachusetts Minutemen', 'UMass', 'UMass Amherst'],
+    'Memphis': ['Memphis', 'Memphis Tigers'],
+    'Merrimack': ['Merrimack', 'Merrimack Warriors'],
+    'Miami (OH)': ['Miami OH', 'Miami (OH)', 'Miami Ohio', 'Miami-OH', 'Miami RedHawks', 'RedHawks'],
+    'Michigan': ['Michigan', 'Michigan Wolverines', 'Wolverines', 'Mich'],
+    'Michigan State': ['Michigan State', 'Michigan State Spartans', 'Michigan St', 'MSU', 'Spartans'],
+    'Middle Tennessee': ['Middle Tennessee', 'Middle Tennessee Blue Raiders', 'MTSU'],
+    'Milwaukee': ['Milwaukee', 'Milwaukee Panthers', 'Wisconsin Milwaukee', 'UWM'],
+    'Minnesota': ['Minnesota', 'Minnesota Golden Gophers', 'Gophers', 'Minn'],
+    'Mississippi State': ['Mississippi State', 'Mississippi State Bulldogs', 'Mississippi St', 'Miss St', 'MSST'],
+    'Mississippi Valley State': ['Mississippi Valley State', 'Mississippi Valley State Delta Devils', 'MVST', 'Miss Valley St'],
+    'Missouri': ['Missouri', 'Missouri Tigers', 'Mizzou'],
+    'Missouri State': ['Missouri State', 'Missouri State Bears', 'MO St'],
+    'Monmouth': ['Monmouth', 'Monmouth Hawks'],
+    'Montana': ['Montana', 'Montana Grizzlies'],
+    'Montana State': ['Montana State', 'Montana State Bobcats', 'Montana St'],
+    'Morehead State': ['Morehead State', 'Morehead State Eagles', 'Morehead St'],
+    'Morgan State': ['Morgan State', 'Morgan State Bears'],
+    "Mount St. Mary's": ["Mount St. Mary's", "Mount St. Mary's Mountaineers", 'Mt St Marys'],
+    'Murray State': ['Murray State', 'Murray State Racers', 'Murray St'],
+    'NC State': ['NC State', 'NC State Wolfpack', 'NCST', 'Wolfpack'],
+    'NJIT': ['NJIT', 'NJIT Highlanders'],
+    'Navy': ['Navy', 'Navy Midshipmen'],
+    'Nebraska': ['Nebraska', 'Nebraska Cornhuskers', 'Neb'],
+    'Nevada': ['Nevada', 'Nevada Wolf Pack'],
+    'New Mexico': ['New Mexico', 'New Mexico Lobos', 'UNM', 'Lobos', 'NM'],
+    'New Mexico State': ['New Mexico State', 'New Mexico State Aggies', 'NMSU', 'NM State'],
+    'North Carolina': ['North Carolina', 'North Carolina Tar Heels', 'UNC', 'Tar Heels'],
+    'North Carolina A&T': ['North Carolina A&T', 'North Carolina A&T Aggies', 'NC A&T', 'NCAT'],
+    'North Carolina Central': ['North Carolina Central', 'North Carolina Central Eagles', 'NC Central'],
+    'North Dakota': ['North Dakota', 'North Dakota Fighting Hawks', 'UND'],
+    'North Dakota State': ['North Dakota State', 'North Dakota State Bison', 'NDSU', 'N Dakota St', 'NDST'],
+    'North Texas': ['North Texas', 'North Texas Mean Green', 'UNT'],
+    'Northeastern': ['Northeastern', 'Northeastern Huskies'],
+    'Northern Arizona': ['Northern Arizona', 'Northern Arizona Lumberjacks', 'NAU'],
+    'Northern Colorado': ['Northern Colorado', 'Northern Colorado Bears', 'UNCO'],
+    'Northern Illinois': ['Northern Illinois', 'Northern Illinois Huskies', 'NIU'],
+    'Northern Iowa': ['Northern Iowa', 'Northern Iowa Panthers', 'UNI', 'N Iowa'],
+    'Northern Kentucky': ['Northern Kentucky', 'Northern Kentucky Norse', 'NKU'],
+    'Northwestern': ['Northwestern', 'Northwestern Wildcats', 'NW'],
+    'Notre Dame': ['Notre Dame', 'Notre Dame Fighting Irish', 'Irish', 'ND'],
+    'Oakland': ['Oakland', 'Oakland Golden Grizzlies'],
+    'Ohio': ['Ohio', 'Ohio Bobcats', 'OH'],
+    'Ohio State': ['Ohio State', 'Ohio State Buckeyes', 'Ohio St', 'OSU', 'Buckeyes'],
+    'Oklahoma': ['Oklahoma', 'Oklahoma Sooners', 'Sooners', 'OU'],
+    'Oklahoma State': ['Oklahoma State', 'Oklahoma State Cowboys', 'Oklahoma St', 'OKST'],
+    'Ole Miss': ['Ole Miss', 'Ole Miss Rebels', 'Mississippi'],
+    'Oregon': ['Oregon', 'Oregon Ducks', 'ORE'],
+    'Oregon State': ['Oregon State', 'Oregon State Beavers', 'Oregon St'],
+    'Penn': ['Penn', 'Penn Quakers', 'Pennsylvania'],
+    'Penn State': ['Penn State', 'Penn State Nittany Lions', 'Penn St', 'PSU'],
+    'Pittsburgh': ['Pittsburgh', 'Pittsburgh Panthers', 'Pitt'],
+    'Portland State': ['Portland State', 'Portland State Vikings', 'Portland St'],
+    'Princeton': ['Princeton', 'Princeton Tigers'],
+    'Providence': ['Providence', 'Providence Friars', 'Friars'],
+    'Purdue': ['Purdue', 'Purdue Boilermakers', 'Boilermakers', 'Purd'],
+    'Purdue Fort Wayne': ['Purdue Fort Wayne', 'Purdue Fort Wayne Mastodons', 'PFW'],
+    'Rhode Island': ['Rhode Island', 'Rhode Island Rams', 'URI'],
+    'Rice': ['Rice', 'Rice Owls'],
+    'Richmond': ['Richmond', 'Richmond Spiders'],
+    'Rider': ['Rider', 'Rider Broncs'],
+    'Rutgers': ['Rutgers', 'Rutgers Scarlet Knights', 'Rutg'],
+    'SE Missouri State': ['SE Missouri State', 'SE Missouri State Redhawks', 'Southeastern Missouri', 'SEMO'],
+    'SMU': ['SMU', 'SMU Mustangs'],
+    'Sacramento State': ['Sacramento State', 'Sacramento State Hornets', 'Cal State Sacramento', 'CS Sacramento', 'Sac State'],
+    'Sacred Heart': ['Sacred Heart', 'Sacred Heart Pioneers', 'SHU'],
+    'Saint Bonaventure': ['Saint Bonaventure', 'Saint Bonaventure Bonnies', 'St Bonaventure', 'St Bona'],
+    'Saint Francis': ['Saint Francis', 'Saint Francis Red Flash'],
+    "Saint Mary's": ["Saint Mary's", "Saint Mary's Gaels", 'Saint Marys', 'SMC', 'Gaels'],
+    "Saint Peter's": ["Saint Peter's", "Saint Peter's Peacocks", 'St Peters'],
+    'Sam Houston': ['Sam Houston', 'Sam Houston Bearkats', 'Sam Houston State', 'SHSU'],
+    'Samford': ['Samford', 'Samford Bulldogs'],
+    'San Diego': ['San Diego', 'San Diego Toreros'],
+    'San Diego State': ['San Diego State', 'San Diego State Aztecs', 'SDSU', 'Aztecs'],
+    'San Francisco': ['San Francisco Dons', 'SF Dons', 'USF'],
+    'Santa Clara': ['Santa Clara', 'Santa Clara Broncos'],
+    'Seattle': ['Seattle Redhawks', 'Seattle U'],
+    'Seton Hall': ['Seton Hall', 'Seton Hall Pirates', 'Seton'],
+    'Shelton State': ['Shelton State', 'Shelton State Buccaneers', 'Shelton'],
+    'Siena': ['Siena', 'Siena Saints'],
+    'South Alabama': ['South Alabama', 'South Alabama Jaguars'],
+    'South Carolina': ['South Carolina', 'South Carolina Gamecocks', 'Gamecocks'],
     'South Carolina State': ['South Carolina State', 'South Carolina State Bulldogs', 'SC State'],
-    
-    // FIX: Problematic mappings identified in API
-    'Stanford': ['Stanford', 'Stanford Cardinal', 'Cardinal'],
-    'Boston University': ['Boston University', 'Boston U', 'BU Terriers'],
-    'Texas A&M Corpus Christi': ['Texas A&M Corpus Christi', 'Texas A&M Corpus', 'TAMUCC', 'Islanders'],
-    'Marshall': ['Marshall', 'Marshall Thundering Herd', 'Thundering Herd'],
-    'Dayton': ['Dayton', 'Dayton Flyers', 'Flyers'],
-    'Northern Iowa': ['Northern Iowa', 'UNI', 'Panthers', 'Northern Iowa Panthers'],
-    
-    // More NCAAB teams
-    Auburn: ['Auburn', 'Tigers', 'Auburn Tigers'],
-    Alabama: ['Alabama', 'Bama', 'Crimson Tide', 'Alabama Crimson Tide'],
-    UConn: ['UConn', 'Connecticut', 'Huskies', 'UConn Huskies'],
-    Purdue: ['Purdue', 'Boilermakers', 'Purdue Boilermakers'],
-    Tennessee: ['Tennessee', 'Vols', 'Volunteers', 'Tennessee Volunteers'],
-    Houston: ['Houston', 'Cougars', 'Houston Cougars'],
-    'Iowa State': ['Iowa State', 'Cyclones', 'Iowa State Cyclones'],
-    Marquette: ['Marquette', 'Golden Eagles', 'Marquette Golden Eagles'],
-    Creighton: ['Creighton', 'Bluejays', 'Creighton Bluejays'],
-    Villanova: ['Villanova', 'Nova', 'Wildcats', 'Villanova Wildcats'],
-    Baylor: ['Baylor', 'Bears', 'Baylor Bears'],
-    'Michigan State': ['Michigan State', 'MSU', 'Spartans', 'Michigan State Spartans'],
-    Michigan: ['Michigan', 'Wolverines', 'Michigan Wolverines'],
-    Indiana: ['Indiana', 'IU', 'Hoosiers', 'Indiana Hoosiers'],
-    Texas: ['Texas', 'Longhorns', 'Texas Longhorns'],
-    Arkansas: ['Arkansas', 'Razorbacks', 'Arkansas Razorbacks'],
-    Florida: ['Florida', 'Gators', 'Florida Gators'],
-    'Ohio State': ['Ohio State', 'OSU', 'Buckeyes', 'Ohio State Buckeyes'],
-    Syracuse: ['Syracuse', 'Cuse', 'Orange', 'Syracuse Orange'],
-    Louisville: ['Louisville', 'Cardinals', 'Louisville Cardinals'],
-    UCLA: ['UCLA', 'Bruins', 'UCLA Bruins'],
-    Arizona: ['Arizona', 'Wildcats', 'Arizona Wildcats'],
-    USC: ['USC', 'Trojans', 'USC Trojans'],
-    Oregon: ['Oregon', 'Ducks', 'Oregon Ducks'],
-    Iowa: ['Iowa', 'Hawkeyes', 'Iowa Hawkeyes'],
-    Wisconsin: ['Wisconsin', 'Badgers', 'Wisconsin Badgers'],
-    Virginia: ['Virginia', 'UVA', 'Cavaliers', 'Virginia Cavaliers'],
-    Georgetown: ['Georgetown', 'Hoyas', 'Georgetown Hoyas'],
-    "St. John's": ["St. John's", "St Johns", 'Red Storm', "St. John's Red Storm"],
-    Memphis: ['Memphis', 'Tigers', 'Memphis Tigers'],
-    'Seton Hall': ['Seton Hall', 'Pirates', 'Seton Hall Pirates'],
-    Xavier: ['Xavier', 'Musketeers', 'Xavier Musketeers'],
-    Cincinnati: ['Cincinnati', 'Bearcats', 'Cincinnati Bearcats'],
-    'West Virginia': ['West Virginia', 'WVU', 'Mountaineers', 'West Virginia Mountaineers'],
-    Pittsburgh: ['Pittsburgh', 'Pitt', 'Panthers', 'Pittsburgh Panthers'],
-    'Ole Miss': ['Ole Miss', 'Rebels', 'Ole Miss Rebels'],
-    LSU: ['LSU', 'Tigers', 'LSU Tigers'],
-    'South Carolina': ['South Carolina', 'Gamecocks', 'South Carolina Gamecocks'],
-    TCU: ['TCU', 'Horned Frogs', 'TCU Horned Frogs'],
-    'Texas Tech': ['Texas Tech', 'Red Raiders', 'Texas Tech Red Raiders'],
-    Oklahoma: ['Oklahoma', 'Sooners', 'Oklahoma Sooners'],
-    'Oklahoma State': ['Oklahoma State', 'OK State', 'Cowboys', 'Oklahoma State Cowboys'],
-    'Kansas State': ['Kansas State', 'K State', 'Wildcats', 'Kansas State Wildcats'],
-    Colorado: ['Colorado', 'Buffs', 'Buffaloes', 'Colorado Buffaloes'],
-    'San Diego State': ['San Diego State', 'SDSU', 'Aztecs', 'San Diego State Aztecs'],
-    UNLV: ['UNLV', 'Rebels', 'UNLV Rebels'],
-    'Boise State': ['Boise State', 'Broncos', 'Boise State Broncos'],
-    
-    // Ivy League  
-    Harvard: ['Harvard', 'Crimson', 'Harvard Crimson'],
-    Princeton: ['Princeton', 'Tigers', 'Princeton Tigers'],
-    Penn: ['Penn', 'Pennsylvania', 'Quakers', 'Pennsylvania Quakers'],
-    Cornell: ['Cornell', 'Big Red', 'Cornell Big Red'],
-    Columbia: ['Columbia', 'Lions', 'Columbia Lions'],
-    Brown: ['Brown', 'Bears', 'Brown Bears'],
-    Dartmouth: ['Dartmouth', 'Big Green', 'Dartmouth Big Green'],
-    
-    // Mid-majors
-    'VCU': ['VCU', 'Rams', 'VCU Rams'],
-    'George Mason': ['George Mason', 'Patriots', 'George Mason Patriots'],
-    'Old Dominion': ['Old Dominion', 'ODU', 'Monarchs', 'Old Dominion Monarchs'],
-    'James Madison': ['James Madison', 'JMU', 'Dukes', 'James Madison Dukes'],
-    'William & Mary': ['William & Mary', 'Tribe', 'William & Mary Tribe'],
-    
-    // MAC 
-    Ohio: ['Ohio', 'Bobcats', 'Ohio Bobcats'],
-    'Miami (OH)': ['Miami OH', 'Miami-OH', 'Miami (OH)', 'RedHawks', 'Miami RedHawks'],
-    'Kent State': ['Kent State', 'Golden Flashes', 'Kent State Golden Flashes'],
-    'Bowling Green': ['Bowling Green', 'BGSU', 'Falcons', 'Bowling Green Falcons'],
-    Toledo: ['Toledo', 'Rockets', 'Toledo Rockets'],
-    Akron: ['Akron', 'Zips', 'Akron Zips'],
-    
-    // More specific teams to prevent mismatches
-    'Saint Mary\'s': ['Saint Mary\'s', 'Saint Marys', 'Gaels', 'Saint Mary\'s Gaels'],
-    Iona: ['Iona', 'Gaels', 'Iona Gaels'],  // Fix: Iona ≠ Saint Mary's
-    'UMass': ['UMass', 'Massachusetts', 'Minutemen', 'Massachusetts Minutemen'],
+    'South Dakota': ['South Dakota', 'South Dakota Coyotes', 'USD'],
+    'South Dakota State': ['South Dakota State', 'South Dakota State Jackrabbits', 'South Dakota St'],
+    'South Florida': ['South Florida', 'South Florida Bulls'],
+    'Southern': ['Southern', 'Southern Jaguars'],
+    'Southern Illinois': ['Southern Illinois', 'Southern Illinois Salukis', 'SIU'],
+    'Southern Indiana': ['Southern Indiana', 'Southern Indiana Screaming Eagles', 'USI'],
+    'Southern Miss': ['Southern Miss', 'Southern Miss Golden Eagles', 'USM'],
+    "St. John's": ["St. John's", "St. John's Red Storm", 'St Johns', 'Saint Johns', 'SJU', 'Johnnies'],
+    'St. Thomas': ['St. Thomas', 'St. Thomas Tommies', 'St Thomas'],
+    'Stanford': ['Stanford', 'Stanford Cardinal', 'Stan'],
+    'Stony Brook': ['Stony Brook', 'Stony Brook Seawolves', 'Seawolves'],
+    'Syracuse': ['Syracuse', 'Syracuse Orange', 'Cuse', 'SYR'],
+    'TCU': ['TCU', 'TCU Horned Frogs', 'Horned Frogs'],
+    'Tarleton State': ['Tarleton State', 'Tarleton State Texans', 'Tarleton', 'Tarleton St'],
+    'Temple': ['Temple', 'Temple Owls'],
+    'Tennessee': ['Tennessee', 'Tennessee Volunteers', 'Vols', 'Tenn'],
+    'Tennessee State': ['Tennessee State', 'Tennessee State Tigers'],
+    'Tennessee Tech': ['Tennessee Tech', 'Tennessee Tech Golden Eagles', 'Tenn Tech'],
+    'Texas': ['Texas', 'Texas Longhorns', 'Longhorns'],
+    'Texas A&M-CC': ['Texas A&M Corpus Christi', 'Texas A&M Corpus Christi Islanders', 'TAMUCC', 'Texas A&M Corpus'],
+    'Texas State': ['Texas State', 'Texas State Bobcats', 'TXST'],
+    'Texas Tech': ['Texas Tech', 'Texas Tech Red Raiders', 'TTU', 'Red Raiders'],
+    'Toledo': ['Toledo', 'Toledo Rockets', 'TOL'],
+    'Tulane': ['Tulane', 'Tulane Green Wave', 'Green Wave'],
+    'Tulsa': ['Tulsa', 'Tulsa Golden Hurricane'],
+    'UAB': ['UAB', 'UAB Blazers'],
+    'UC Riverside': ['UC Riverside', 'UC Riverside Highlanders', 'Cal Riverside'],
+    'UC San Diego': ['UC San Diego', 'UC San Diego Tritons', 'UCSD'],
+    'UC Santa Barbara': ['UC Santa Barbara', 'UC Santa Barbara Gauchos', 'UCSB'],
+    'UCF': ['UCF', 'UCF Knights', 'Central Florida'],
+    'UCLA': ['UCLA', 'UCLA Bruins'],
+    'UConn': ['UConn', 'UConn Huskies', 'Connecticut', 'Conn'],
+    'UIC': ['UIC', 'UIC Flames', 'Illinois Chicago'],
+    'UL Lafayette': ['UL Lafayette', 'UL Lafayette Ragin Cajuns', 'Louisiana Lafayette', 'Ragin Cajuns'],
+    'UL Monroe': ['UL Monroe', 'UL Monroe Warhawks', 'Louisiana Monroe', 'ULM'],
+    'UMKC': ['UMKC', 'UMKC Kangaroos'],
+    'UMass Lowell': ['UMass Lowell', 'UMass Lowell River Hawks'],
+    'UNC Greensboro': ['UNC Greensboro', 'UNC Greensboro Spartans', 'UNCG'],
+    'UNC Wilmington': ['UNC Wilmington', 'UNC Wilmington Seahawks', 'UNCW', 'NC Wilmington'],
+    'UNLV': ['UNLV', 'UNLV Rebels'],
+    'USC': ['USC', 'USC Trojans', 'Trojans'],
+    'USC Upstate': ['USC Upstate', 'USC Upstate Spartans'],
+    'UT Arlington': ['UT Arlington', 'UT Arlington Mavericks', 'Texas Arlington'],
+    'UT Martin': ['UT Martin', 'UT Martin Skyhawks', 'Martin'],
+    'UTEP': ['UTEP', 'UTEP Miners'],
+    'UTSA': ['UTSA', 'UTSA Roadrunners'],
+    'Utah': ['Utah', 'Utah Utes', 'Utes'],
+    'Utah State': ['Utah State', 'Utah State Aggies', 'Utah St', 'USU'],
+    'Utah Tech': ['Utah Tech', 'Utah Tech Trailblazers'],
+    'Utah Valley': ['Utah Valley', 'Utah Valley Wolverines', 'UVU'],
+    'VCU': ['VCU', 'VCU Rams', 'Virginia Commonwealth'],
+    'VMI': ['VMI', 'VMI Keydets'],
+    'Valparaiso': ['Valparaiso', 'Valparaiso Beacons', 'Valpo'],
+    'Vanderbilt': ['Vanderbilt', 'Vanderbilt Commodores', 'Vandy'],
+    'Vermont': ['Vermont', 'Vermont Catamounts'],
+    'Villanova': ['Villanova', 'Villanova Wildcats', 'Nova', 'Vill'],
+    'Virginia': ['Virginia', 'Virginia Cavaliers', 'UVA'],
+    'Virginia Tech': ['Virginia Tech', 'Virginia Tech Hokies', 'VT', 'Hokies', 'VA Tech'],
+    'Wake Forest': ['Wake Forest', 'Wake Forest Demon Deacons', 'Wake'],
+    'Washington': ['Washington', 'Washington Huskies', 'Wash'],
+    'Washington State': ['Washington State', 'Washington State Cougars', 'Washington St', 'WSU'],
+    'Weber State': ['Weber State', 'Weber State Wildcats', 'Weber St'],
+    'West Virginia': ['West Virginia', 'West Virginia Mountaineers', 'WVU'],
+    'Western Kentucky': ['Western Kentucky', 'Western Kentucky Hilltoppers', 'WKU'],
+    'Western Michigan': ['Western Michigan', 'Western Michigan Broncos', 'WMU'],
+    'Wichita State': ['Wichita State', 'Wichita State Shockers', 'Wichita St', 'Shockers'],
+    'William & Mary': ['William & Mary', 'William & Mary Tribe', 'William and Mary', 'William Mary', 'W&M'],
+    'Wisconsin': ['Wisconsin', 'Wisconsin Badgers', 'Badgers', 'Wisc'],
+    'Wright State': ['Wright State', 'Wright State Raiders', 'Wright'],
+    'Wyoming': ['Wyoming', 'Wyoming Cowboys', 'WYO'],
+    'Xavier': ['Xavier', 'Xavier Musketeers'],
+    'Yale': ['Yale', 'Yale Bulldogs'],
+    'Youngstown State': ['Youngstown State', 'Youngstown State Penguins', 'YSU'],
   },
 };
 
@@ -327,22 +508,67 @@ export function standardizeTeamName(input: string, sport?: string): string {
 }
 
 /**
- * Identify sport from team name (enhanced)
+ * Generic mascots that appear across many teams — skip these as standalone
+ * words to avoid cross-sport confusion (e.g. "Tigers" in MLB/NCAAB/NCAAF)
+ */
+const GENERIC_MASCOTS = new Set([
+  'tigers', 'eagles', 'bears', 'wildcats', 'bulldogs', 'panthers',
+  'cardinals', 'lions', 'hawks', 'rams', 'warriors', 'rockets',
+  'rebels', 'pirates', 'cougars', 'huskies', 'knights', 'falcons',
+]);
+
+/**
+ * Identify sport from team name using strict matching.
+ *
+ * Rules (in priority order):
+ * 1. Exact match — normalized alias equals normalized input
+ * 2. Prefix match — input starts with alias + space (4+ char aliases only)
+ * 3. Word match — single-word alias (3+ chars) exact-matches a word in input,
+ *    but skip generic mascots that appear across multiple sports
  */
 export function identifySport(teamName: string): string {
+  if (!teamName || teamName.trim().length === 0) return 'OTHER';
+
   const cleanName = normalizeForMatch(teamName);
-  
+  const inputWords = cleanName.split(/\s+/);
+
+  // Pass 1: Exact match (highest confidence)
   for (const [sport, teams] of Object.entries(teamMappings)) {
-    for (const [canonical, aliases] of Object.entries(teams)) {
+    for (const [, aliases] of Object.entries(teams)) {
       for (const alias of aliases) {
-        if (normalizeForMatch(alias) === cleanName || 
-            cleanName.includes(normalizeForMatch(alias)) ||
-            normalizeForMatch(alias).includes(cleanName)) {
+        if (normalizeForMatch(alias) === cleanName) {
           return sport;
         }
       }
     }
   }
-  
+
+  // Pass 2: Prefix match — input starts with alias + space (4+ char aliases)
+  for (const [sport, teams] of Object.entries(teamMappings)) {
+    for (const [, aliases] of Object.entries(teams)) {
+      for (const alias of aliases) {
+        const aliasNorm = normalizeForMatch(alias);
+        if (aliasNorm.length >= 4 && cleanName.startsWith(aliasNorm + ' ')) {
+          return sport;
+        }
+      }
+    }
+  }
+
+  // Pass 3: Word match — single-word alias matches a word in input
+  for (const [sport, teams] of Object.entries(teamMappings)) {
+    for (const [, aliases] of Object.entries(teams)) {
+      for (const alias of aliases) {
+        const aliasNorm = normalizeForMatch(alias);
+        // Only single-word aliases, 3+ chars, not generic mascots
+        if (aliasNorm.length >= 3 && !aliasNorm.includes(' ') &&
+            !GENERIC_MASCOTS.has(aliasNorm) &&
+            inputWords.includes(aliasNorm)) {
+          return sport;
+        }
+      }
+    }
+  }
+
   return 'OTHER';
 }

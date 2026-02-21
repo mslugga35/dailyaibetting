@@ -51,7 +51,7 @@ function formatDate(): string {
 }
 
 // Sports display order (by season relevance)
-const SPORT_ORDER = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA', 'SOCCER'];
+const SPORT_ORDER = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA', 'SOCCER', 'TENNIS', 'MMA', 'GOLF', 'BOXING'];
 
 export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusReportProps) {
   const [copied, setCopied] = useState(false);
@@ -182,7 +182,7 @@ export function generateConsensusText(
   const sortedSports = Object.keys(bySport)
     .filter(sport => bySport[sport]?.length > 0)
     .sort((a, b) => {
-      const order = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA', 'SOCCER'];
+      const order = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA', 'SOCCER', 'TENNIS', 'MMA', 'GOLF', 'BOXING'];
       const aIdx = order.indexOf(a);
       const bIdx = order.indexOf(b);
       if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);

@@ -351,22 +351,18 @@ export function normalizeSport(sport: string): string {
   return sportMap[upper] || upper;
 }
 
-// Sports that we support (have ESPN endpoints for)
-export const SUPPORTED_SPORTS = ['NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'WNBA'];
-
-// Sports to always filter out (tennis, soccer, etc.)
-const UNSUPPORTED_SPORTS = ['SOCCER', 'TENNIS', 'ATP', 'WTA', 'UFC', 'MMA', 'GOLF', 'PGA', 'BOXING', 'ESPORTS'];
+// All sports we display in the consensus report
+export const SUPPORTED_SPORTS = [
+  'NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'WNBA',
+  'SOCCER', 'TENNIS', 'MMA', 'GOLF', 'BOXING',
+];
 
 /**
- * Check if sport is supported (has ESPN endpoint)
- * Note: 'OTHER' is allowed through so consensus can still group unknown-sport picks
+ * Check if sport is supported for consensus display
+ * Only named sports pass — OTHER/unknown picks are filtered out
  */
 export function isSupportedSport(sport: string): boolean {
-  const upper = sport.toUpperCase();
-  // Filter out explicitly unsupported sports
-  if (UNSUPPORTED_SPORTS.includes(upper)) return false;
-  // Allow supported sports + OTHER (unknown sport picks still count for consensus)
-  return SUPPORTED_SPORTS.includes(upper) || upper === 'OTHER' || upper === 'ALL';
+  return SUPPORTED_SPORTS.includes(sport.toUpperCase());
 }
 
 /**
@@ -391,8 +387,14 @@ export function isInSeason(sport: string): boolean {
       return month >= 8 || month <= 1; // Aug-Jan (bowl season includes Dec/Jan)
     case 'NCAAB':
       return month >= 11 || month <= 4;
+    case 'TENNIS':
+    case 'GOLF':
+    case 'MMA':
+    case 'BOXING':
+    case 'SOCCER':
+      return true; // Year-round sports
     default:
-      return true; // Unknown/OTHER sports pass through for consensus
+      return true;
   }
 }
 
@@ -495,31 +497,15 @@ function normalizeGameForTotal(team: string, sport: string, matchup?: string): s
 }
 
 /**
- * For game totals, group all similar lines together
- * Round to nearest 2 points to group 50.5, 51, 51.5, 52 together
+ * Normalize spread line format — ensure consistent +/- prefix, no rounding.
+ * Per MASTER_CONSENSUS_RULES: "Must match EXACT spread number"
+ * +3 stays +3, -7.5 stays -7.5, +3 ≠ +3.5
  */
-function roundTotalLineForGrouping(line: string): string {
+function normalizeSpreadLine(line: string): string {
   const num = parseFloat(line);
   if (isNaN(num)) return line;
-  // Round to nearest 2 points for aggressive grouping
-  const rounded = Math.round(num / 2) * 2;
-  return String(rounded);
-}
-
-/**
- * Round spread line for grouping - groups within ±0.5 points
- * NC State +3 and +3.5 become the same group
- * Uses floor for positive, ceil for negative to group .5 with base number
- * +3 and +3.5 → +3, -7 and -7.5 → -7
- */
-function roundSpreadLineForGrouping(line: string): string {
-  const num = parseFloat(line);
-  if (isNaN(num)) return line;
-  // Floor positive numbers, ceil negative numbers
-  // This groups +3 and +3.5 together, -7 and -7.5 together
-  const rounded = num >= 0 ? Math.floor(num) : Math.ceil(num);
-  const sign = rounded >= 0 ? '+' : '';
-  return `${sign}${rounded}`;
+  const sign = num >= 0 ? '+' : '';
+  return `${sign}${num}`;
 }
 
 /**
@@ -537,23 +523,33 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
     team: string;
   }>();
 
+  // Words that indicate a pick with no actual game context
+  const CONTEXTLESS_TEAMS = new Set([
+    'total', 'totals', 'under', 'over', 'unknown', 'o', 'u',
+    'btts', 'both teams to score', 'draw', 'clean sheet', 'parlay', 'teaser',
+  ]);
+
   for (const pick of normalizedPicks) {
-    // For totals, normalize game name and round line
+    // Skip picks with no identifiable game (e.g. "Total Under 224", "BTTS ML")
+    if (CONTEXTLESS_TEAMS.has(pick.standardizedTeam.toLowerCase())) {
+      continue;
+    }
+
+    // For totals, normalize game name; for spreads, normalize +/- prefix
+    // Per MASTER_CONSENSUS_RULES: exact line matching — no rounding
     let teamForKey = pick.standardizedTeam;
     let lineForKey = pick.line;
 
-    // Round spread lines to group within ±0.5 points (NC State +3 and +3.5 combine)
+    // Normalize spread format: ensure consistent +/- prefix (e.g. "3" → "+3")
     if (pick.betType === 'SPREAD' && lineForKey) {
-      lineForKey = roundSpreadLineForGrouping(lineForKey);
+      lineForKey = normalizeSpreadLine(lineForKey);
     }
 
     if (pick.betType === 'OVER' || pick.betType === 'UNDER') {
       // For totals, normalize game name using both team and matchup fields
       // This handles "Cal Over 50" with matchup "Cal vs Hawaii" -> "California/Hawaii"
       teamForKey = normalizeGameForTotal(pick.standardizedTeam, pick.sport, pick.matchup);
-      if (lineForKey) {
-        lineForKey = roundTotalLineForGrouping(lineForKey);
-      }
+      // Line used as-is — Over 222 ≠ Over 224
     }
 
     // Create unique bet key: Team + BetType + Line (if applicable)

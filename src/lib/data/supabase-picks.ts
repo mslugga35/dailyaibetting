@@ -27,8 +27,9 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_P
 /** Map hb_picks sport values to consensus-builder standard format */
 const HB_SPORT_MAP: Record<string, string> = {
   'nba': 'NBA', 'nfl': 'NFL', 'nhl': 'NHL', 'mlb': 'MLB',
-  'ncaab': 'NCAAB', 'ncaaf': 'NCAAF', 'soccer': 'SOCCER',
-  'tennis': 'TENNIS', 'other': 'OTHER',
+  'ncaab': 'NCAAB', 'ncaaf': 'NCAAF', 'wnba': 'WNBA',
+  'soccer': 'SOCCER', 'tennis': 'TENNIS', 'mma': 'MMA',
+  'golf': 'GOLF', 'boxing': 'BOXING', 'other': 'OTHER',
 };
 
 /** Map hb_picks.source to display site label */
@@ -65,9 +66,20 @@ function hbPickToRawPick(pick: any, dateStr: string): RawPick {
   }
 
   let sport = HB_SPORT_MAP[(pick.sport || '').toLowerCase()] || 'OTHER';
-  if ((sport === 'NBA' || sport === 'OTHER') && displayTeam) {
+
+  // Detect sport from team name in two cases:
+  // 1. DB has no sport info (OTHER) — always try to detect
+  // 2. DB has a non-team sport (TENNIS/MMA/GOLF/BOXING/SOCCER) but team name
+  //    resolves to a real team sport — these are misclassified picks from
+  //    parse-worker (e.g. "Murray State" stored as sport='tennis')
+  const MISCLASSIFIABLE_SPORTS = new Set(['OTHER', 'TENNIS', 'MMA', 'GOLF', 'BOXING', 'SOCCER']);
+  const TEAM_SPORTS = new Set(['NBA', 'NCAAB', 'NFL', 'NCAAF', 'MLB', 'NHL', 'WNBA']);
+
+  if (MISCLASSIFIABLE_SPORTS.has(sport) && displayTeam) {
     const detected = identifySport(displayTeam);
-    if (detected && detected !== sport) sport = detected;
+    if (detected && TEAM_SPORTS.has(detected)) {
+      sport = detected;
+    }
   }
 
   const site = SOURCE_SITE_MAP[pick.source] || 'FreeCappers';
