@@ -41,11 +41,68 @@ const SOURCE_SITE_MAP: Record<string, string> = {
   'telegram': 'FreeCappers',
 };
 
+/** Reverse map: hb_games.sport (Odds API format) → consensus display sport */
+const GAME_SPORT_MAP: Record<string, string> = {
+  'basketball_nba': 'NBA', 'basketball_ncaab': 'NCAAB', 'basketball_wnba': 'WNBA',
+  'americanfootball_nfl': 'NFL', 'americanfootball_ncaaf': 'NCAAF',
+  'icehockey_nhl': 'NHL', 'baseball_mlb': 'MLB',
+  'soccer_epl': 'SOCCER', 'soccer_spain_la_liga': 'SOCCER', 'soccer_italy_serie_a': 'SOCCER',
+  'soccer_germany_bundesliga': 'SOCCER', 'soccer_france_ligue_one': 'SOCCER',
+  'soccer_usa_mls': 'SOCCER', 'soccer_mexico_ligamx': 'SOCCER',
+  'soccer_uefa_champs_league': 'SOCCER',
+  'tennis_atp': 'TENNIS', 'tennis_wta': 'TENNIS',
+  'mma_mixed_martial_arts': 'MMA',
+};
+
+interface GameRecord {
+  id: string;
+  home_team: string;
+  away_team: string;
+  sport: string;
+}
+
+/**
+ * Resolve which canonical team name a pick is for (home or away).
+ * Uses substring + mascot matching against the game's actual team names.
+ */
+function resolveCanonicalTeam(pickTeam: string, game: GameRecord): string | null {
+  const pick = pickTeam.toLowerCase().replace(/[^a-z]/g, '');
+  const home = game.home_team.toLowerCase().replace(/[^a-z]/g, '');
+  const away = game.away_team.toLowerCase().replace(/[^a-z]/g, '');
+
+  if (!pick || pick.length < 2) return null;
+
+  // Substring match (handles "LAL" in "losangeleslakers", "Lakers" in "losangeleslakers")
+  if (home.includes(pick) || pick.includes(home)) return game.home_team;
+  if (away.includes(pick) || pick.includes(away)) return game.away_team;
+
+  // Mascot match (last word: "Lakers", "Warriors", etc.)
+  const pickWords = pickTeam.trim().split(/\s+/);
+  const pickMascot = (pickWords[pickWords.length - 1] || '').toLowerCase().replace(/[^a-z]/g, '');
+  const homeMascot = (game.home_team.split(/\s+/).pop() || '').toLowerCase().replace(/[^a-z]/g, '');
+  const awayMascot = (game.away_team.split(/\s+/).pop() || '').toLowerCase().replace(/[^a-z]/g, '');
+
+  if (pickMascot.length >= 3 && pickMascot === homeMascot) return game.home_team;
+  if (pickMascot.length >= 3 && pickMascot === awayMascot) return game.away_team;
+
+  return null;
+}
+
 /** Convert an hb_picks row into a RawPick for the consensus builder */
-function hbPickToRawPick(pick: any, dateStr: string): RawPick {
+function hbPickToRawPick(pick: any, dateStr: string, gameMap?: Map<string, GameRecord>): RawPick {
   const capperName = pick.capper?.name || 'Unknown';
-  const teamName = pick.team || '';
+  let teamName = pick.team || '';
   const opponentName = pick.opponent || '';
+
+  // Canonicalize team name from matched game (if available)
+  // This collapses "LAL", "Lakers", "Los Angeles Lakers" into one canonical name
+  if (pick.matched_game_id && gameMap?.has(pick.matched_game_id)) {
+    const game = gameMap.get(pick.matched_game_id)!;
+    const canonical = resolveCanonicalTeam(teamName, game);
+    if (canonical) {
+      teamName = canonical;
+    }
+  }
 
   // For over/under with "Total" as team, use opponent for game context
   const displayTeam = (teamName === 'Total' && opponentName) ? opponentName : teamName;
@@ -67,7 +124,16 @@ function hbPickToRawPick(pick: any, dateStr: string): RawPick {
 
   let sport = HB_SPORT_MAP[(pick.sport || '').toLowerCase()] || 'OTHER';
 
-  // Detect sport from team name in two cases:
+  // Use game's sport as authoritative source when available
+  if (pick.matched_game_id && gameMap?.has(pick.matched_game_id)) {
+    const game = gameMap.get(pick.matched_game_id)!;
+    const gameSport = GAME_SPORT_MAP[game.sport];
+    if (gameSport) {
+      sport = gameSport;
+    }
+  }
+
+  // Fallback: detect sport from team name for picks without game ID
   // 1. DB has no sport info (OTHER) — always try to detect
   // 2. DB has a non-team sport (TENNIS/MMA/GOLF/BOXING/SOCCER) but team name
   //    resolves to a real team sport — these are misclassified picks from
@@ -123,7 +189,7 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
     
     logger.debug('Supabase', `Fetching picks for ET day ${todayStr}: ${utcStart} to ${utcEnd}`);
     
-    // Fetch today's picks with capper names
+    // Fetch today's picks with capper names + game ID
     const { data: picks, error } = await supabase
       .from('hb_picks')
       .select(`
@@ -138,6 +204,7 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
         source,
         posted_at,
         created_at,
+        matched_game_id,
         capper:hb_cappers(name)
       `)
       .gte('created_at', utcStart)
@@ -155,7 +222,23 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
 
     logger.info('Supabase', `Fetched ${picks.length} picks from hb_picks`);
 
-    const rawPicks: RawPick[] = picks.map((pick: any) => hbPickToRawPick(pick, todayStr));
+    // Fetch matched games for canonical team name resolution
+    const gameIds = [...new Set(picks.filter((p: any) => p.matched_game_id).map((p: any) => p.matched_game_id))];
+    let gameMap = new Map<string, GameRecord>();
+
+    if (gameIds.length > 0) {
+      const { data: games } = await supabase
+        .from('hb_games')
+        .select('id, home_team, away_team, sport')
+        .in('id', gameIds);
+
+      if (games) {
+        gameMap = new Map(games.map((g: any) => [g.id, g]));
+        logger.debug('Supabase', `Loaded ${gameMap.size} games for team name canonicalization`);
+      }
+    }
+
+    const rawPicks: RawPick[] = picks.map((pick: any) => hbPickToRawPick(pick, todayStr, gameMap));
 
     // Log sport breakdown
     const sportCounts: Record<string, number> = {};
@@ -191,7 +274,7 @@ export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
     const { data: picks, error } = await supabase
       .from('hb_picks')
       .select(`
-        id, sport, team, opponent, pick_type, line, odds, units, source, posted_at, created_at,
+        id, sport, team, opponent, pick_type, line, odds, units, source, posted_at, created_at, matched_game_id,
         capper:hb_cappers(name)
       `)
       .gte('created_at', utcStart)
@@ -201,7 +284,22 @@ export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
 
     logger.info('Supabase', `Fetched ${picks.length} yesterday picks from hb_picks`);
 
-    return picks.map((pick: any) => hbPickToRawPick(pick, yesterdayStr));
+    // Fetch matched games for canonical team name resolution
+    const gameIds = [...new Set(picks.filter((p: any) => p.matched_game_id).map((p: any) => p.matched_game_id))];
+    let gameMap = new Map<string, GameRecord>();
+
+    if (gameIds.length > 0) {
+      const { data: games } = await supabase
+        .from('hb_games')
+        .select('id, home_team, away_team, sport')
+        .in('id', gameIds);
+
+      if (games) {
+        gameMap = new Map(games.map((g: any) => [g.id, g]));
+      }
+    }
+
+    return picks.map((pick: any) => hbPickToRawPick(pick, yesterdayStr, gameMap));
   } catch (error) {
     logger.error('Supabase', `Exception fetching yesterday picks: ${error}`);
     return [];

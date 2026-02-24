@@ -7,14 +7,14 @@ AI-powered sports betting consensus platform with real-time capper tracking.
 - **URL**: https://dailyaibetting.com
 - **Type**: Directory-style sports betting analytics site
 - **Tech Stack**: Next.js 14, Supabase, Tailwind CSS, shadcn/ui
-- **Automation**: n8n Cloud (mslugga35.app.n8n.cloud)
+- **Automation**: Local PM2 scraper (`dailyai-picks-local`)
 
 ## Key Features
 
 1. **Daily AI Consensus** - Identifies picks where 3+ cappers agree (🔥 fire tag)
-2. **Capper Leaderboards** - Track and rank 10 cappers by performance
+2. **Capper Leaderboards** - Track and rank cappers by performance
 3. **Historical Data** - Browse past picks with results
-4. **Real-time Updates** - Data refreshes every 5 minutes from Google Sheets
+4. **Real-time Updates** - Data fetched from Supabase `hb_picks` (single source of truth)
 5. **AI Analysis** - GPT-powered insights and trend detection
 
 ## Consensus Rules (from MASTER_CONSENSUS_RULES)
@@ -65,31 +65,38 @@ dailyaibetting/
 └── public/                    # Static assets
 ```
 
-## Data Flow
+## Data Flow (updated 2026-02-20)
 
 ```
-Google Doc ──────────────┐
-                         ├──► Google Sheets ──► API Routes ──► Consensus Builder ──► Frontend
-Local Scraper (PM2) ─────┘
-        ↓
-   ESPN Validation (filters stale picks)
+Discord cappers ──► bot ──► parse-worker ──► hb_picks (source='discord')
+BetFirm ──────┐
+BoydsBets ─────┤──► ESPN Validation ──► hb_picks (source='scrape')
+SportsMemo ────┤
+Covers ────────┘
+                                            │
+                                            ▼
+                              Website API Routes ──► Consensus Builder ──► Frontend
 ```
 
-### Primary Data Sources
+**Single Source of Truth: Supabase `hb_picks`** (migrated 2026-02-20)
 
-1. **Google Doc** (ID: `<GOOGLE_DOC_ID - see .env.local>`)
-   - Contains latest picks from multiple cappers
+Google Sheets pipeline was retired. All data reads and writes go through Supabase.
 
-2. **Google Sheets** (ID: `<GOOGLE_SHEET_ID - see .env.local>`)
-   - Populated by **local scraper** (replaced n8n to save executions)
-   - Tabs: BetFirm, BoydsBets, Dimers, Covers, SportsLine, AllPicks
-   - Columns: Site, League, Date, Matchup, Service, Pick, RunDate
+### Data Sources (all write to hb_picks)
 
-3. **Local Scraper** (`C:\Users\mpmmo\dailyai-picks-local\`)
-   - Node.js script running via PM2
-   - Scrapes BetFirm + Google Doc
-   - **ESPN Validation**: Filters out stale picks (teams not playing today)
-   - Start: `pm2 start ecosystem.config.js`
+1. **Discord Cappers** (source='discord')
+   - HiddenBag Discord → bot → parse-worker → hb_picks
+   - Dynamic list (whoever posts picks in Discord)
+
+2. **Website Scrapers** (source='scrape')
+   - BetFirm, BoydsBets, SportsMemo, Covers
+   - `dailyai-picks-local/index.js` runs via PM2 every 30 min
+   - ESPN validation filters out teams not playing today
+   - Writes directly to hb_picks (no Sheets intermediary)
+
+### Website Data Reading
+- `src/lib/data/supabase-picks.ts` — fetches from hb_picks, converts to RawPick
+- `src/lib/data/google-sheets.ts` — splits parlays, fixes sport misclassification (no longer reads Sheets despite filename)
 
 ## Related Projects
 
@@ -102,13 +109,6 @@ Local Scraper (PM2) ─────┘
 | ConsensusAutomation | `C:\Users\mpmmo\ConsensusAutomation\` | Python consensus analysis |
 | SportsBettingAutomation | `C:\Users\mpmmo\SportsBettingAutomation\` | Web scrapers |
 
-## n8n Automation
-
-- **Instance**: https://mslugga35.app.n8n.cloud
-- **Workflow**: Unified Sports Picks Scraper
-- **Schedule**: Daily at 3 PM ET
-- **Output**: Google Sheets with picks
-
 ## Environment Variables
 
 Copy `.env.example` to `.env.local`:
@@ -116,13 +116,11 @@ Copy `.env.example` to `.env.local`:
 ```bash
 # Required
 GOOGLE_SHEET_ID=<GOOGLE_SHEET_ID - see .env.local>
-GOOGLE_DOC_ID=<GOOGLE_DOC_ID - see .env.local>
 
 # Optional
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
-N8N_WEBHOOK_URL=<N8N_WEBHOOK_URL - see .env.local>
 ```
 
 ## API Endpoints
@@ -159,17 +157,50 @@ npm run build
 
 ## Cappers Tracked
 
-10 cappers with max picks (not all picks):
-1. Dave Price (BetFirm)
-2. Jack Jones (BetFirm)
-3. Dimers
-4. Chris Vasile (Covers)
-5. Pure Lock (BetFirm)
-6. Matt Fargo (BetFirm)
-7. Quinn Allen (Covers)
-8. SportsLine
-9. Ballpark Pal
-10. Consensus Leans
+Cappers are **dynamic** — not a fixed list. Sources:
+- **Discord DB**: Whatever HB cappers post picks (names from `hb_cappers` table)
+- **BetFirm**: Expert names scraped from site (Dave Price, Jack Jones, Pure Lock, Matt Fargo, etc.)
+- **BoydsBets**: Capper names or "BoydsBets" fallback
+- **SportsMemo**: Expert names scraped from site
+- **Covers** (optional): Expert names (Chris Vasile, Quinn Allen, etc.)
+
+## Consensus System Overhaul (2026-02-21)
+
+6-phase fix deployed. All commits pushed, Vercel live, PM2 restarted.
+
+### What Changed
+
+| Phase | What | File | Commit |
+|-------|------|------|--------|
+| 1 | Exact line matching (no rounding) | `consensus-builder.ts` | `91bb11e` |
+| 2 | 281 NCAAB teams (was 68) | `team-mappings.ts` | `91bb11e` |
+| 3 | Strict `identifySport()` (3-pass) | `team-mappings.ts` | `91bb11e` |
+| 4a | `default_sport` column on channels | `20260220_channel_default_sport.sql` | `90b9641` |
+| 4b | Parse-worker sport fallback | `parse-worker.mjs` | `90b9641` |
+| 5 | Sport override for misclassified picks | `supabase-picks.ts` | `91bb11e` |
+| cleanup | Stale comments, Memphis alias conflict | both | `9481ff5` |
+
+### Key Design Decisions
+
+- **`normalizeSpreadLine()`** replaces old `roundSpreadLineForGrouping()` — consistent `+/-` prefix only, NO rounding
+- **`identifySport()` 3-pass matching:** (1) exact, (2) prefix match (4+ chars), (3) word match (skip generic mascots)
+- **GENERIC_MASCOTS skip list:** tigers, eagles, bears, wildcats, bulldogs, panthers, cardinals, lions, hawks, rams, warriors, rockets, rebels, pirates, cougars, huskies, knights, falcons
+- **Sport override (Phase 5):** `MISCLASSIFIABLE_SPORTS` = OTHER, TENNIS, MMA, GOLF, BOXING, SOCCER → auto-corrected to real team sport at display time
+- **Memphis conflict:** bare 'Memphis' removed from NCAAB aliases (conflicts with NBA Grizzlies), kept 'Memphis Tigers' only
+
+### DB Cleanup Applied (2026-02-21)
+- 134 dirty team name rows cleaned (e.g., "Lakers -6½ -110 at PlayMGM" → "Lakers")
+- 14 sport misclassifications fixed (NCAAB picks stored as OTHER/tennis/mlb)
+- `hb_pick_type` enum: valid values are `spread`, `moneyline`, `over`, `under`, `prop` (NOT 'ml')
+
+### Known Cross-Sport Alias Conflicts (pre-existing, not from this work)
+- City abbreviations (ATL, CLE, HOU, MIN) exist in multiple pro sports
+- `identifySport()` returns first match in object iteration order (MLB > NBA > NFL > NCAAB)
+- Mitigated by DB sport column + Phase 5 override
+
+### Scraper Fix (dailyai-picks-local)
+- `cleanPick` pipeline in `parsePickFields()` now strips sportsbook names, ½→.5, trailing odds
+- Commit: `e5efd26` in `dailyai-picks-local`
 
 ## Design System
 

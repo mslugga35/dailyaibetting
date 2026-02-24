@@ -374,7 +374,7 @@ export function isInSeason(sport: string): boolean {
 
   switch (sport) {
     case 'MLB':
-      return month >= 3 && month <= 10;
+      return month >= 2 && month <= 10; // Feb = spring training
     case 'NFL':
       return month >= 9 || month <= 2;
     case 'NBA':
