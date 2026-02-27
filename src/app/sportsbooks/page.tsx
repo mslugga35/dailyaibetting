@@ -10,12 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Star, Gift, Shield, Zap, ExternalLink, Check, HelpCircle, ChevronDown } from 'lucide-react';
+import { Star, Gift, Shield, Zap, ExternalLink, Check, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Best Sports Betting Apps 2025 - Sportsbook Bonuses & Promos | DailyAI',
-  description: 'Compare the best sports betting apps and sportsbook bonuses for 2025. Get up to $1,500 in signup bonuses from DraftKings, FanDuel, BetMGM, and more. Exclusive promo codes.',
+  title: 'Best Sports Betting Apps 2026 - Sportsbook Bonuses & Promos | DailyAI',
+  description: 'Compare the best sports betting apps and sportsbook bonuses for 2026. Get up to $1,500 in signup bonuses from DraftKings, FanDuel, BetMGM, and more. Exclusive promo codes.',
   keywords: [
     'best sports betting apps',
     'sportsbook bonus',
@@ -23,15 +23,18 @@ export const metadata: Metadata = {
     'FanDuel bonus',
     'BetMGM promo',
     'sports betting signup bonus',
-    'best sportsbook 2025',
+    'best sportsbook 2026',
     'Caesars sportsbook promo',
     'ESPN BET bonus',
     'legal sports betting',
   ],
   openGraph: {
-    title: 'Best Sports Betting Apps & Bonuses 2025',
+    title: 'Best Sports Betting Apps & Bonuses 2026',
     description: 'Compare top sportsbooks and claim up to $1,500 in signup bonuses.',
     type: 'website',
+  },
+  alternates: {
+    canonical: 'https://dailyaibetting.com/sportsbooks',
   },
 };
 
@@ -150,8 +153,8 @@ const sportsbooks = [
 // FAQ data for SEO
 const faqs = [
   {
-    question: 'What is the best sports betting app in 2025?',
-    answer: 'DraftKings and FanDuel are consistently rated as the top sports betting apps in 2025. DraftKings offers the best mobile experience and rewards program, while FanDuel typically has the best odds and most user-friendly interface. Both offer $150 in bonus bets for new users.',
+    question: 'What is the best sports betting app in 2026?',
+    answer: 'DraftKings and FanDuel are consistently rated as the top sports betting apps in 2026. DraftKings offers the best mobile experience and rewards program, while FanDuel typically has the best odds and most user-friendly interface. Both offer $150 in bonus bets for new users.',
   },
   {
     question: 'Which sportsbook has the biggest signup bonus?',
@@ -199,7 +202,7 @@ export default function SportsbooksPage() {
 
       {/* Header */}
       <div className="mb-8 text-center">
-        <Badge className="mb-4">Updated December 2025</Badge>
+        <Badge className="mb-4">Updated February 2026</Badge>
         <h1 className="text-3xl md:text-4xl font-bold mb-4">
           Best Sports Betting Apps & Bonuses
         </h1>

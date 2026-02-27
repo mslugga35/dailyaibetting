@@ -78,6 +78,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${capper.name} - ${capper.win_pct}% Win Rate | DailyAI Betting`,
     description: `${capper.name} betting record: ${capper.record}. ${capper.win_pct}% win rate across ${capper.total_picks} picks. See full pick history and performance by sport.`,
     keywords: `${capper.name} picks, ${capper.name} record, betting handicapper, sports betting expert`,
+    alternates: {
+      canonical: `https://dailyaibetting.com/cappers/${params.slug}`,
+    },
   };
 }
 

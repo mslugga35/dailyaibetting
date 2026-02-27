@@ -67,6 +67,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: post.meta_title || `${post.title} | DailyAI Betting`,
     description: post.meta_description || post.excerpt,
     keywords: post.tags?.join(', '),
+    alternates: {
+      canonical: `https://dailyaibetting.com/blog/${params.slug}`,
+    },
   };
 }
 

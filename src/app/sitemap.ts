@@ -4,7 +4,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://dailyaibetting.com';
   const today = new Date().toISOString();
 
+  // Static pages that rarely change get a fixed lastModified date
+  const staticDate = '2026-02-26';
+
   return [
+    // Dynamic pages updated with live data
     {
       url: baseUrl,
       lastModified: today,
@@ -67,19 +71,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'hourly',
       priority: 0.85,
     },
-    // Monetization Pages
-    {
-      url: `${baseUrl}/sportsbooks`,
-      lastModified: today,
-      changeFrequency: 'weekly',
-      priority: 0.85,
-    },
-    {
-      url: `${baseUrl}/advertise`,
-      lastModified: today,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
     // SEO Landing Pages - High Volume Keywords
     {
       url: `${baseUrl}/free-sports-picks`,
@@ -104,6 +95,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: today,
       changeFrequency: 'hourly',
       priority: 0.9,
+    },
+    // Matchups & Stats (live data)
+    {
+      url: `${baseUrl}/matchups`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/stats`,
+      lastModified: today,
+      changeFrequency: 'daily',
+      priority: 0.8,
     },
     // Performance & History Pages
     {
@@ -137,6 +141,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: today,
       changeFrequency: 'daily',
       priority: 0.8,
+    },
+    // Static / rarely-updated pages
+    {
+      url: `${baseUrl}/sportsbooks`,
+      lastModified: staticDate,
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/advertise`,
+      lastModified: staticDate,
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
     // AI Visibility
     {

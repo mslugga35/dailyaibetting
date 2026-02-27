@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Target, TrendingUp, Users, ExternalLink } from 'lucide-react';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
+import { SportsEventJsonLd } from '@/components/seo/JsonLd';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,6 +89,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: `${gameInfo.team1} vs ${gameInfo.team2} - Expert Betting Picks | DailyAI Betting`,
     description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which handicappers agree on spreads, moneylines, and totals.`,
     keywords: `${gameInfo.team1} vs ${gameInfo.team2} picks, ${gameInfo.team1} ${gameInfo.team2} predictions, betting picks, spread picks`,
+    alternates: {
+      canonical: `https://dailyaibetting.com/games/${params.slug}`,
+    },
   };
 }
 
@@ -136,6 +140,16 @@ export default async function GamePage({ params }: PageProps) {
 
       {/* Sport Quick Nav */}
       <SportQuickNav currentSport={sport} />
+
+      {/* Structured Data for this game */}
+      {gamePicks.length > 0 && (
+        <SportsEventJsonLd
+          sport={sport}
+          game={`${gameInfo.team1} vs ${gameInfo.team2}`}
+          pick={gamePicks[0].bet}
+          capperCount={gamePicks[0].capperCount}
+        />
+      )}
 
       {/* Picks for this game */}
       {gamePicks.length > 0 ? (
