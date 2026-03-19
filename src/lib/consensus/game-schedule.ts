@@ -354,7 +354,7 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     // matching substrings in unrelated team names (e.g. "la" in "coloradoavalanche")
     const isFuzzyMatch = !isExactMatch && [...sportGames].some(t => {
       const tClean = t.replace(/[^a-z0-9]/g, '');
-      if (tClean.length < 4 || teamClean.length < 4) return false;
+      if (tClean.length < 4 || teamClean.length < 4 || standardizedClean.length < 4) return false;
       const tSlice = tClean.slice(0, 4);
       const teamSlice = teamClean.slice(0, 4);
       const stdSlice = standardizedClean.slice(0, 4);

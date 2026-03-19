@@ -112,39 +112,43 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
   // NCAAB — 281 teams from parse-worker's team-aliases.mjs
   // Generic mascots (Tigers, Eagles, Bears, etc.) removed as standalone aliases
   // Pro sport conflicts (Cavaliers, Spurs, Charlotte, Memphis, Flyers, Thunder) omitted
+  // NHL — Only NHL-unique aliases here. Bare city names (Boston, Detroit, etc.)
+  // and shared abbreviations (CHI, DET, MIN, PHI, PIT, STL, TB, TOR, WSH)
+  // are omitted to prevent cross-sport collisions with MLB/NBA/NFL.
+  // The DB sport column + game-schedule ESPN filter handle disambiguation.
   NHL: {
-    Ducks: ['Ducks', 'Anaheim', 'Anaheim Ducks', 'ANA'],
-    Coyotes: ['Coyotes', 'Arizona Coyotes', 'ARI', 'Utah Hockey Club', 'Utah HC', 'Utah Mammoth', 'UTA'],
-    Bruins: ['Bruins', 'Boston Bruins', 'BOS'],
-    Sabres: ['Sabres', 'Buffalo', 'Buffalo Sabres', 'BUF'],
+    Ducks: ['Ducks', 'Anaheim Ducks', 'ANA'],
+    Coyotes: ['Coyotes', 'Arizona Coyotes', 'Utah Hockey Club', 'Utah HC', 'Utah Mammoth'],
+    Bruins: ['Bruins', 'Boston Bruins'],
+    Sabres: ['Sabres', 'Buffalo Sabres', 'BUF'],
     Flames: ['Flames', 'Calgary', 'Calgary Flames', 'CGY'],
-    Hurricanes: ['Hurricanes', 'Carolina', 'Carolina Hurricanes', 'CAR'],
-    Blackhawks: ['Blackhawks', 'Chicago Blackhawks', 'CHI'],
-    Avalanche: ['Avalanche', 'Colorado Avalanche', 'COL'],
-    'Blue Jackets': ['Blue Jackets', 'Columbus', 'Columbus Blue Jackets', 'CBJ'],
-    Stars: ['Stars', 'Dallas Stars', 'DAL'],
-    'Red Wings': ['Red Wings', 'Detroit Red Wings', 'DET'],
+    Hurricanes: ['Hurricanes', 'Carolina Hurricanes'],
+    Blackhawks: ['Blackhawks', 'Chicago Blackhawks'],
+    Avalanche: ['Avalanche', 'Colorado Avalanche'],
+    'Blue Jackets': ['Blue Jackets', 'Columbus Blue Jackets', 'CBJ'],
+    Stars: ['Stars', 'Dallas Stars'],
+    'Red Wings': ['Red Wings', 'Detroit Red Wings'],
     Oilers: ['Oilers', 'Edmonton', 'Edmonton Oilers', 'EDM'],
-    Panthers: ['Panthers', 'Florida Panthers', 'FLA'],
+    'Panthers (NHL)': ['Florida Panthers', 'FLA'],
     Kings: ['Kings', 'Los Angeles Kings', 'LA Kings', 'LAK'],
-    Wild: ['Wild', 'Minnesota Wild', 'MIN'],
+    Wild: ['Wild', 'Minnesota Wild'],
     Canadiens: ['Canadiens', 'Montreal', 'Montreal Canadiens', 'MTL', 'Habs'],
     Predators: ['Predators', 'Nashville', 'Nashville Predators', 'NSH'],
-    Devils: ['Devils', 'New Jersey', 'New Jersey Devils', 'NJ', 'NJD'],
+    Devils: ['Devils', 'New Jersey Devils', 'NJD'],
     Islanders: ['Islanders', 'New York Islanders', 'NYI'],
-    Rangers: ['Rangers', 'New York Rangers', 'NYR'],
+    'Rangers (NHL)': ['New York Rangers', 'NYR'],
     Senators: ['Senators', 'Ottawa', 'Ottawa Senators', 'OTT'],
-    Flyers: ['Flyers', 'Philadelphia Flyers', 'PHI'],
-    Penguins: ['Penguins', 'Pittsburgh Penguins', 'PIT', 'Pens'],
-    Sharks: ['Sharks', 'San Jose', 'San Jose Sharks', 'SJ', 'SJS'],
-    Kraken: ['Kraken', 'Seattle Kraken', 'SEA'],
-    Blues: ['Blues', 'St Louis', 'St. Louis', 'St Louis Blues', 'STL'],
-    Lightning: ['Lightning', 'Tampa Bay Lightning', 'TB', 'TBL', 'Bolts'],
-    'Maple Leafs': ['Maple Leafs', 'Toronto Maple Leafs', 'TOR', 'Leafs'],
+    Flyers: ['Flyers', 'Philadelphia Flyers'],
+    Penguins: ['Penguins', 'Pittsburgh Penguins', 'Pens'],
+    Sharks: ['Sharks', 'San Jose Sharks', 'SJS'],
+    Kraken: ['Kraken', 'Seattle Kraken'],
+    Blues: ['Blues', 'St Louis Blues'],
+    Lightning: ['Lightning', 'Tampa Bay Lightning', 'TBL', 'Bolts'],
+    'Maple Leafs': ['Maple Leafs', 'Toronto Maple Leafs', 'Leafs'],
     Canucks: ['Canucks', 'Vancouver', 'Vancouver Canucks', 'VAN'],
-    'Golden Knights': ['Golden Knights', 'Vegas', 'Vegas Golden Knights', 'VGK'],
-    Capitals: ['Capitals', 'Washington Capitals', 'WSH', 'Caps'],
-    Jets: ['Jets', 'Winnipeg', 'Winnipeg Jets', 'WPG'],
+    'Golden Knights': ['Golden Knights', 'Vegas Golden Knights', 'VGK'],
+    Capitals: ['Capitals', 'Washington Capitals', 'Caps'],
+    'Jets (NHL)': ['Winnipeg Jets', 'WPG'],
   },
 
   NCAAB: {
@@ -550,6 +554,8 @@ const GENERIC_MASCOTS = new Set([
   'tigers', 'eagles', 'bears', 'wildcats', 'bulldogs', 'panthers',
   'cardinals', 'lions', 'hawks', 'rams', 'warriors', 'rockets',
   'rebels', 'pirates', 'cougars', 'huskies', 'knights', 'falcons',
+  // Cross-sport mascots (appear in 2+ pro sports)
+  'jets', 'rangers', 'kings', 'stars', 'bruins', 'flames',
 ]);
 
 /**
