@@ -106,7 +106,11 @@ export default function RootLayout({
         <FAQJsonLd />
         <GoogleAnalytics />
         {/* Harbor AI SEO — auto-optimizes meta tags, descriptions, and schema */}
-        <script data-harbor-site="nd70pb9sd9fpewcxsyk028at0n8368ee" src="https://outgoing-oyster-428.convex.site/api/harbor-seo.js?siteId=nd70pb9sd9fpewcxsyk028at0n8368ee" async></script>
+        <Script
+          src="https://outgoing-oyster-428.convex.site/api/harbor-seo.js?siteId=nd70pb9sd9fpewcxsyk028at0n8368ee"
+          data-harbor-site="nd70pb9sd9fpewcxsyk028at0n8368ee"
+          strategy="beforeInteractive"
+        />
         {/* Google AdSense */}
         <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" strategy="lazyOnload" />
         {/* Impact.com Verification */}
