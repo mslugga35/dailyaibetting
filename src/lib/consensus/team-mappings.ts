@@ -118,7 +118,7 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
   // The DB sport column + game-schedule ESPN filter handle disambiguation.
   NHL: {
     Ducks: ['Ducks', 'Anaheim Ducks', 'ANA'],
-    Coyotes: ['Coyotes', 'Arizona Coyotes', 'Utah Hockey Club', 'Utah HC', 'Utah Mammoth'],
+    'Utah Hockey Club': ['Utah Hockey Club', 'Utah HC', 'Utah Mammoth', 'Coyotes', 'Arizona Coyotes'],
     Bruins: ['Bruins', 'Boston Bruins'],
     Sabres: ['Sabres', 'Buffalo Sabres', 'BUF'],
     Flames: ['Flames', 'Calgary', 'Calgary Flames', 'CGY'],
@@ -129,7 +129,7 @@ export const teamMappings: Record<string, Record<string, string[]>> = {
     Stars: ['Stars', 'Dallas Stars'],
     'Red Wings': ['Red Wings', 'Detroit Red Wings'],
     Oilers: ['Oilers', 'Edmonton', 'Edmonton Oilers', 'EDM'],
-    'Panthers (NHL)': ['Florida Panthers', 'FLA'],
+    'Panthers (NHL)': ['Panthers', 'Florida Panthers', 'FLA'],
     Kings: ['Kings', 'Los Angeles Kings', 'LA Kings', 'LAK'],
     Wild: ['Wild', 'Minnesota Wild'],
     Canadiens: ['Canadiens', 'Montreal', 'Montreal Canadiens', 'MTL', 'Habs'],
