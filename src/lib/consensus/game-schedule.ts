@@ -350,12 +350,18 @@ export async function filterToTodaysGamesAsync<T extends PickWithCapper>(
     // Strategy 2: Fuzzy match (for ESPN abbreviations like "PUR" matching "purdue")
     // ONLY used for pro sports (ESPN has reliable full coverage)
     // NOT used for college sports (too many false positives: "Arizona" → "Arizona State")
+    // Min 4 chars on both sides to prevent 2-3 letter abbreviations (la, sj, tb) from
+    // matching substrings in unrelated team names (e.g. "la" in "coloradoavalanche")
     const isFuzzyMatch = !isExactMatch && [...sportGames].some(t => {
       const tClean = t.replace(/[^a-z0-9]/g, '');
-      return tClean.includes(teamClean.slice(0, 4)) ||
-             teamClean.includes(tClean.slice(0, 4)) ||
-             tClean.includes(standardizedClean.slice(0, 4)) ||
-             standardizedClean.includes(tClean.slice(0, 4));
+      if (tClean.length < 4 || teamClean.length < 4) return false;
+      const tSlice = tClean.slice(0, 4);
+      const teamSlice = teamClean.slice(0, 4);
+      const stdSlice = standardizedClean.slice(0, 4);
+      return tClean.includes(teamSlice) ||
+             teamClean.includes(tSlice) ||
+             tClean.includes(stdSlice) ||
+             standardizedClean.includes(tSlice);
     });
 
     const isCollegeSport = sport.includes('NCAA');
