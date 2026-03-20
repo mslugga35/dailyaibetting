@@ -106,10 +106,10 @@ export default function RootLayout({
         <FAQJsonLd />
         <GoogleAnalytics />
         {/* HarborSEO — AI-optimised titles, descriptions, and schema */}
-        <Script
+        <script
           src="https://outgoing-oyster-428.convex.site/api/harbor-seo.js?siteId=nd70pb9sd9fpewcxsyk028at0n8368ee"
           data-harbor-site="nd70pb9sd9fpewcxsyk028at0n8368ee"
-          strategy="beforeInteractive"
+          async
         />
         {/* Google AdSense */}
         <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" strategy="lazyOnload" />
