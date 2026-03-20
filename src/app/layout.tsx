@@ -105,15 +105,11 @@ export default function RootLayout({
         <WebsiteJsonLd />
         <FAQJsonLd />
         <GoogleAnalytics />
-        {/* Harbor AI SEO — auto-optimizes meta tags, descriptions, and schema
-             Uses dangerouslySetInnerHTML to emit a real <script> tag in server HTML,
-             bypassing Next.js Script component which converts to <link rel="preload"> */}
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: '' }}
-          {...{ 'data-harbor-site': 'nd70pb9sd9fpewcxsyk028at0n8368ee' } as any}
+        {/* HarborSEO — AI-optimised titles, descriptions, and schema */}
+        <Script
           src="https://outgoing-oyster-428.convex.site/api/harbor-seo.js?siteId=nd70pb9sd9fpewcxsyk028at0n8368ee"
-          async={true}
+          data-harbor-site="nd70pb9sd9fpewcxsyk028at0n8368ee"
+          strategy="afterInteractive"
         />
         {/* Google AdSense */}
         <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" strategy="lazyOnload" />
