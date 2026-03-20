@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.dailyaibetting.com" }],
+      "destination": "https://dailyaibetting.com/:path",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/grade-picks",
@@ -15,7 +23,7 @@
       ]
     },
     {
-      "source": "/(.*)\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf)",
+      "source": "/(.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf))",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=86400, stale-while-revalidate=604800" },
         { "key": "Cloudflare-CDN-Cache-Control", "value": "public, max-age=86400" }
