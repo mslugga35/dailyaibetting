@@ -8,10 +8,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: ['/api/', '/admin/', '/_next/'],
       },
+      // Block scraper bots
       {
-        userAgent: 'Googlebot',
-        allow: '/',
-        disallow: ['/_next/'],
+        userAgent: ['AhrefsBot', 'SemrushBot', 'MJ12bot', 'DotBot', 'BLEXBot'],
+        disallow: '/',
       },
     ],
     sitemap: 'https://dailyaibetting.com/sitemap.xml',
