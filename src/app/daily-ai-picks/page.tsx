@@ -3,7 +3,7 @@ import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
 import { DailyAIPicksContent } from './DailyAIPicksContent';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 3600; // ISR: regenerate every hour
+export const revalidate = 14400; // ISR: 4 hour cache, cron force-refreshes 3x/day
 
 export const metadata: Metadata = {
   title: 'DailyAI Picks — AI-Powered Best Bets Today',

@@ -12,6 +12,18 @@
     {
       "path": "/api/cron/grade-picks",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/daily-ai-picks",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/daily-ai-picks",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/daily-ai-picks",
+      "schedule": "0 22 * * *"
     }
   ],
   "headers": [

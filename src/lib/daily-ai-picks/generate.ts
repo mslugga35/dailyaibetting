@@ -10,7 +10,7 @@ import { collectAllData, type ReportContext } from './collect';
 import { buildSystemPrompt, buildUserPrompt } from './prompt';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (3x/day refresh via cron)
 
 // ── Cache Layer (Supabase) ────────────────────────────────────────────────────
 
