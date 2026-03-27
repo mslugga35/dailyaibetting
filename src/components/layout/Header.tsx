@@ -38,6 +38,7 @@ const sports = [
 ];
 
 const navItems = [
+  { name: 'AI Picks', href: '/daily-ai-picks', icon: Brain },
   { name: 'Daily Bets', href: '/daily-bets', icon: Zap },
   { name: 'Consensus', href: '/consensus', icon: Target },
   { name: 'Stats', href: '/stats', icon: TrendingUp },

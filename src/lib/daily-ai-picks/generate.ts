@@ -1,0 +1,156 @@
+/**
+ * DailyAI Picks report generator.
+ * Calls Claude Sonnet via OpenRouter to generate the full daily picks report.
+ * Caches result in Supabase for 1 hour.
+ *
+ * @created 2026-03-27
+ */
+
+import { collectAllData, type ReportContext } from './collect';
+import { buildSystemPrompt, buildUserPrompt } from './prompt';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// ── Cache Layer (Supabase) ────────────────────────────────────────────────────
+
+async function getCachedReport(): Promise<{ report: string; generatedAt: string } | null> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { data } = await supabase
+      .from('daily_ai_report')
+      .select('report_text, generated_at')
+      .eq('report_date', today)
+      .single();
+
+    if (!data?.report_text) return null;
+
+    // Check if cache is still fresh (< 1 hour old)
+    const age = Date.now() - new Date(data.generated_at).getTime();
+    if (age > CACHE_TTL_MS) return null;
+
+    return { report: data.report_text, generatedAt: data.generated_at };
+  } catch {
+    return null;
+  }
+}
+
+async function cacheReport(report: string, context: ReportContext): Promise<void> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Upsert — update if today's row exists, insert if not
+    await supabase.from('daily_ai_report').upsert({
+      report_date: today,
+      report_text: report,
+      expert_pick_count: context.expertPicks?.picks?.length || 0,
+      mlb_game_count: context.mlbSchedule?.length || 0,
+      has_ballparkpal: !!context.ballparkPal,
+      has_statcast: !!context.statcast,
+      generated_at: new Date().toISOString(),
+    }, { onConflict: 'report_date' });
+  } catch {
+    // Non-fatal — page still works without cache
+  }
+}
+
+// ── OpenRouter API Call ───────────────────────────────────────────────────────
+
+async function callClaude(system: string, user: string): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://dailyaibetting.com',
+    },
+    body: JSON.stringify({
+      model: 'anthropic/claude-sonnet-4-6',
+      max_tokens: 12000,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenRouter ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+// ── Main Generator ────────────────────────────────────────────────────────────
+
+export interface GenerateResult {
+  report: string;
+  cached: boolean;
+  generatedAt: string;
+  dataStats: {
+    expertPicks: number;
+    cappers: number;
+    mlbGames: number;
+    prizePicksProps: number;
+    hasBallparkPal: boolean;
+    hasStatcast: boolean;
+    sportCount: number;
+  };
+}
+
+export async function generateDailyReport(forceRefresh = false): Promise<GenerateResult> {
+  // Check cache first (unless forced)
+  if (!forceRefresh) {
+    const cached = await getCachedReport();
+    if (cached) {
+      return {
+        report: cached.report,
+        cached: true,
+        generatedAt: cached.generatedAt,
+        dataStats: {
+          expertPicks: 0,
+          cappers: 0,
+          mlbGames: 0,
+          prizePicksProps: 0,
+          hasBallparkPal: false,
+          hasStatcast: false,
+          sportCount: 0,
+        },
+      };
+    }
+  }
+
+  // Collect fresh data
+  const context = await collectAllData();
+
+  // Generate report via Claude
+  const system = buildSystemPrompt();
+  const user = buildUserPrompt(context);
+  const report = await callClaude(system, user);
+
+  // Cache for next request
+  await cacheReport(report, context);
+
+  return {
+    report,
+    cached: false,
+    generatedAt: new Date().toISOString(),
+    dataStats: {
+      expertPicks: context.expertPicks.picks.length,
+      cappers: context.expertPicks.capperCount,
+      mlbGames: context.mlbSchedule.length,
+      prizePicksProps: context.prizePicks.length,
+      hasBallparkPal: !!context.ballparkPal,
+      hasStatcast: !!context.statcast,
+      sportCount: Object.keys(context.espnSchedule).length,
+    },
+  };
+}
