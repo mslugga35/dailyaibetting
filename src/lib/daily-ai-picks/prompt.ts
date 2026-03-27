@@ -56,11 +56,14 @@ export function buildUserPrompt(data: ReportContext): string {
     const bppPages = [
       { key: 'strikeouts', label: 'Strikeout Center' },
       { key: 'homeruns', label: 'Home Run Zone' },
-      { key: 'yrfi-nrfi', label: 'YRFI / NRFI Projections' },
+      { key: 'first-inning', label: 'YRFI / NRFI Projections' },
       { key: 'first5', label: 'First 5 Innings' },
-      { key: 'hits-bases', label: 'Hits & Bases' },
+      { key: 'hits', label: 'Hits Projections' },
+      { key: 'bases', label: 'Total Bases Projections' },
       { key: 'positive-ev', label: 'Positive EV Bets' },
       { key: 'park-factors', label: 'Park Factors' },
+      { key: 'game-sims', label: 'Game Simulation O/U Odds' },
+      { key: 'most-likely', label: 'Most Likely Outcomes' },
     ];
 
     for (const page of bppPages) {

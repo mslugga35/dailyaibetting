@@ -1,5 +1,6 @@
 'use client';
 
+import DOMPurify from 'isomorphic-dompurify';
 import { Brain, Clock, RefreshCw, Database, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { GenerateResult } from '@/lib/daily-ai-picks/generate';
@@ -9,7 +10,7 @@ interface Props {
 }
 
 function formatMarkdown(text: string): string {
-  // Convert markdown bold to HTML
+  // Convert markdown to HTML
   let html = text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-6 mb-2 text-primary">$1</h3>')
@@ -22,7 +23,8 @@ function formatMarkdown(text: string): string {
   // Wrap consecutive <li> in <ul>
   html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*<br\/>?\s*)+)/g, '<ul class="list-disc space-y-1 my-2">$1</ul>');
 
-  return html;
+  // Sanitize to prevent XSS from AI-generated content
+  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['h1','h2','h3','strong','br','li','ul','p'], ALLOWED_ATTR: ['class'] });
 }
 
 export function DailyAIPicksContent({ result }: Props) {

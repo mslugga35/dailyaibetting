@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
 import { DailyAIPicksContent } from './DailyAIPicksContent';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 14400; // ISR: 4 hour cache, cron force-refreshes 3x/day
+// ISR: page regenerates every 4 hours on request, cron force-refreshes 3x/day
+export const revalidate = 14400;
 
 export const metadata: Metadata = {
   title: 'DailyAI Picks — AI-Powered Best Bets Today',

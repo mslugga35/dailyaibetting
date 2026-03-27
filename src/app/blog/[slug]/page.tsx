@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 interface BlogPost {
@@ -21,14 +22,15 @@ interface BlogPost {
   excerpt: string;
   content: string;
   category: string;
-  sport: string | null;
   tags: string[];
-  meta_title: string;
-  meta_description: string;
+  seo_title: string | null;
+  seo_description: string | null;
   featured_image: string | null;
   published_at: string;
   view_count: number;
-  ai_model: string;
+  ai_model: string | null;
+  author: string | null;
+  read_time: string | null;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -38,15 +40,25 @@ const categoryLabels: Record<string, string> = {
   'analysis': 'Analysis',
 };
 
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
+
 async function getBlogPost(slug: string): Promise<BlogPost | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  
   try {
-    const res = await fetch(`${baseUrl}/api/blog?slug=${encodeURIComponent(slug)}`, {
-      cache: 'no-store',
-    });
-    const data = await res.json();
-    return data.success && data.post ? data.post : null;
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blog_posts')
+      .select('id, slug, title, excerpt, content, category, tags, featured_image, published_at, view_count, ai_model, author, seo_title, seo_description, read_time')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single();
+
+    if (error || !data) return null;
+    return data as unknown as BlogPost;
   } catch (error) {
     console.error('Failed to fetch blog post:', error);
     return null;
@@ -54,8 +66,9 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const post = await getBlogPost(params.slug);
-  
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
+
   if (!post) {
     return {
       title: 'Article Not Found | DailyAI Betting',
@@ -64,17 +77,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   return {
-    title: post.meta_title || `${post.title} | DailyAI Betting`,
-    description: post.meta_description || post.excerpt,
+    title: post.seo_title || `${post.title} | DailyAI Betting`,
+    description: post.seo_description || post.excerpt,
     keywords: post.tags?.join(', '),
     alternates: {
-      canonical: `https://dailyaibetting.com/blog/${params.slug}`,
+      canonical: `https://dailyaibetting.com/blog/${slug}`,
     },
   };
 }
 
 export default async function BlogPostPage({ params }: PageProps) {
-  const post = await getBlogPost(params.slug);
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
 
   if (!post) {
     notFound();
@@ -103,11 +117,11 @@ export default async function BlogPostPage({ params }: PageProps) {
       {/* Blog Post Schema */}
       <BlogPostingJsonLd
         title={post.title}
-        description={post.meta_description || post.excerpt}
+        description={post.seo_description || post.excerpt}
         slug={post.slug}
         publishedAt={post.published_at}
         category={post.category}
-        tags={post.tags}
+        tags={post.tags || []}
         viewCount={post.view_count}
       />
 
@@ -118,8 +132,8 @@ export default async function BlogPostPage({ params }: PageProps) {
             <Badge className="bg-primary">
               {categoryLabels[post.category] || post.category}
             </Badge>
-            {post.sport && (
-              <Badge variant="outline">{post.sport}</Badge>
+            {(post as any).sport && (
+              <Badge variant="outline">{(post as any).sport}</Badge>
             )}
           </div>
 

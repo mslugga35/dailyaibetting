@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       .from('blog_posts')
       .select('id, slug, title, excerpt, category, tags, featured_image, published_at, view_count, author', { count: 'exact' })
       .eq('status', 'published')
-      .eq('category', 'daily-picks')  // Only show dailyaibetting posts
+      .eq('site', 'dailyaibetting')
       .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -151,6 +151,7 @@ export async function POST(request: Request) {
         ai_model: ai_model || 'gpt-3.5-turbo',
         ai_generated: true,
         author: 'DailyAI Betting',
+        site: 'dailyaibetting',
         status: 'published',
         published_at: new Date().toISOString()
       })
