@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
 import { DailyAIPicksContent } from './DailyAIPicksContent';
 
-// ISR: page regenerates every 4 hours on request, cron force-refreshes 3x/day
-export const revalidate = 14400;
+// Dynamic — data collection (6 APIs + AI generation) takes >60s, exceeds static build timeout.
+// Cron refreshes cached report 3x/day; page reads from Supabase cache at request time.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'DailyAI Picks — AI-Powered Best Bets Today',

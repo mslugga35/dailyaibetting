@@ -22,6 +22,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.95,
     },
     {
+      url: `${baseUrl}/daily-ai-picks`,
+      lastModified: today,
+      changeFrequency: 'hourly',
+      priority: 0.95,
+    },
+    {
       url: `${baseUrl}/consensus`,
       lastModified: today,
       changeFrequency: 'hourly',
