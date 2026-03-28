@@ -1,9 +1,15 @@
 /**
- * DailyAI Picks report generator.
- * Calls Claude Sonnet via OpenRouter to generate the full daily picks report.
- * Caches result in Supabase for 1 hour.
+ * DailyAI Picks report cache reader.
+ *
+ * Reports are generated locally by `hiddenbag-v2/scripts/daily-ai-report.mjs`
+ * (PM2 cron, 3x/day) because BallparkPal + Statcast data lives on the local
+ * filesystem. This module only reads the cached report from Supabase.
+ *
+ * generateFreshReport() is kept for the POST /api/daily-ai-picks fallback
+ * but produces an inferior report (no BallparkPal/Statcast data on Vercel).
  *
  * @created 2026-03-27
+ * @updated 2026-03-28 — split cache-read vs generation, local script is primary
  */
 
 import { collectAllData, type ReportContext } from './collect';

@@ -1,12 +1,12 @@
 /**
  * DailyAI Picks API Route
  *
- * GET — returns cached report only (never triggers generation, prevents credit burn)
+ * GET — returns cached report from Supabase (never triggers generation)
  * POST — force-refresh (requires CRON_SECRET auth)
  *
- * Generation is triggered ONLY by:
- *   1. Vercel cron (GET /api/cron/daily-ai-picks with CRON_SECRET)
- *   2. Server-side page render (page.tsx calls generateDailyReport directly)
+ * Report is generated locally by hb-daily-ai-report PM2 cron (3x/day)
+ * because BallparkPal + Statcast data lives on local filesystem.
+ * This route only reads/writes the Supabase cache.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
