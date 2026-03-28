@@ -14,7 +14,7 @@ const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (3x/day refresh via cron)
 
 // ── Cache Layer (Supabase) ────────────────────────────────────────────────────
 
-async function getCachedReport(): Promise<{ report: string; generatedAt: string } | null> {
+async function getCachedReport(allowStale = false): Promise<{ report: string; generatedAt: string } | null> {
   try {
     const supabase = await createServerSupabaseClient();
     const today = new Date().toISOString().slice(0, 10);
@@ -27,7 +27,10 @@ async function getCachedReport(): Promise<{ report: string; generatedAt: string 
 
     if (!data?.report_text) return null;
 
-    // Check if cache is still fresh (< 1 hour old)
+    // If allowStale, return any cached report from today regardless of age
+    if (allowStale) return { report: data.report_text, generatedAt: data.generated_at };
+
+    // Otherwise check freshness
     const age = Date.now() - new Date(data.generated_at).getTime();
     if (age > CACHE_TTL_MS) return null;
 
@@ -106,37 +109,42 @@ export interface GenerateResult {
   };
 }
 
-export async function generateDailyReport(forceRefresh = false): Promise<GenerateResult> {
-  // Check cache first (unless forced)
-  if (!forceRefresh) {
-    const cached = await getCachedReport();
-    if (cached) {
-      return {
-        report: cached.report,
-        cached: true,
-        generatedAt: cached.generatedAt,
-        dataStats: {
-          expertPicks: 0,
-          cappers: 0,
-          mlbGames: 0,
-          prizePicksProps: 0,
-          hasBallparkPal: false,
-          hasStatcast: false,
-          sportCount: 0,
-        },
-      };
-    }
-  }
+/**
+ * Read today's cached report. Used by the page — never generates inline
+ * because data collection + AI takes >60s (exceeds Vercel function timeout).
+ * Returns null if no cached report exists yet (cron hasn't run).
+ */
+export async function generateDailyReport(): Promise<GenerateResult | null> {
+  // Return any cached report from today (even stale) — page should never generate
+  const cached = await getCachedReport(true);
+  if (!cached) return null;
 
-  // Collect fresh data
+  return {
+    report: cached.report,
+    cached: true,
+    generatedAt: cached.generatedAt,
+    dataStats: {
+      expertPicks: 0,
+      cappers: 0,
+      mlbGames: 0,
+      prizePicksProps: 0,
+      hasBallparkPal: false,
+      hasStatcast: false,
+      sportCount: 0,
+    },
+  };
+}
+
+/**
+ * Generate a fresh report. Called ONLY by the cron API route —
+ * collects data from 6 APIs + calls Claude, takes 60-120s.
+ */
+export async function generateFreshReport(): Promise<GenerateResult> {
   const context = await collectAllData();
-
-  // Generate report via Claude
   const system = buildSystemPrompt();
   const user = buildUserPrompt(context);
   const report = await callClaude(system, user);
 
-  // Cache for next request
   await cacheReport(report, context);
 
   return {

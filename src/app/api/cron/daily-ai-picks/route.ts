@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
+import { generateFreshReport } from '@/lib/daily-ai-picks/generate';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await generateDailyReport(true);
+    const result = await generateFreshReport();
 
     // Post to Discord consensus channel
     await postToDiscord(result.report);

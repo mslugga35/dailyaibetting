@@ -59,10 +59,10 @@ export async function POST(req: NextRequest) {
   }
 
   // Dynamic import to avoid loading generation code on every GET
-  const { generateDailyReport } = await import('@/lib/daily-ai-picks/generate');
+  const { generateFreshReport } = await import('@/lib/daily-ai-picks/generate');
 
   try {
-    const result = await generateDailyReport(true);
+    const result = await generateFreshReport();
     return NextResponse.json({
       success: true,
       generatedAt: result.generatedAt,

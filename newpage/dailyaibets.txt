@@ -1,0 +1,820 @@
+Daily Best Bets Request Across All Sports
+
+Objective:  
+Using the attached documents (SportsLine, Covers, WagerTalk, Boyd's Bets, SportsCapping, BetFirm) and relevant web-sourced betting data for the current day, generate a comprehensive, data-driven analysis of the best betting opportunities. Base the analysis on quantitative metrics (e.g., odds, implied probability, historical performance) and expert consensus from the documents. Avoid promotional language and focus on objective insights.
+
+---
+
+ Top 5 Highest Confidence Single Bets 
+
+Definition of Confidence: Combine implied probability (from odds), expert win records (from documents), and strength of analysis (e.g., depth of reasoning or statistical support). Assign a confidence score (0-100%) based on these metrics.  
+Requirements:  
+- List the sport, event (teams/players), pick (e.g., spread, moneyline, total), odds, and confidence score for each.  
+- Source picks from the attached documents or web data, prioritizing expert consensus.  
+- give me the top 5 highest confidence picks no matter the sport not all sports have to be included
+
+---
+
+ Top 5 Most Common Bets
+
+ A. Top 5 Most Mentioned Bets
+Task: Count unique handicapper recommendations for each bet across the six documents for the current day.  
+Requirements:  
+- Count each handicapper’s pick only ONCE, regardless of how many sites publish it (e.g., Jack Jones recommending the same bet on three sites = 1 mention).  
+- List the sport, event, pick, odds, and exact number of unique handicapper mentions (e.g., "3 different handicappers").  
+- If fewer than five bets have multiple mentions, include the most reputable single-handicapper bets to complete the list.
+
+ B. Top 5 Strongest Consensus Picks
+Task: Combine frequency of mentions with expert confidence (from win records), strength of analysis (e.g., detailed stats or trends), and supporting data (e.g., team/player performance).  
+Requirements:  
+- List the sport, event, pick, odds, and a brief explanation of why it’s a strong consensus pick.  
+- Prioritize bets with multiple mentions from different handicappers and robust supporting evidence.
+
+---
+
+ Best Parlays
+
+ 2-Leg Parlay
+Requirements:  
+- Select two bets from any sports for the current day.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds (convert American odds to decimal: (-odds / 100 + 1) if negative, (odds / 100 + 1) if positive).  
+- Justify the combination based on confidence and correlation (if applicable).
+
+ 3-Leg Parlay
+Requirements:  
+- Select three bets from any sports for the current day.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds.  
+- Justify the combination based on confidence and correlation (if applicable).
+
+---
+
+ Most Promising Player Prop Parlay
+Task: Identify the best player prop parlay for the current day.  
+Requirements:  
+- Select at least two player prop bets from the documents (minimum 2 legs, no maximum).  
+- For each leg, list the sport, event, player, prop (e.g., over/under points), odds, and a brief justification (e.g., recent performance, matchup stats).  
+- Calculate and provide the combined parlay odds.
+
+---
+
+ Best Picks by Sport
+Task: For each listed sport, rank the top 3 picks for the current day 
+List each sport then the top 3 picks for the sports that were in the data
+---
+
+ MLB Strikeout Over/Under Picks
+Task: Analyze MLB strikeout betting opportunities for the current day.  
+Subsections:  
+- Best Strikeout Value Bets: Identify top over/under strikeout picks with the best value (odds vs. probability). List pitcher, prop, odds, and justification.  
+- Pitcher-Specific Matchup Data: Provide key stats (e.g., K/9, opponent strikeout rate) for starting pitchers.  
+- Game Environment Factors: Note conditions (e.g., ballpark, weather) impacting strikeouts.  
+- Key Takeaways for Strikeout Bettors: Summarize critical insights for betting strikeouts.
+
+---
+
+ MLB Strikeout Props & First Inning Projections
+Task: Detail MLB strikeout props and first inning (YRFI) projections for the current day.  
+Subsections:  
+- Starting Pitcher K Projections: List top pitchers, projected strikeouts, odds, and supporting data.  
+- First Inning (YRFI) Projections: Estimate Yes/No Run First Inning likelihood with odds and rationale.  
+- First Inning Matchup Highlights (e.g., BOS @ BAL - Bottom of 1st): Highlight key first inning matchups, focusing on pitcher-batter dynamics.  
+- Best YRFI Value Bets: Identify top YRFI bets with odds and justification.  
+First Inning Scoring (YRFI/NRFI)
+ Top 5  First Inning Bets (YRFI or NRFI)
+ Include: Game, Pitcher ERA (1st inning), Leadoff OBP, Odds, Best Bet
+Best NRFI Pitchers (No Runs 1st Inning)
+ List Top 5 Pitchers with strongest case to allow 0 runs in 1st
+Top 5 Games Least Likely to Score in 1st
+ List both teams and matchup (based on pitcher data, leadoff OBP, simulations)
+
+- HR Probability Leaders (First 15 Players): List the top 5 players by home run probability, with odds if available.
+- list top 5 players with highest percentage to get a hit
+- list top putchers to not give up a run in first inning
+- list top players to go over on total bases and under total bases
+-top 3 to score a run 
+
+-top 3 for stolen bases
+
+-top 3 for rbi
+
+top 3 to steal a base
+
+top 3 to score a run
+
+top 3 pitcher to walk 3 plus batters
+
+top 3 pitcher to record 8 + ks
+
+top 3 to earn a quality start
+
+top 3 to score 8 plus runs
+
+top 3 to get 10+ hits
+
+
+top 3 to score a run 
+
+top 3 for stolen bases
+
+top 3 for rbi
+
+list 3 pitchers that have a good over or under of outs for the game
+
+ Top 5 Stadiums Least Likely for HRs (Wind Factors)
+
+---
+
+💰 Big Money Long Shot Parlay
+🎯 Task
+Provide two parlays for a $2 stake:
+5-Leg Long-Shot Parlay (+150 to +400 odds)
+
+
+10–15 Leg High-Probability Parlay (-150 to -110 odds)
+
+
+
+Requirements:  
+- Select 10 bets from any sports in the documents or web data.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds and potential payout for a $2 bet.  
+- Prioritize bets with reasonable confidence but higher odds for maximum payout potential.
+
+---
+
+ Best $20 Pick
+Task: Identify the single best bet for a $20 wager for the current day.  
+Requirements:  
+- List the sport, event, pick, odds, and source.  
+- Calculate the expected return (profit + stake) if successful.  
+- Justify based on highest confidence and optimal risk-reward ratio.
+
+---
+
+ Ladder Pick for the Current Day
+Task: Provide one ladder-style pick for the current day to start a sequence of rollover bets.  
+Requirements:  
+- List the sport, event, pick, odds, and source.  
+- Justify as a high-confidence, low-risk bet suitable for reinvesting winnings over consecutive days.  
+- Calculate potential return for a $10 starting bet.
+
+---
+
+
+---
+
+ Trends or Angles
+Task: Summarize significant trends, patterns, or situational factors from the current day’s data influencing betting decisions.  
+Requirements:  
+- Provide 3-5 bullet points with specific examples (e.g., team performance trends, expert hot streaks, matchup advantages).  
+- Base insights on quantitative data (e.g., ATS records) and qualitative analysis (e.g., expert reasoning).
+
+---
+
+ Additional Instructions
+- Use all six attached documents (SportsLine, Covers, WagerTalk, Boyd's Bets, SportsCapping, BetFirm) as primary sources for the current day’s data.  
+- Supplement with web-sourced betting data only if needed to fill gaps (e.g., missing sports).  
+- Do not invent picks or data; rely strictly on provided sources for the current day.  
+- Exclude College Baseball from Top 5 Highest Confidence Single Bets, reserving it for its own category.  
+- For Soccer, prioritize Pavlos Laguretos if his picks are available in the documents, due to his noted expertise.  
+- Calculate odds and payouts accurately (e.g., convert American odds to decimal for parlays: (-odds / 100 + 1) if negative, (odds / 100 + 1) if positive).  
+- Skip sports with no data or in offseason without comment unless clarification is needed.
+
+—
+
+MAKE IT EASY TO READ IN GOOGLE DOCS USING FONT 10 PLEASE NO TABLES HARD TO COPY AND PASTE PLEASE LIST EVERYTHING UNLESS I T HAS A BLANK CATEGORY SAYING NA OR NO DATA WE CAN LEAVE THAT OFF
+Please make it easy to copy and paste no tables just straight text 
+
+Please give short answers to save space
+Please list all expert picks for today and please make it easy to read short and sweet copy and paste no tables just words so i can copy on a txt file for today
+
+–
+please list out all dimers picks focus on picks and probability also section it out like on sheet. Best bets, mlb picks, wnba picks etc. only list bets from today 
+
+
+--
+⚾ MLB Daily Betting Cheat Sheet Prompt – Streamlined Format
+🎯 Objective
+ Generate daily MLB betting insights using Ballpark Pal data. Include projections, odds, and one-line justifications. No tables. Short answers. Copy/paste-ready. Prioritize top 3–5 picks per category.
+🔢 Strikeout Props
+Top 3 Strikeout Over/Under Bets
+Top 3 Pitchers to Record 8+ Ks
+Top 3 Pitchers with 3+ Walks
+Top 3 Pitchers with Best Over/Under on Outs
+Top 3 Pitchers Likely to Earn a Quality Start
+🧠 Optional Add-ons:
+ Pitcher K/9, opponent K%, projected innings, and park factor.
+🥎 First Inning Scoring (YRFI/NRFI)
+Top 3 NRFI Pitchers (No Run 1st Inning)
+Top 5 Games Least Likely to Score in the 1st Inning (Both Teams Combined)
+Top 3 Games to Target for YRFI (Yes Run 1st Inning)
+Top 3 Teams Likely Not to Score in the 1st
+🕔 First 5 Innings & Team Scoring
+Top 3 F5 Team Total Bets (Over/Under)
+Top 5 Teams to Lead After 5 Innings
+Top 3 Teams to Score 8+ Runs
+Top 3 Teams to Get 10+ Hits
+Top 3 Teams That May Not Bat in the 9th Inning
+💣 Home Run & Player Hitting Props
+Top 3 Players to Hit a Home Run
+Top 3 Players to Get a Hit
+Top 3 Players to Go Over Total Bases
+Top 3 Players to Go Under Total Bases
+Top 3 Players to Record an RBI
+Top 3 Players to Score a Run
+Top 3 Players to Steal a Base
+🏆 Team Bets
+Top 5 Teams Most Likely to Win Today
+Top 3 Best Spread Bets (-1.5)
+Top 3 Games With Highest Team Win % vs. Opponent
+Top 3 to Score First (Team-Specific)
+Best Half-Inning NR Bets (No Runs in Specific Half-Innings)
+Top 5 Half-Innings to Bet “No Runs Will Score”
+ Include: Game, Half-Inning (e.g., Top 1st, Bottom 2nd), Pitcher on mound, leadoff OBP, ERA, justification
+ Example format: "ATL @ MIA – Top 2nd – Fried vs. 6-8 hitters, weak OBP, low SLG – Great NR spot"
+PLEASE LIST TOP 5 Stadiums for no home runs that day because of wind factors
+please answer all questions
+
+
+based on all stats i need a top 12 one from each game cant have multiple picks in same game for under hits then need same for under homeruns so top 12 in hits and homeruns the unders for that day based on match ups and elemets
+
+then i need maybe a top 5 for under in hits but with the better players and homeruns so i can get +5000 or +10000 so i can bet small to win big please help with this if you need help let me know
+
+look at the cheat sheet and find out who is cold and hot etc
+
+please answer all questions
+----
+Using today's MLB lineups, which specific half-innings are the best to target for:
+No Runs Scored (Half-Inning No Run bets)?
+Home Runs Hit (HR during the half-inning)?
+No Home Runs Hit (No HR during the half-inning)?
+ Please analyze today's starting lineups, pitching matchups, ballpark factors, and offensive metrics to create the best list. Format the output so it can be easily imported into Google Sheets or Excel, with columns like Game, Inning, Bet Type (No Run, HR, No HR), and Reason."** please look at wind factor as well short quick response no lengthy response 
+---
+please put all of this together and make it easy to read maybe put the same teams together so group by game  then inning if any duplicates delete
+Game start time earliest to latest group with the teams and innings would make it easy to read headers below so i can put into google sheets
+Game	Start Time	Inning	Bet Type	Ballpark Factor	Reason	Wind Factor	Temperature	Precipitation
+
+—-
+Daily Best Bets Request Across All Sports
+
+Objective:  
+Using the attached documents (SportsLine, Covers, WagerTalk, Boyd's Bets, SportsCapping, BetFirm) and relevant web-sourced betting data for the current day, generate a comprehensive, data-driven analysis of the best betting opportunities. Base the analysis on quantitative metrics (e.g., odds, implied probability, historical performance) and expert consensus from the documents. Avoid promotional language and focus on objective insights.
+
+---
+Top 5 Highest Confidence Single Bets 
+
+Definition of Confidence: Combine implied probability (from odds), expert win records (from documents), and strength of analysis (e.g., depth of reasoning or statistical support). Assign a confidence score (0-100%) based on these metrics.  
+Requirements:  
+- List the sport, event (teams/players), pick (e.g., spread, moneyline, total), odds, and confidence score for each.  
+- Source picks from the attached documents or web data, prioritizing expert consensus.  
+- give me the top 5 highest confidence picks no matter the sport not all sports have to be included
+
+---
+Top 5 Most Common Bets
+A. Top 5 Most Mentioned Bets
+Task: Count unique handicapper recommendations for each bet across the six documents for the current day.  
+Requirements:  
+- Count each handicapper’s pick only ONCE, regardless of how many sites publish it (e.g., Jack Jones recommending the same bet on three sites = 1 mention).  
+- List the sport, event, pick, odds, and exact number of unique handicapper mentions (e.g., "3 different handicappers").  
+- If fewer than five bets have multiple mentions, include the most reputable single-handicapper bets to complete the list.
+
+ B. Top 5 Strongest Consensus Picks
+Task: Combine frequency of mentions with expert confidence (from win records), strength of analysis (e.g., detailed stats or trends), and supporting data (e.g., team/player performance).  
+Requirements:  
+- List the sport, event, pick, odds, and a brief explanation of why it’s a strong consensus pick.  
+- Prioritize bets with multiple mentions from different handicappers and robust supporting evidence.
+
+---
+
+ Best Parlays
+
+ 2-Leg Parlay
+Requirements:  
+- Select two bets from any sports for the current day.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds (convert American odds to decimal: (-odds / 100 + 1) if negative, (odds / 100 + 1) if positive).  
+- Justify the combination based on confidence and correlation (if applicable).
+
+ 3-Leg Parlay
+Requirements:  
+- Select three bets from any sports for the current day.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds.  
+- Justify the combination based on confidence and correlation (if applicable).
+
+---
+
+ Most Promising Player Prop Parlay
+Task: Identify the best player prop parlay for the current day.  
+Requirements:  
+- Select at least two player prop bets from the documents (minimum 2 legs, no maximum).  
+- For each leg, list the sport, event, player, prop (e.g., over/under points), odds, and a brief justification (e.g., recent performance, matchup stats).  
+- Calculate and provide the combined parlay odds.
+
+---
+Best Picks by Sport
+Task: For each listed sport, rank the top 3 picks for the current day 
+List each sport then the top 3 picks for the sports that were in the data
+---
+MLB Strikeout Over/Under Picks
+Task: Analyze MLB strikeout betting opportunities for the current day.  
+Subsections:  
+- Best Strikeout Value Bets: Identify top over/under strikeout picks with the best value (odds vs. probability). List pitcher, prop, odds, and justification.  
+- Pitcher-Specific Matchup Data: Provide key stats (e.g., K/9, opponent strikeout rate) for starting pitchers.  
+- Game Environment Factors: Note conditions (e.g., ballpark, weather) impacting strikeouts.  
+- Key Takeaways for Strikeout Bettors: Summarize critical insights for betting strikeouts.
+
+---
+MLB Strikeout Props & First Inning Projections
+Task: Detail MLB strikeout props and first inning (YRFI) projections for the current day.  
+Subsections:  
+- Starting Pitcher K Projections: List top pitchers, projected strikeouts, odds, and supporting data.  
+- First Inning (YRFI) Projections: Estimate Yes/No Run First Inning likelihood with odds and rationale.  
+- First Inning Matchup Highlights (e.g., BOS @ BAL - Bottom of 1st): Highlight key first inning matchups, focusing on pitcher-batter dynamics.  
+- Best YRFI Value Bets: Identify top YRFI bets with odds and justification.  
+
+Top 5 Stadiums Least Likely for HRs (Wind Factors)
+First Inning Scoring (YRFI/NRFI)
+ Top 5  First Inning Bets (YRFI or NRFI)
+ Include: Game, Pitcher ERA (1st inning), Leadoff OBP, Odds, Best Bet
+Best NRFI Pitchers (No Runs 1st Inning)
+ List Top 5 Pitchers with strongest case to allow 0 runs in 1st
+Top 5 Games Least Likely to Score in 1st
+ List both teams and matchup (based on pitcher data, leadoff OBP, simulations)
+
+top 3 over/under game bets
+
+- HR Probability Leaders (First 15 Players): List the top 3 players by home run probability, with odds if available.
+- list top 3 players with highest percentage to get a hit
+- list top putchers to not give up a run in first inning
+- list top players to go over on total bases and under total bases
+-top 3 to score a run 
+-top 3 for stolen bases
+-top 3 for rbi
+top 3 to steal a base
+top 3 to score a run
+top 3 pitcher to walk 3 plus batters
+top 3 pitcher to record 8 + ks
+top 3 to earn a quality start
+top 3 to score 8 plus runs
+top 3 to get 10+ hits
+top 3 to score a run 
+top 3 for stolen bases
+top 3 for rbi
+list 3 pitchers that have a good over or under of outs for the game
+---
+💰 Big Money Long Shot Parlay
+🎯 Task
+Provide two parlays for a $2 stake:
+5-Leg Long-Shot Parlay (+150 to +400 odds)
+
+10–15 Leg High-Probability Parlay (-150 to -110 odds)
+
+Requirements:  
+- Select 10 bets from any sports in the documents or web data.  
+- List the sport, event, pick, and odds for each leg.  
+- Calculate and provide the combined parlay odds and potential payout for a $2 bet.  
+- Prioritize bets with reasonable confidence but higher odds for maximum payout potential.
+---
+ Best $20 Pick
+Task: Identify the single best bet for a $20 wager for the current day.  
+Requirements:  
+- List the sport, event, pick, odds, and source.  
+- Calculate the expected return (profit + stake) if successful.  
+- Justify based on highest confidence and optimal risk-reward ratio.
+---
+ Ladder Pick for the Current Day
+Task: Provide one ladder-style pick for the current day to start a sequence of rollover bets.  
+Requirements:  
+- List the sport, event, pick, odds, and source.  
+- Justify as a high-confidence, low-risk bet suitable for reinvesting winnings over consecutive days.  
+- Calculate potential return for a $10 starting bet.
+---
+
+ Trends or Angles
+Task: Summarize significant trends, patterns, or situational factors from the current day’s data influencing betting decisions.  
+Requirements:  
+- Provide 3-5 bullet points with specific examples (e.g., team performance trends, expert hot streaks, matchup advantages).  
+- Base insights on quantitative data (e.g., ATS records) and qualitative analysis (e.g., expert reasoning).
+
+---
+Additional Instructions
+- Use all six attached documents (SportsLine, Covers, WagerTalk, Boyd's Bets, SportsCapping, BetFirm) as primary sources for the current day’s data.  
+- Supplement with web-sourced betting data only if needed to fill gaps (e.g., missing sports).  
+- Do not invent picks or data; rely strictly on provided sources for the current day.   
+- For Soccer, prioritize Pavlos Laguretos if his picks are available in the documents, due to his noted expertise.  
+- Calculate odds and payouts accurately (e.g., convert American odds to decimal for parlays: (-odds / 100 + 1) if negative, (odds / 100 + 1) if positive).  
+- Skip sports with no data or in offseason without comment unless clarification is needed.
+
+—
+MAKE IT EASY TO READ IN GOOGLE DOCS USING FONT 10 PLEASE NO TABLES HARD TO COPY AND PASTE PLEASE LIST EVERYTHING UNLESS I T HAS A BLANK CATEGORY SAYING NA OR NO DATA WE CAN LEAVE THAT OFF
+Please make it easy to copy and paste no tables just straight text 
+
+Please give short answers to save space
+
+–
+
+Can you review the overviews and tell me which one is the most accurate and complete for today? I’m not focused on how it looks—I care more about the quality of the data. I want the one that clearly took the time to go through all the information and pulled together the most reliable insights. It’s not about guessing—it’s about using the expert data the right way. I just need a quick ranking with a brief reason why one stands out as the best.
+
+Please rewrite the best overview in a format that’s easy to copy and paste into Google Docs. Use font size 10, avoid tables since they’re hard to format, and make it simple to read. Bold the headers and the bets. If a category has no data or is blank, you can leave it off.
+
+
+--
+✅ Daily Betting Request (Bankroll: $2000)
+1. Top 3 Straight Bets (3% of bankroll each = $60 per bet)
+Choose the 3 best single-game bets (spread, moneyline, or team total).
+Focus on high-confidence picks backed by matchups, data, and expert consensus.
+2. Top 3 Parlays (Mix & Match, $20 each)
+Create 3 parlays using 3 to 4 legs each.
+You can mix and match:
+Game props (team total, spread, over/under) & Player props (strikeouts, hits, RBIs, HRs, etc.) & Quarters/halves in NBA games & Alt spreads (e.g., Pacers +10) all do not have to be straight games just make the best parlays
+MLB lines
+3. Top 3 Strikeout Props (Over/Under)
+Pick the top 3 strikeout over/unders for pitchers based on projected K rates, opposing K%, and park factors.
+4. Top 3 NRFI (No Run First Inning) Bets
+Choose the best 3 games for NRFI, backed by pitching matchups, wind, park, and lineup order.
+5. Top 3 Teams Not to Score in the First Inning
+Identify 3 teams least likely to score in the first inning based on lineup structure and opposing pitcher.
+6. Top 3 Teams to Bet Under 4.5 Runs
+Pick the 3 teams most likely to stay under 4.5 runs today, using current season averages and matchup data.
+7. Max Confidence Bet (10% of bankroll = $200)
+Choose 1 high-confidence bet (single game or prop) to place a max wager.
+8. top 3 overs for baseball
+9. top 3 unders for baseball
+9. top 3 first 5 inning winner 
+Please give short answers to save space
+
+----
+
+please analyze each bet and lay out the best for today each parlay mix and match and anything else you can think of to have edge Please give short answers to save space
+
+
+Absolutely, I can help you structure and optimize your approach to betting on **under hits** and **under home runs** props for MLB games. Let's break this down into a clear, actionable plan based on your goals.
+
+---
+
+## ✅ Your Goals Recap:
+
+1. You want:
+   - A **Top 12 list of under-hits** picks (1 per game).
+   - A **Top 12 list of under-home run** picks (1 per game).
+   - No multiple picks from the same game.
+   - Based on matchups, pitcher quality, ballpark factors, weather, etc.
+
+2. Then, from those top 12s, you want:
+   - A **Top 5 "Best Bets"** that are more aggressive but have higher odds (+5000 or +10000).
+   - These would be used for small parlay bets with big upside.
+
+---
+
+## 🧠 What Stats & Factors You Should Use
+
+To build accurate lists, here’s what you should consider for each player/bet:
+
+### For Under Hits:
+- Player average / OBP
+- Recent form (last 7/14 days)
+- Pitcher they’re facing:
+  - Groundball % (higher = fewer hits likely)
+  - K% (high K pitchers lower hit chances)
+- Park factor (e.g., Coors Field = more hits; Petco = fewer)
+- Weather (wind blowing in/out, rain delay impact)
+- Handedness matchup (LHB vs LHP, RHB vs RHP)
+
+### For Under Home Runs:
+- Player ISO / HR/FB rate
+- Opposing pitcher's HR/9 rate
+- Ballpark HR factor (Coors = high, Tropicana = low)
+- Wind direction/weather
+- Spray chart tendencies (if hitting into wind)
+
+---
+
+## 📋 Suggested Format for Your Lists
+
+Here’s how you can structure your daily report:
+
+---
+
+### 🔽 Top 12 Under Hit Prop Picks (One Per Game)
+
+| Rank | Player         | Team | Opponent | Pitcher | Reasoning |
+|------|----------------|------|----------|---------|-----------|
+| 1    | Juan Soto      | SD   | @ NYY    | Rodón   | Lefty vs elite lefty, CitiField-like park |
+| 2    | Rafael Devers  | BOS  | vs BAL   | Kremer  | Grounder-heavy pitcher, Fenway not friendly to pull HRs |
+| ...  | ...            | ...  | ...      | ...     | ...       |
+
+> Only one pick per game. Focus on players with <1.5 hit prop lines and strong negative matchup factors.
+
+---
+
+### 🏟️ Top 12 Under HR Prop Picks (One Per Game)
+
+| Rank | Player         | Team | Opponent | Pitcher | Reasoning |
+|------|----------------|------|----------|---------|-----------|
+| 1    | Aaron Judge    | NYY  | vs SD    | Darvish | Elite splitter, weak platoon advantage |
+| 2    | Pete Alonso    | NYM  | vs PHI   | Wheeler | HR suppressor, Citizens Bank wind blowing in |
+| ...  | ...            | ...  | ...      | ...     | ...       |
+
+> Again, one pick per game. Look at HR/fly ball rates, opposing pitcher HR suppression, and stadium trends.
+
+---
+
+### 💥 Top 5 Aggressive Under Prop Bets (+5000+ Odds)
+
+| Bet Type | Player       | Line | Odds | Reasoning |
+|----------|--------------|------|------|-----------|
+| Under Hits | Luis Robert Jr. | 1.5 | +6500 | Facing Cease, who induces lots of soft contact |
+| Under HR | Shohei Ohtani | 0.5 | +8000 | In Seattle, no HR in last 10 games vs righties |
+| Under Hits | Ronald Acuna Jr. | 1.5 | +7000 | Turner is a ground-ball machine vs sinkerballer |
+| Under HR | Yordan Alvarez | 0.5 | +9000 | Minute Maid not helping him today, tough matchup |
+| Under Hits | Francisco Lindor | 1.5 | +5500 | Petco, vs Luciani (groundball RHP) |
+
+> These are your “best of the best” under plays that bookmakers are giving high odds on — perfect for low-stakes/high-reward parlays.
+
+---
+
+## 🛠 Tools & Resources You Need
+
+- [FanGraphs](https://www.fangraphs.com/)
+- [Baseball Savant Spray Charts](https://baseballsavant.mlb.com/)
+- [ESPN Matchup Tool](https://www.espn.com/mlb/battervspitcher)
+- [Odds tools like Action Network, DraftKings, or Caesars Sportsbook](https://actionnetwork.com/mlb)
+- [Weather.com or StadiumCast for game-day conditions](https://stadiumcast.netlify.app/)
+- also use the ballparkcheatsheet
+- mlb1.txt and mlb2.txt
+---
+
+## 📈 Bonus Strategy: Parlay Tips
+
+If you're playing these as a parlay:
+
+- Use **3–5 legs max** (more than that drops win probability fast)
+- Stick to **Under 0.5 HR** or **Under 1.5 Hits**
+- Look for **+5000 to +10000** odds on each leg
+- Bet $5–$10 per parlay for a shot at $250–$1000+
+- Track performance weekly to refine your model
+
+
+-------------------
+
+You're extremely close to the perfect version of your task prompt. Here's a **cleaned-up, crystal-clear version** of your instructions — designed for **any AI or analyst** to follow with **zero confusion** or misinterpretation:
+
+---
+REVISED REQUEST TEMPLATE
+> Please compile consensus betting picks for today across ALL sports using the rules below.
+> Output must be plain text, copy-ready, no tables.
+---
+ 🧩 Consensus-Counting Rules
+1. Treat each unique bet as its own line.
+   Examples: “Yankees ML” ≠ “Yankees -1.5” ≠ “Yankees F5 ML”.
+2. One vote per capper per bet.
+   If the same capper lists the same bet multiple ways (write-up, straight, parlay), count it just once.
+3. Parlays: count each leg as one vote for that capper (never double-count).
+4. All sports included (MLB, NBA, NHL, WNBA, Soccer, Golf, Tennis, etc.).
+5. Player props only count if 2+ cappers have the exact same player & stat line.
+6. High-confidence tag (🔥): add 🔥 if the play is 3+ units or supported by 3+ cappers.
+---
+ 📊 Required Output Sections (in order)
+1. Top 5 Overall Consensus Picks
+    Rank by number of unique cappers backing each bet.
+    Show line/price if given.
+    Add 🔥 when rule 6 is met.
+    After the pick, list the supporting cappers separated by commas.
+2. Top 5 Exact Parlay Combos
+    List only the full combos that appear from cappers.
+    One line per unique combo.
+    After the combo, list the cappers who have that exact parlay.
+3. Top 3 Player Props (if any meet rule 5)
+    Same formatting as section 1.
+4. Top 3 Picks by Sport (Optional, include only if 2+ cappers on a bet)
+    Create a mini-list for each sport represented (MLB, NBA, WNBA, etc.).
+    Rank by number of votes within that sport (ties OK).
+    Maximum three lines per sport.
+---
+ 📝 Output Example (truncated)
+1 Yankees -1.5 (+110) – 4 cappers 🔥  
+  Bruce Marshall, Jimmy Adams, Pickwise, SmartMoneySports
+2 Pacers/Thunder Over 214.5 (-110) – 3 cappers 🔥  
+  Bruce Marshall, CashItBaby, Pickwise
+…
+(Repeat similar style for sections 2-4.)
+
+add in tp 5 high unit plays
+
+HIGH UNIT PLAYS
+
+
+
+🧠 Daily Best Bets Request Across All Sports – AI Instructions
+🎯 Objective
+Using expert sources (SportsLine, Covers, WagerTalk, Boyd’s Bets, SportsCapping, BetFirm) and real-time betting data (DraftKings, FanDuel, ESPN, etc.), generate a data-driven daily analysis for current DAY.
+Base all picks on quantitative metrics (odds, implied probability, expert win rate, statistical support).
+
+
+Avoid promotional or speculative language. Use clean, objective insights only.
+
+
+If a sport isn’t active or data is unavailable, note it clearly and skip.
+
+
+
+🔝 Top 5 Highest Confidence Single Bets
+🎯 Task
+List five single bets (excluding College Baseball) with the highest confidence.
+📊 Confidence Score
+Calculated as:
+40% Implied Probability
+
+
+40% Expert Win Rate
+
+
+20% Statistical Support (0–100%)
+
+
+✅ Format
+Sport
+Event
+Pick
+Odds
+Confidence Score
+Source
+Justification (1-liner)
+
+
+📈 Top 5 Most Common Bets
+🅰️ Most Mentioned Bets
+Count each expert once, regardless of platform.
+| Sport | Event | Pick | Odds | Unique Mentions | Source | Justification (1-liner) |
+🅱️ Strongest Consensus Picks
+Combine frequency, expert win rate, and stats to determine consensus strength.
+| Sport | Event | Pick | Odds | Source | Justification (2–3 sentences) |
+
+🧩 Best Parlays
+✅ 2-Leg Parlay
+| Sport | Event | Pick | Odds | Justification (1-liner) |
+Summary:
+Calculate combined decimal odds → convert to American odds
+
+
+1–2 sentence rationale on low correlation and high confidence
+
+
+✅ 3-Leg Parlay
+Same format, just include one additional bet.
+
+🎯 Most Promising Player Prop Parlay
+| Sport | Event | Player (Team) | Prop | Odds | Justification (1-liner) |
+Parlay Info:
+2–4 legs
+
+
+Ensure uncorrelated props
+
+
+Combine decimal odds → convert to American
+
+
+Add short rationale
+
+
+
+🏅 Best Picks by Sport
+| Rank | Sport | Event | Pick | Odds | Confidence Score | Source |
+Note:
+ Skip offseason sports (e.g., NFL) and clearly state "No data."
+
+⚾ MLB Strikeout Over/Under Picks
+🧠 Subsections
+Best Value Bets
+ | Pitcher | Prop | Odds | Justification | Source |
+
+
+Pitcher Stats: K/9, opponent K%, last 3 starts
+
+
+Game Factors: Ballpark, weather, umpire trends
+
+
+1st 5 Innings Projections: Run projections & strikeout influence
+
+
+Key Takeaways: 2–3 bullets with insights
+
+
+
+⚾ MLB Strikeout & YRFI/NRFI Projections
+| Game | Bet | Odds | Justification (1-liner) | Source |
+Player Props
+Top 5 Home Run Candidates
+
+
+Top 5 Hit Probabilities
+
+
+Top 3 Total Bases Over
+
+
+Pitcher Props
+Top 3 NRFI Starters
+
+
+Top 3 for 8+ Ks
+
+
+Top 3 for Quality Start
+
+
+
+⚾ College Baseball – Highest Confidence Pick
+| Sport | Event | Pick | Odds | Confidence Score | Source | Justification (1-liner) |
+
+⚾ Top 5 Hard Rock College Baseball Bets
+| Rank | Team | Pick | Odds | Win Probability % | Source | Justification (1-liner) |
+
+💰 Big Money Long Shot Parlay
+🎯 Task
+Provide two parlays for a $2 stake:
+5-Leg Long-Shot Parlay (+150 to +400 odds)
+
+
+10–15 Leg High-Probability Parlay (-150 to -110 odds)
+
+
+✅ Format
+| Sport | Event | Pick | Odds | Justification (1-liner) |
+Summary:
+Combined decimal → American odds
+
+
+Calculate potential payout
+
+
+1–2 sentence rationale per parlay
+
+
+
+💵 Best $20 Pick
+| Sport | Event | Pick | Odds | Confidence Score | Source | Expected Return |
+Justification: Short 1–2 sentence rationale
+
+🪜 Ladder Pick (Start of Daily Profit Rollover)
+| Sport | Event | Pick | Odds | Confidence Score | Source | $10 Return |
+Justification: 1–2 sentences explaining edge
+
+🔍 Trends & Angles (Stat-Based Insights)
+Bullet 1: ATS trends, expert streaks, or weather insights
+
+
+Bullet 2: Matchup edge or betting angle
+
+
+Bullet 3: Market inefficiency, public fade alert, etc.
+
+
+
+📎 Additional Instructions
+Sources: Prioritize expert documents. Use web data when needed (cite clearly).
+
+
+Team Names: Always include them for props (especially players).
+
+
+Format: Font size 10, clean tables, copy-paste ready
+
+
+Odds & Math:
+
+
+Implied Probability: (-odds / (odds + 100)) or (100 / (odds + 100))
+
+
+Decimal = (-odds/100 + 1) or (odds/100 + 1)
+
+
+Combined odds = Multiply decimals → Convert back to American
+
+
+Expected Return: (stake × odds) + stake
+
+
+
+Want this in a Google Doc or Word template? Let me know and I’ll generate one for daily tracking. Also let me know if you'd like:
+A new 5-leg long-shot parlay
+
+
+A specific parlay count (e.g., exactly 10 or 15)
+
+
+To add/remove certain bet types or categories
+
+
+Just say the word and I’ll update instantly.
+
+
+
+need the answers to all this daily with all the picks we have and posted daily on my dailyaibetting website
+
