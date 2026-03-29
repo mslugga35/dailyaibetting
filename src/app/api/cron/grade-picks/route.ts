@@ -302,17 +302,8 @@ export async function GET(request: Request) {
       throw new Error(`Failed to fetch picks: ${fetchError.message}`);
     }
     
-    if (!pendingPicks || pendingPicks.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No pending picks to grade',
-        graded: 0,
-        duration: Date.now() - startTime,
-      });
-    }
-    
     // 2. Group by sport/date and fetch games
-    const uniqueKeys = new Set(pendingPicks.map(p => `${p.sport}:${p.date}`));
+    const uniqueKeys = new Set((pendingPicks || []).map(p => `${p.sport}:${p.date}`));
     const gamesByKey = new Map<string, Map<string, GameScore>>();
     
     for (const key of uniqueKeys) {
@@ -328,7 +319,7 @@ export async function GET(request: Request) {
     let pushes = 0;
     const gradedPicks: any[] = [];
     
-    for (const pick of pendingPicks) {
+    for (const pick of (pendingPicks || [])) {
       const key = `${pick.sport}:${pick.date}`;
       const games = gamesByKey.get(key) || new Map();
       
@@ -369,20 +360,95 @@ export async function GET(request: Request) {
       }
     }
     
-    const winPct = wins + losses > 0 
-      ? Math.round((wins / (wins + losses)) * 1000) / 10 
+    const winPct = wins + losses > 0
+      ? Math.round((wins / (wins + losses)) * 1000) / 10
       : 0;
-    
+
+    // 4. Grade AI picks (ai_picks table — structured fields, no text parsing needed)
+    let aiGraded = 0;
+    let aiWins = 0;
+    let aiLosses = 0;
+
+    const { data: pendingAI } = await db
+      .from('ai_picks')
+      .select('id, pick_date, sport, team, opponent, bet_type, line')
+      .eq('result', 'PENDING')
+      .gte('pick_date', cutoffDate.toISOString().split('T')[0]);
+
+    if (pendingAI && pendingAI.length > 0) {
+      // Fetch games for AI picks (reuse cache when possible)
+      for (const pick of pendingAI) {
+        const key = `${pick.sport}:${pick.pick_date}`;
+        if (!gamesByKey.has(key)) {
+          gamesByKey.set(key, await fetchCompletedGames(pick.sport, pick.pick_date));
+        }
+        const games = gamesByKey.get(key) || new Map();
+
+        const teamStd = standardizeTeamName(pick.team, pick.sport);
+        const game = games.get(teamStd) || games.get(pick.team.toLowerCase());
+        if (!game) continue;
+
+        // Grade using structured fields directly
+        const betType = (pick.bet_type || '').toUpperCase();
+        let result: GradeResult = 'PENDING';
+
+        if (betType === 'ML') {
+          result = gradeMoneyline(pick.team, pick.sport, game);
+        } else if (betType === 'SPREAD') {
+          result = gradeSpread(pick.team, pick.line, pick.sport, game);
+        } else if (betType === 'OVER' || betType === 'UNDER') {
+          result = gradeOverUnder(pick.line, betType, game);
+        } else if (betType === 'NRFI') {
+          // NRFI/YRFI can't be graded from basic scores — skip for now
+          continue;
+        } else if (betType === 'YRFI') {
+          continue;
+        } else if (betType.startsWith('K_')) {
+          // K props need player stats — skip for now (future: ESPN box scores)
+          continue;
+        } else {
+          // Fallback: try ML
+          result = gradeMoneyline(pick.team, pick.sport, game);
+        }
+
+        if (result === 'PENDING') continue;
+
+        const finalScore = `${game.awayTeam} ${game.awayScore} @ ${game.homeTeam} ${game.homeScore}`;
+
+        const { error: aiUpdateError } = await db
+          .from('ai_picks')
+          .update({
+            result,
+            final_score: finalScore,
+            graded_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', pick.id);
+
+        if (!aiUpdateError) {
+          aiGraded++;
+          if (result === 'WIN') aiWins++;
+          else if (result === 'LOSS') aiLosses++;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Graded ${graded} picks`,
-      stats: {
-        pending: pendingPicks.length,
+      message: `Graded ${graded} consensus + ${aiGraded} AI picks`,
+      consensus: {
+        pending: pendingPicks?.length || 0,
         graded,
         wins,
         losses,
         pushes,
         winPct,
+      },
+      aiPicks: {
+        pending: pendingAI?.length || 0,
+        graded: aiGraded,
+        wins: aiWins,
+        losses: aiLosses,
       },
       picks: gradedPicks,
       duration: Date.now() - startTime,

@@ -238,6 +238,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                 <TabsTrigger value="featured">Featured</TabsTrigger>
                 {data.mlbAnalysis && <TabsTrigger value="mlb">MLB</TabsTrigger>}
                 {data.aiReport && <TabsTrigger value="ai-picks">AI Picks</TabsTrigger>}
+                {data.botPicks?.length > 0 && <TabsTrigger value="bot">Bot Picks</TabsTrigger>}
                 <TabsTrigger value="trends">Trends</TabsTrigger>
               </TabsList>
             )}
@@ -674,6 +675,81 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                       className="prose prose-sm dark:prose-invert max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:border-b [&_h2]:border-border [&_h2]:pb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-primary [&_li]:ml-4 [&_li]:mb-1 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:my-2 [&_strong]:text-foreground"
                       dangerouslySetInnerHTML={{ __html: formattedReport }}
                     />
+                  </CardContent>
+                </Card>
+              </Section>
+            )}
+
+            {/* Bot Picks Tab — AI-generated tracked picks */}
+            {data.botPicks?.length > 0 && (
+              <Section value="bot" viewAll={viewAll} className="space-y-6 mt-6">
+                {/* Bot Record Banner */}
+                {data.botRecord && data.botRecord.wins + data.botRecord.losses > 0 && (
+                  <Card className="border-primary/50 bg-primary/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-3">
+                          <Zap className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Bot Record</div>
+                            <div className="text-2xl font-bold">
+                              {data.botRecord.wins}W - {data.botRecord.losses}L
+                              {data.botRecord.pushes > 0 && ` - ${data.botRecord.pushes}P`}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-3xl font-bold text-primary">{data.botRecord.winPct ?? 0}%</div>
+                          <div className="text-xs text-muted-foreground">Win Rate</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Today's Bot Picks */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      Bot Picks — Today
+                    </CardTitle>
+                    <CardDescription>
+                      AI-generated picks locked before games start. Graded automatically.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {data.botPicks.map((pick, index) => (
+                        <div key={index} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border">
+                          <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
+                            pick.confidence >= 8 ? 'bg-green-500 text-green-950' :
+                            pick.confidence >= 6 ? 'bg-yellow-500 text-yellow-950' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {pick.confidence}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline">{pick.sport}</Badge>
+                              <Badge variant="secondary">{pick.bet_type}</Badge>
+                              {pick.result !== 'PENDING' && (
+                                <Badge variant={pick.result === 'WIN' ? 'default' : pick.result === 'LOSS' ? 'destructive' : 'secondary'}>
+                                  {pick.result}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="font-semibold">
+                              {pick.team} {pick.line && <span className="text-primary">{pick.line}</span>}
+                            </div>
+                            {pick.opponent && (
+                              <div className="text-sm text-muted-foreground">vs {pick.opponent}</div>
+                            )}
+                            <div className="text-xs text-muted-foreground mt-1">{pick.reasoning}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </CardContent>
                 </Card>
               </Section>

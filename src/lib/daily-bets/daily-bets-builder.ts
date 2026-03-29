@@ -115,6 +115,10 @@ export interface DailyBetsOutput {
   // AI Analysis
   aiReport: string | null;
   aiReportGeneratedAt: string | null;
+
+  // Bot Picks
+  botPicks: Array<{ sport: string; team: string; opponent: string; bet_type: string; line: string | null; confidence: number; reasoning: string; result: string }>;
+  botRecord: { wins: number; losses: number; pushes: number; pending: number; winPct: number | null } | null;
 }
 
 /**
@@ -657,5 +661,8 @@ export function buildDailyBets(
 
     aiReport: null,
     aiReportGeneratedAt: null,
+
+    botPicks: [],
+    botRecord: null,
   };
 }

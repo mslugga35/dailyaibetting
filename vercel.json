@@ -10,6 +10,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/ai-picks",
+      "schedule": "0 14 * * *"
+    },
+    {
       "path": "/api/cron/grade-picks",
       "schedule": "0 6 * * *"
     },
