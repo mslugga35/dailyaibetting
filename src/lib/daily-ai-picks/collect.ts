@@ -29,6 +29,7 @@ export interface ReportContext {
   prizePicks: PrizePicksProp[];
   mlbSchedule: MLBGame[];
   espnSchedule: Record<string, ESPNGame[]>;
+  polymarket: Array<{ question: string; probability: number; volume24hr: number }>;
 }
 
 interface ExpertPick {
@@ -277,14 +278,55 @@ async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
   return schedule;
 }
 
+// ── Polymarket Sports Odds ───────────────────────────────────────────────────
+
+interface PolymarketOdds {
+  question: string;
+  probability: number;
+  volume24hr: number;
+}
+
+async function collectPolymarket(): Promise<PolymarketOdds[]> {
+  try {
+    const res = await fetch(
+      'https://gamma-api.polymarket.com/markets?closed=false&active=true&limit=100&order=volume24hr&ascending=false',
+      { next: { revalidate: 3600 } }
+    );
+    if (!res.ok) return [];
+    const markets = await res.json();
+
+    // Filter to sports markets (team vs team outcomes)
+    return (markets as Array<{ question: string; outcomePrices?: string; volume24hr?: number }>)
+      .filter(m => {
+        const q = (m.question || '').toLowerCase();
+        return q.includes(' vs ') || q.includes('win on') || (q.includes('will') && q.includes('win'));
+      })
+      .map(m => {
+        let prob = 0.5;
+        if (m.outcomePrices) {
+          try { prob = parseFloat(JSON.parse(m.outcomePrices)[0]) || 0.5; } catch { /* skip */ }
+        }
+        return {
+          question: m.question,
+          probability: prob,
+          volume24hr: m.volume24hr || 0,
+        };
+      })
+      .filter(m => m.volume24hr > 1000); // Only liquid markets
+  } catch {
+    return [];
+  }
+}
+
 // ── Collect All ───────────────────────────────────────────────────────────────
 
 export async function collectAllData(): Promise<ReportContext> {
-  const [expertPicks, prizePicks, mlbSchedule, espnSchedule] = await Promise.all([
+  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket] = await Promise.all([
     collectExpertPicks(),
     collectPrizePicks(),
     collectMLBSchedule(),
     collectESPN(),
+    collectPolymarket(),
   ]);
 
   return {
@@ -298,5 +340,6 @@ export async function collectAllData(): Promise<ReportContext> {
     prizePicks,
     mlbSchedule,
     espnSchedule,
+    polymarket,
   };
 }

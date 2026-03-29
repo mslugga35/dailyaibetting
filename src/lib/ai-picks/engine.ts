@@ -147,6 +147,16 @@ function buildPickUserPrompt(data: ReportContext): string {
     }
   }
 
+  // Polymarket real-money odds (crowd-sourced probabilities)
+  if (data.polymarket?.length > 0) {
+    sections.push('\n## POLYMARKET ODDS (real-money markets)');
+    for (const m of data.polymarket.slice(0, 20)) {
+      const pct = Math.round(m.probability * 100);
+      sections.push(`- ${m.question}: ${pct}% YES ($${Math.round(m.volume24hr).toLocaleString()} 24h vol)`);
+    }
+    sections.push('Note: Polymarket odds reflect where real money is placed. Use as confirmation/contradiction of other signals.');
+  }
+
   sections.push('\n---\nGenerate 8-15 structured picks as a JSON array. Output ONLY valid JSON, no markdown fences.');
 
   return sections.join('\n');

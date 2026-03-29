@@ -124,6 +124,15 @@ export function buildUserPrompt(data: ReportContext): string {
     }
   }
 
+  // ── Polymarket Odds ───────────────────────────────────────────────────────
+  if (data.polymarket?.length > 0) {
+    sections.push('\n## POLYMARKET ODDS (real money)\n');
+    data.polymarket.slice(0, 20).forEach(m => {
+      const pct = Math.round(m.probability * 100);
+      sections.push(`- ${m.question}: ${pct}% YES ($${Math.round(m.volume24hr).toLocaleString()} vol)`);
+    });
+  }
+
   // ── REPORT INSTRUCTIONS ───────────────────────────────────────────────────
   sections.push(`
 ---
