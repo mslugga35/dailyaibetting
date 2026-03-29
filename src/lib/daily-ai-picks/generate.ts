@@ -15,6 +15,8 @@
 import { collectAllData, type ReportContext } from './collect';
 import { buildSystemPrompt, buildUserPrompt } from './prompt';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getTodayET } from '@/lib/utils/date';
+import { callOpenRouter } from '@/lib/utils/openrouter';
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (3x/day refresh via cron)
 
@@ -23,7 +25,7 @@ const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (3x/day refresh via cron)
 async function getCachedReport(allowStale = false): Promise<{ report: string; generatedAt: string } | null> {
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayET();
 
     const { data } = await supabase
       .from('daily_ai_report')
@@ -49,7 +51,7 @@ async function getCachedReport(allowStale = false): Promise<{ report: string; ge
 async function cacheReport(report: string, context: ReportContext): Promise<void> {
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayET();
 
     // Upsert — update if today's row exists, insert if not
     await supabase.from('daily_ai_report').upsert({
@@ -64,38 +66,6 @@ async function cacheReport(report: string, context: ReportContext): Promise<void
   } catch {
     // Non-fatal — page still works without cache
   }
-}
-
-// ── OpenRouter API Call ───────────────────────────────────────────────────────
-
-async function callClaude(system: string, user: string): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
-
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://dailyaibetting.com',
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4-6',
-      max_tokens: 12000,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 // ── Main Generator ────────────────────────────────────────────────────────────
@@ -149,7 +119,7 @@ export async function generateFreshReport(): Promise<GenerateResult> {
   const context = await collectAllData();
   const system = buildSystemPrompt();
   const user = buildUserPrompt(context);
-  const report = await callClaude(system, user);
+  const report = await callOpenRouter(system, user, { maxTokens: 12000 });
 
   await cacheReport(report, context);
 

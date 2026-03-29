@@ -306,11 +306,10 @@ export async function GET(request: Request) {
     const uniqueKeys = new Set((pendingPicks || []).map(p => `${p.sport}:${p.date}`));
     const gamesByKey = new Map<string, Map<string, GameScore>>();
     
-    for (const key of uniqueKeys) {
+    await Promise.all([...uniqueKeys].map(async (key) => {
       const [sport, date] = key.split(':');
-      const games = await fetchCompletedGames(sport, date);
-      gamesByKey.set(key, games);
-    }
+      gamesByKey.set(key, await fetchCompletedGames(sport, date));
+    }));
     
     // 3. Grade picks
     let graded = 0;
@@ -433,24 +432,25 @@ export async function GET(request: Request) {
       }
     }
 
-    // Post AI grading results to Discord
+    // Post AI grading results to Discord (fire-and-forget)
     if (aiGraded > 0) {
       const aiWebhook = process.env.AI_PICKS_DISCORD_WEBHOOK;
       if (aiWebhook) {
-        const bankroll = 1000 + (aiWins * 9.09) - (aiLosses * 10);
-        const aiWinPct = aiWins + aiLosses > 0 ? Math.round((aiWins / (aiWins + aiLosses)) * 1000) / 10 : 0;
+        // Query lifetime record for accurate bankroll
+        const { data: record } = await db.from('ai_picks_overall').select('*').single();
+        const totalW = record?.wins || 0;
+        const totalL = record?.losses || 0;
+        const bankroll = 1000 + (totalW * 9.09) - (totalL * 10);
+        const lifetimeWinPct = record?.win_pct || 0;
         const msg = `## 📊 AI Pick Grading — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\n` +
-          `**Graded today:** ${aiGraded} picks\n` +
-          `**Results:** ${aiWins}W - ${aiLosses}L\n` +
-          `**Win%:** ${aiWinPct}% | **Bankroll:** $${bankroll.toFixed(2)}\n` +
+          `**Today:** ${aiWins}W - ${aiLosses}L | **Lifetime:** ${totalW}W - ${totalL}L (${lifetimeWinPct}%)\n` +
+          `**Bankroll:** $${bankroll.toFixed(2)}\n` +
           `*$10 flat bets from $1,000 start*`;
-        try {
-          await fetch(aiWebhook, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: msg }),
-          });
-        } catch { /* non-fatal */ }
+        fetch(aiWebhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: msg }),
+        }).catch(() => {}); // fire-and-forget
       }
     }
 

@@ -14,6 +14,7 @@ import {
 import { buildDailyBets } from '@/lib/daily-bets/daily-bets-builder';
 import { filterToTodaysGamesAsync } from '@/lib/consensus/game-schedule';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getTodayAIPicks } from '@/lib/ai-picks/engine';
 import { getTodayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
 
@@ -35,27 +36,14 @@ async function fetchAiReport(): Promise<{ aiReport: string | null; aiReportGener
   return { aiReport: null, aiReportGeneratedAt: null };
 }
 
-async function fetchBotPicks(): Promise<{
-  botPicks: Array<{ sport: string; team: string; opponent: string; bet_type: string; line: string | null; confidence: number; reasoning: string; result: string }>;
-  botRecord: { wins: number; losses: number; pushes: number; pending: number; winPct: number | null } | null;
-}> {
+async function fetchBotData() {
   try {
-    const supabase = await createServerSupabaseClient();
-    const today = getTodayET();
-
-    const [picksRes, recordRes] = await Promise.all([
-      supabase
-        .from('ai_picks')
-        .select('sport, team, opponent, bet_type, line, confidence, reasoning, result')
-        .eq('pick_date', today)
-        .order('confidence', { ascending: false }),
-      supabase.from('ai_picks_overall').select('*').single(),
+    const [botPicks, supabase] = await Promise.all([
+      getTodayAIPicks(),
+      createServerSupabaseClient(),
     ]);
-
-    return {
-      botPicks: (picksRes.data || []) as typeof picksRes.data & Array<{ sport: string; team: string; opponent: string; bet_type: string; line: string | null; confidence: number; reasoning: string; result: string }>,
-      botRecord: recordRes.data as { wins: number; losses: number; pushes: number; pending: number; winPct: number | null } | null,
-    };
+    const { data: botRecord } = await supabase.from('ai_picks_overall').select('*').single();
+    return { botPicks, botRecord };
   } catch {
     return { botPicks: [], botRecord: null };
   }
@@ -67,7 +55,7 @@ export async function GET() {
     const [rawPicks, aiReportResult, botData] = await Promise.all([
       getAllPicksFromSources(),
       fetchAiReport(),
-      fetchBotPicks(),
+      fetchBotData(),
     ]);
 
     // Normalize picks
@@ -100,8 +88,8 @@ export async function GET() {
       ...dailyBets,
       aiReport,
       aiReportGeneratedAt,
-      botPicks: botData.botPicks,
-      botRecord: botData.botRecord,
+      botPicks: botData?.botPicks,
+      botRecord: botData?.botRecord,
     });
   } catch (error) {
     logger.error('Daily Bets API', 'Request failed:', error);

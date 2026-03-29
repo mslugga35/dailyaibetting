@@ -14,6 +14,7 @@
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getTodayET } from '@/lib/utils/date';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -99,7 +100,7 @@ interface ESPNGame {
 async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayET();
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
     const { data: picks, error } = await supabase
@@ -135,7 +136,7 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
 // ── BallparkPal Cache ─────────────────────────────────────────────────────────
 
 function collectBallparkPal(): BallparkPalData | null {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayET();
   const combinedFile = join(BPP_DIR, today, 'combined.json');
 
   if (existsSync(combinedFile)) {
@@ -207,7 +208,7 @@ async function collectPrizePicks(): Promise<PrizePicksProp[]> {
 
 async function collectMLBSchedule(): Promise<MLBGame[]> {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayET();
     const res = await fetch(
       `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${today}&hydrate=probablePitcher,team`,
       { next: { revalidate: 3600 } }

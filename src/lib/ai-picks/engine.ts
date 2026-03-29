@@ -13,6 +13,7 @@
 import { collectAllData, type ReportContext } from '@/lib/daily-ai-picks/collect';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
+import { callOpenRouter } from '@/lib/utils/openrouter';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,39 +191,6 @@ function buildPickUserPrompt(data: ReportContext): string {
   return sections.join('\n');
 }
 
-// ── Claude API ───────────────────────────────────────────────────────────────
-
-async function callClaude(system: string, user: string): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
-
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://dailyaibetting.com',
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4-6',
-      max_tokens: 6000,
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
-}
-
 // ── Parse + Validate ─────────────────────────────────────────────────────────
 
 function parsePicks(raw: string): AIPick[] {
@@ -381,16 +349,16 @@ export async function generateAIPicks(force = false): Promise<EngineResult> {
   // Build prompts and call Claude
   const system = buildPickSystemPrompt();
   const user = buildPickUserPrompt(context);
-  const raw = await callClaude(system, user);
+  const raw = await callOpenRouter(system, user, { maxTokens: 6000, temperature: 0.3 });
 
   // Parse and validate
   const picks = parsePicks(raw);
 
-  // Save to DB
-  const saved = await savePicks(picks);
-
-  // Post to Discord (agent-os server, not live Discord)
-  await postToDiscord(picks);
+  // Save to DB + post to Discord in parallel (Discord is fire-and-forget)
+  const [saved] = await Promise.all([
+    savePicks(picks),
+    postToDiscord(picks),
+  ]);
 
   return {
     picks,
