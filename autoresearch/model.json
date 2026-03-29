@@ -1,0 +1,42 @@
+{
+  "_description": "Tunable parameters for AI pick generation. The autoresearch agent modifies these values, backtests, and keeps improvements.",
+  "_metric": "win_pct on graded ai_picks (higher is better)",
+
+  "filters": {
+    "min_k_pct": 20.0,
+    "min_whiff_pct": 25.0,
+    "min_chase_pct": 28.0,
+    "min_consensus_cappers": 3,
+    "min_edge_pct": 10.0,
+    "min_bpp_confidence": 0.55
+  },
+
+  "confidence_weights": {
+    "consensus_weight": 0.35,
+    "statcast_weight": 0.25,
+    "bpp_sim_weight": 0.25,
+    "line_value_weight": 0.15
+  },
+
+  "bet_type_weights": {
+    "k_props": 1.0,
+    "ml": 1.0,
+    "spread": 0.8,
+    "over_under": 0.9,
+    "nrfi_yrfi": 0.7
+  },
+
+  "risk_controls": {
+    "max_picks_per_day": 15,
+    "min_confidence_to_pick": 5,
+    "max_confidence_override": false
+  },
+
+  "prompt_tuning": {
+    "temperature": 0.3,
+    "model": "anthropic/claude-sonnet-4-6",
+    "max_tokens": 6000,
+    "pick_count_target": "8-15",
+    "confidence_distribution": "3-5 high (7-10), 3-5 medium (5-6), 2-3 value (3-4)"
+  }
+}
