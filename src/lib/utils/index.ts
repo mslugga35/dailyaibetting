@@ -5,3 +5,4 @@
 
 export { getTodayET, getYesterdayET, toEasternDate, getCurrentYearET } from './date';
 export { logger } from './logger';
+export { formatMarkdown } from './format-markdown';

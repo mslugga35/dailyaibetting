@@ -13,15 +13,35 @@ import {
 } from '@/lib/consensus/consensus-builder';
 import { buildDailyBets } from '@/lib/daily-bets/daily-bets-builder';
 import { filterToTodaysGamesAsync } from '@/lib/consensus/game-schedule';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getTodayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+async function fetchAiReport(): Promise<{ aiReport: string | null; aiReportGeneratedAt: string | null }> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data } = await supabase
+      .from('daily_ai_report')
+      .select('report_text, generated_at')
+      .eq('report_date', getTodayET())
+      .single();
+    if (data?.report_text) {
+      return { aiReport: data.report_text, aiReportGeneratedAt: data.generated_at };
+    }
+  } catch { /* non-fatal — page works without AI report */ }
+  return { aiReport: null, aiReportGeneratedAt: null };
+}
+
 export async function GET() {
   try {
-    // Fetch all picks from data sources (pre-filtered by date)
-    const rawPicks = await getAllPicksFromSources();
+    // Fire independent network calls in parallel
+    const [rawPicks, aiReportResult] = await Promise.all([
+      getAllPicksFromSources(),
+      fetchAiReport(),
+    ]);
 
     // Normalize picks
     const normalizedPicks = normalizePicks(rawPicks);
@@ -44,11 +64,15 @@ export async function GET() {
       todaysPicks.length
     );
 
-    logger.info('Daily Bets API', `Today's picks: ${todaysPicks.length}, Consensus: ${formatted.filteredConsensus.length}`);
+    const { aiReport, aiReportGeneratedAt } = aiReportResult;
+
+    logger.info('Daily Bets API', `Today's picks: ${todaysPicks.length}, Consensus: ${formatted.filteredConsensus.length}, AI report: ${aiReport ? 'yes' : 'no'}`);
 
     return NextResponse.json({
       success: true,
       ...dailyBets,
+      aiReport,
+      aiReportGeneratedAt,
     });
   } catch (error) {
     logger.error('Daily Bets API', 'Request failed:', error);

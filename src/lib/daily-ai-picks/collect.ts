@@ -58,6 +58,7 @@ interface StatcastData {
     edge: number | null;
     whiffPct: number | null;
     chasePct: number | null;
+    swingPct: number | null;
     signal: string;
   }>;
 }

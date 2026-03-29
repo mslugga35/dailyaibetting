@@ -1,30 +1,12 @@
 'use client';
 
-import DOMPurify from 'isomorphic-dompurify';
 import { Brain, Clock, RefreshCw, Database, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatMarkdown } from '@/lib/utils/format-markdown';
 import type { GenerateResult } from '@/lib/daily-ai-picks/generate';
 
 interface Props {
   result: GenerateResult | null;
-}
-
-function formatMarkdown(text: string): string {
-  // Convert markdown to HTML
-  let html = text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-6 mb-2 text-primary">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-8 mb-3 text-foreground border-b border-border pb-2">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-4 mb-4 text-foreground">$1</h1>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 mb-1">$1</li>')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
-
-  // Wrap consecutive <li> in <ul>
-  html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*<br\/>?\s*)+)/g, '<ul class="list-disc space-y-1 my-2">$1</ul>');
-
-  // Sanitize to prevent XSS from AI-generated content
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['h1','h2','h3','strong','br','li','ul','p'], ALLOWED_ATTR: ['class'] });
 }
 
 export function DailyAIPicksContent({ result }: Props) {

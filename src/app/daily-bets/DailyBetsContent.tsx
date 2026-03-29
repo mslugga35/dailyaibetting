@@ -23,13 +23,31 @@ import {
   AlertCircle,
   Activity,
   CircleDot,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
+import { formatMarkdown } from '@/lib/utils/format-markdown';
 import { useDailyBets } from '@/lib/hooks/use-daily-bets';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+
+function Section({ value, viewAll, className, children }: {
+  value: string;
+  viewAll: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (viewAll) return <div className={className}>{children}</div>;
+  return <TabsContent value={value} className={className}>{children}</TabsContent>;
+}
 
 export function DailyBetsContent({ initialData }: { initialData: unknown }) {
   const { data, isLoading, error, refetch } = useDailyBets(initialData as never);
   const [copied, setCopied] = useState(false);
+  const [viewAll, setViewAll] = useState(false);
+  const formattedReport = useMemo(
+    () => data?.aiReport ? formatMarkdown(data.aiReport, false) : '',
+    [data?.aiReport],
+  );
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -124,6 +142,16 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant={viewAll ? 'default' : 'outline'}
+              size="sm"
+              className="gap-2"
+              onClick={() => setViewAll(!viewAll)}
+              disabled={isLoading || !data}
+            >
+              {viewAll ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+              {viewAll ? 'Tabs' : 'View All'}
+            </Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={shareToTwitter} disabled={isLoading || !data}>
               <Twitter className="h-4 w-4" />
               Share
@@ -202,17 +230,20 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
 
           {/* Tab Navigation */}
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="parlays">Parlays</TabsTrigger>
-              <TabsTrigger value="sports">By Sport</TabsTrigger>
-              <TabsTrigger value="featured">Featured</TabsTrigger>
-              {data.mlbAnalysis && <TabsTrigger value="mlb">MLB</TabsTrigger>}
-              <TabsTrigger value="trends">Trends</TabsTrigger>
-            </TabsList>
+            {!viewAll && (
+              <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="parlays">Parlays</TabsTrigger>
+                <TabsTrigger value="sports">By Sport</TabsTrigger>
+                <TabsTrigger value="featured">Featured</TabsTrigger>
+                {data.mlbAnalysis && <TabsTrigger value="mlb">MLB</TabsTrigger>}
+                {data.aiReport && <TabsTrigger value="ai-picks">AI Picks</TabsTrigger>}
+                <TabsTrigger value="trends">Trends</TabsTrigger>
+              </TabsList>
+            )}
 
             {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6 mt-6">
+            <Section value="overview" viewAll={viewAll} className="space-y-6 mt-6">
               {/* Top 5 Highest Confidence */}
               <Card>
                 <CardHeader>
@@ -305,10 +336,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+            </Section>
 
             {/* Parlays Tab */}
-            <TabsContent value="parlays" className="space-y-6 mt-6">
+            <Section value="parlays" viewAll={viewAll} className="space-y-6 mt-6">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* 2-Leg Parlays */}
                 <Card>
@@ -433,10 +464,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
+            </Section>
 
             {/* By Sport Tab */}
-            <TabsContent value="sports" className="space-y-6 mt-6">
+            <Section value="sports" viewAll={viewAll} className="space-y-6 mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -466,10 +497,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+            </Section>
 
             {/* Featured Tab */}
-            <TabsContent value="featured" className="space-y-6 mt-6">
+            <Section value="featured" viewAll={viewAll} className="space-y-6 mt-6">
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Best $20 Bet */}
                 <Card className="border-green-500/50">
@@ -542,11 +573,11 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
+            </Section>
 
             {/* MLB Tab */}
             {data.mlbAnalysis && (
-              <TabsContent value="mlb" className="space-y-6 mt-6">
+              <Section value="mlb" viewAll={viewAll} className="space-y-6 mt-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Strikeout Props */}
                   <Card>
@@ -615,11 +646,41 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                     </CardContent>
                   </Card>
                 </div>
-              </TabsContent>
+              </Section>
+            )}
+
+            {/* AI Picks Tab — BallparkPal + Statcast enriched report */}
+            {data.aiReport && (
+              <Section value="ai-picks" viewAll={viewAll} className="space-y-6 mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      AI Analysis — BallparkPal + Statcast
+                    </CardTitle>
+                    <CardDescription>
+                      AI-generated picks powered by simulation data, K-prop scanner, and expert consensus
+                      {data.aiReportGeneratedAt && (
+                        <span className="ml-2 text-xs">
+                          Updated {new Date(data.aiReportGeneratedAt).toLocaleTimeString('en-US', {
+                            hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York',
+                          })} ET
+                        </span>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:border-b [&_h2]:border-border [&_h2]:pb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-primary [&_li]:ml-4 [&_li]:mb-1 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:my-2 [&_strong]:text-foreground"
+                      dangerouslySetInnerHTML={{ __html: formattedReport }}
+                    />
+                  </CardContent>
+                </Card>
+              </Section>
             )}
 
             {/* Trends Tab */}
-            <TabsContent value="trends" className="space-y-6 mt-6">
+            <Section value="trends" viewAll={viewAll} className="space-y-6 mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -699,7 +760,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </Section>
           </Tabs>
         </div>
       )}

@@ -111,6 +111,10 @@ export interface DailyBetsOutput {
   totalPicks: number;
   consensusCount: number;
   activeSports: string[];
+
+  // AI Analysis
+  aiReport: string | null;
+  aiReportGeneratedAt: string | null;
 }
 
 /**
@@ -650,5 +654,8 @@ export function buildDailyBets(
     totalPicks,
     consensusCount: consensus.length,
     activeSports: Object.keys(bySport),
+
+    aiReport: null,
+    aiReportGeneratedAt: null,
   };
 }
