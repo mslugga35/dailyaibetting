@@ -30,6 +30,7 @@ export interface ReportContext {
   mlbSchedule: MLBGame[];
   espnSchedule: Record<string, ESPNGame[]>;
   polymarket: Array<{ question: string; probability: number; volume24hr: number }>;
+  kalshi: KalshiMarket[];
 }
 
 interface ExpertPick {
@@ -278,6 +279,68 @@ async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
   return schedule;
 }
 
+// ── Kalshi Sports Markets (player props, K's, NRFI, spreads) ─────────────────
+
+interface KalshiMarket {
+  ticker: string;
+  title: string;
+  yes_bid: number;
+  yes_ask: number;
+  volume: number;
+  series: string;
+}
+
+async function collectKalshi(): Promise<KalshiMarket[]> {
+  const sportsSeries = [
+    'KXMLBKS',     // MLB strikeouts
+    'KXMLBHR',     // MLB home runs
+    'KXMLBF5',     // MLB first 5 innings
+    'KXMLBOU',     // MLB over/under
+    'KXMLBNRFI',   // NRFI
+    'KXMLBYRFI',   // YRFI
+    'KXMLBRUNS',   // MLB team total runs
+    'KXNBAPTS',    // NBA player points
+    'KXNBAAST',    // NBA assists
+    'KXNBAREB',    // NBA rebounds
+    'KXNBA3PT',    // NBA threes
+    'KXNBAGAME',   // NBA game winner
+    'KXNBASPREAD', // NBA spread
+    'KXNHLGAME',   // NHL game winner
+  ];
+
+  try {
+    const allMarkets: KalshiMarket[] = [];
+
+    // Fetch each series in parallel (public endpoint, no auth needed for reads)
+    const results = await Promise.allSettled(
+      sportsSeries.map(async (series) => {
+        const res = await fetch(
+          `https://api.elections.kalshi.com/trade-api/v2/markets?series_ticker=${series}&status=open&limit=50`,
+          { headers: { 'Accept': 'application/json' } }
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.markets || []).map((m: Record<string, unknown>) => ({
+          ticker: m.ticker as string,
+          title: m.title as string || m.subtitle as string || '',
+          yes_bid: (m.yes_bid as number || 0) / 100,   // cents → probability
+          yes_ask: (m.yes_ask as number || 0) / 100,
+          volume: m.volume as number || 0,
+          series,
+        }));
+      })
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') allMarkets.push(...r.value);
+    }
+
+    return allMarkets.filter(m => m.volume > 0);
+  } catch {
+    return [];
+  }
+}
+
 // ── Polymarket Sports Odds ───────────────────────────────────────────────────
 
 interface PolymarketOdds {
@@ -321,12 +384,13 @@ async function collectPolymarket(): Promise<PolymarketOdds[]> {
 // ── Collect All ───────────────────────────────────────────────────────────────
 
 export async function collectAllData(): Promise<ReportContext> {
-  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket] = await Promise.all([
+  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket, kalshi] = await Promise.all([
     collectExpertPicks(),
     collectPrizePicks(),
     collectMLBSchedule(),
     collectESPN(),
     collectPolymarket(),
+    collectKalshi(),
   ]);
 
   return {
@@ -341,5 +405,6 @@ export async function collectAllData(): Promise<ReportContext> {
     mlbSchedule,
     espnSchedule,
     polymarket,
+    kalshi,
   };
 }

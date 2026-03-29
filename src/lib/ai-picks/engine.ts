@@ -147,6 +147,34 @@ function buildPickUserPrompt(data: ReportContext): string {
     }
   }
 
+  // Kalshi prediction market prices (player props, K's, NRFI, spreads, O/U)
+  if (data.kalshi?.length > 0) {
+    const bySeries: Record<string, typeof data.kalshi> = {};
+    for (const m of data.kalshi) {
+      if (!bySeries[m.series]) bySeries[m.series] = [];
+      bySeries[m.series].push(m);
+    }
+
+    sections.push('\n## KALSHI MARKETS (real-money prediction market prices)');
+    const seriesLabels: Record<string, string> = {
+      KXMLBKS: 'MLB Strikeouts', KXMLBHR: 'MLB Home Runs', KXMLBF5: 'MLB First 5',
+      KXMLBOU: 'MLB Over/Under', KXMLBNRFI: 'NRFI', KXMLBYRFI: 'YRFI',
+      KXMLBRUNS: 'MLB Team Runs', KXNBAPTS: 'NBA Points', KXNBAAST: 'NBA Assists',
+      KXNBAREB: 'NBA Rebounds', KXNBA3PT: 'NBA Threes', KXNBAGAME: 'NBA Game Winner',
+      KXNBASPREAD: 'NBA Spread', KXNHLGAME: 'NHL Game Winner',
+    };
+
+    for (const [series, markets] of Object.entries(bySeries)) {
+      const label = seriesLabels[series] || series;
+      sections.push(`\n### ${label} (${markets.length} markets)`);
+      for (const m of markets.slice(0, 10)) {
+        const yesPct = Math.round(((m.yes_bid + m.yes_ask) / 2) * 100);
+        sections.push(`- ${m.title}: ${yesPct}% (bid ${Math.round(m.yes_bid*100)}¢ / ask ${Math.round(m.yes_ask*100)}¢) vol:${m.volume}`);
+      }
+    }
+    sections.push('Note: Kalshi prices reflect real-money prediction market odds. Compare against your model for edge detection.');
+  }
+
   // Polymarket real-money odds (crowd-sourced probabilities)
   if (data.polymarket?.length > 0) {
     sections.push('\n## POLYMARKET ODDS (real-money markets)');
@@ -277,6 +305,68 @@ async function alreadyGenerated(): Promise<boolean> {
   return (count ?? 0) > 0;
 }
 
+// ── Discord Posting (Agent-OS server) ────────────────────────────────────────
+
+const DISCORD_WEBHOOK = process.env.AI_PICKS_DISCORD_WEBHOOK || '';
+const MOCK_BANKROLL = 1000; // $1000 starting bankroll, $10 flat bets
+
+async function postToDiscord(picks: AIPick[]): Promise<void> {
+  if (!DISCORD_WEBHOOK) return;
+
+  // Fetch current record from DB
+  let record = { wins: 0, losses: 0, pushes: 0, winPct: 0 };
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data } = await supabase.from('ai_picks_overall').select('*').single();
+    if (data) record = { wins: data.wins, losses: data.losses, pushes: data.pushes, winPct: data.win_pct || 0 };
+  } catch { /* first run */ }
+
+  const bankroll = MOCK_BANKROLL + (record.wins * 9.09) - (record.losses * 10);
+  const today = getTodayET();
+
+  const highConf = picks.filter(p => p.confidence >= 7);
+  const medConf = picks.filter(p => p.confidence >= 5 && p.confidence < 7);
+  const lowConf = picks.filter(p => p.confidence < 5);
+
+  let msg = `## 🤖 AI Pick Engine — ${today}\n`;
+  msg += `**Bankroll:** $${bankroll.toFixed(2)} | **Record:** ${record.wins}W-${record.losses}L | **Win%:** ${record.winPct}%\n`;
+  msg += `**Picks today:** ${picks.length} (${highConf.length} high, ${medConf.length} med, ${lowConf.length} value)\n\n`;
+
+  if (highConf.length > 0) {
+    msg += `### 🔥 High Confidence (7-10)\n`;
+    for (const p of highConf) {
+      msg += `**[${p.confidence}/10]** ${p.sport} | ${p.team} ${p.bet_type} ${p.line || ''} vs ${p.opponent}\n`;
+      msg += `> ${p.reasoning.slice(0, 150)}\n`;
+    }
+    msg += '\n';
+  }
+
+  if (medConf.length > 0) {
+    msg += `### 📊 Medium Confidence (5-6)\n`;
+    for (const p of medConf) {
+      msg += `**[${p.confidence}/10]** ${p.sport} | ${p.team} ${p.bet_type} ${p.line || ''} vs ${p.opponent}\n`;
+    }
+    msg += '\n';
+  }
+
+  if (lowConf.length > 0) {
+    msg += `### 🎯 Value Plays (1-4)\n`;
+    for (const p of lowConf) {
+      msg += `**[${p.confidence}/10]** ${p.sport} | ${p.team} ${p.bet_type} ${p.line || ''}\n`;
+    }
+  }
+
+  msg += `\n*$10 flat bets | Graded daily via ESPN | Locked at ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })} ET*`;
+
+  try {
+    await fetch(DISCORD_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: msg.slice(0, 2000) }),
+    });
+  } catch { /* non-fatal */ }
+}
+
 // ── Main Entry Point ─────────────────────────────────────────────────────────
 
 export async function generateAIPicks(force = false): Promise<EngineResult> {
@@ -298,6 +388,9 @@ export async function generateAIPicks(force = false): Promise<EngineResult> {
 
   // Save to DB
   const saved = await savePicks(picks);
+
+  // Post to Discord (agent-os server, not live Discord)
+  await postToDiscord(picks);
 
   return {
     picks,

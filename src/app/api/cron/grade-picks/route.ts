@@ -433,6 +433,27 @@ export async function GET(request: Request) {
       }
     }
 
+    // Post AI grading results to Discord
+    if (aiGraded > 0) {
+      const aiWebhook = process.env.AI_PICKS_DISCORD_WEBHOOK;
+      if (aiWebhook) {
+        const bankroll = 1000 + (aiWins * 9.09) - (aiLosses * 10);
+        const aiWinPct = aiWins + aiLosses > 0 ? Math.round((aiWins / (aiWins + aiLosses)) * 1000) / 10 : 0;
+        const msg = `## 📊 AI Pick Grading — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\n` +
+          `**Graded today:** ${aiGraded} picks\n` +
+          `**Results:** ${aiWins}W - ${aiLosses}L\n` +
+          `**Win%:** ${aiWinPct}% | **Bankroll:** $${bankroll.toFixed(2)}\n` +
+          `*$10 flat bets from $1,000 start*`;
+        try {
+          await fetch(aiWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: msg }),
+          });
+        } catch { /* non-fatal */ }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: `Graded ${graded} consensus + ${aiGraded} AI picks`,
