@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, Mail, Loader2 } from 'lucide-react';
+import { Brain, Mail, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -22,7 +22,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
       },
     });
 
@@ -37,32 +37,36 @@ export default function LoginPage() {
 
   return (
     <div className="container px-4 py-16 flex items-center justify-center min-h-[60vh]">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-border/50">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary mx-auto mb-4">
-              <Brain className="h-6 w-6 text-primary-foreground" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 mx-auto mb-4">
+              <Brain className="h-6 w-6 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-bold">Sign in to DailyAI</h1>
+            <h1 className="text-2xl font-bold">Welcome to DailyAI Betting</h1>
             <p className="text-muted-foreground text-sm mt-2">
-              Get access to Pro features and manage your subscription
+              Sign in to access your Pro subscription and picks
             </p>
           </div>
 
           {sent ? (
             <div className="text-center space-y-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 mx-auto">
-                <Mail className="h-8 w-8 text-emerald-400" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 mx-auto">
+                <CheckCircle className="h-8 w-8 text-emerald-400" />
               </div>
-              <h2 className="text-lg font-semibold">Check your email</h2>
+              <h2 className="text-lg font-semibold">Check your inbox</h2>
               <p className="text-sm text-muted-foreground">
-                We sent a magic link to <strong>{email}</strong>. Click the link to sign in.
+                We sent a sign-in link to <strong className="text-foreground">{email}</strong>
               </p>
+              <div className="bg-muted/30 rounded-lg p-4 text-xs text-muted-foreground space-y-1">
+                <p>The link will expire in 1 hour.</p>
+                <p>Check your spam folder if you don&apos;t see it.</p>
+              </div>
               <button
                 onClick={() => setSent(false)}
                 className="text-sm text-primary hover:underline"
               >
-                Try a different email
+                Use a different email
               </button>
             </div>
           ) : (
@@ -78,7 +82,9 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   required
-                  className="w-full px-3 py-2 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoComplete="email"
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
                 />
               </div>
 
@@ -86,28 +92,29 @@ export default function LoginPage() {
                 <p className="text-sm text-red-400">{error}</p>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 h-auto"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending link...
+                    Sending...
                   </>
                 ) : (
-                  <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Send magic link
-                  </>
+                  'Continue with Email'
                 )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                No password needed. We&apos;ll email you a secure login link.
+                We&apos;ll send you a secure sign-in link. No password required.
               </p>
             </form>
           )}
 
           <div className="mt-6 pt-6 border-t text-center">
-            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Back to free picks
             </Link>
           </div>
