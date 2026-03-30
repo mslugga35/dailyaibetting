@@ -5,7 +5,7 @@ import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
-import { Brain, Target, Lock, Trophy, Zap } from 'lucide-react';
+import { Brain, Target, Lock, Trophy, Zap, Clock, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
@@ -54,11 +54,10 @@ export default async function HomePage() {
   return (
     <div className="container px-4 py-8">
       {/* Hero Section */}
-      <section className="text-center mb-12">
+      <section className="text-center mb-16 pb-12 border-b border-border/40">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-4">
           <Brain className="h-4 w-4" />
           AI-Powered Picks
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
         </div>
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
           Daily AI Betting Consensus
@@ -73,8 +72,8 @@ export default async function HomePage() {
             View All Picks
           </Link>
         </Button>
-        <div className="mt-8 flex justify-center">
-          <div className="text-sm text-muted-foreground mb-3">Place your bets at:</div>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">Place your bets at</span>
           <SportsbookLinks variant="compact" />
         </div>
       </section>
@@ -138,7 +137,7 @@ export default async function HomePage() {
                     Premium
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
+                  <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
                     <Lock className="h-3 w-3" />
                     Free Preview
                   </Badge>
@@ -166,9 +165,18 @@ export default async function HomePage() {
                   )}
                 </>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No consensus picks available yet.</p>
-                  <p className="text-sm mt-2">Picks update every 5 minutes.</p>
+                <div className="text-center py-16">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/50 mx-auto mb-4">
+                    <CalendarClock className="h-7 w-7 text-muted-foreground/60" />
+                  </div>
+                  <p className="font-medium text-foreground/70 mb-1">No consensus picks yet today</p>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                    Picks build throughout the day as cappers post. Check back when games are approaching.
+                  </p>
+                  <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
+                    <Clock className="h-3 w-3" />
+                    Updates every 5 minutes
+                  </div>
                 </div>
               )}
             </CardContent>
