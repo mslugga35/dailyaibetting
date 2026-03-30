@@ -161,6 +161,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${baseUrl}/pricing`,
+      lastModified: staticDate,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
     // AI Visibility
     {
       url: `${baseUrl}/llm.txt`,

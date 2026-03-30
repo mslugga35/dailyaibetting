@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createBrowserClient } from '@supabase/ssr';
+import type { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -18,14 +20,14 @@ import {
 import {
   Menu,
   TrendingUp,
-  Users,
   Calendar,
   Target,
   ChevronDown,
   Zap,
   BarChart3,
   Brain,
-  Crown
+  Crown,
+  User as UserIcon,
 } from 'lucide-react';
 
 const sports = [
@@ -48,6 +50,19 @@ const navItems = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -103,14 +118,28 @@ export function Header() {
             <span className="text-xs">Live</span>
           </Badge>
 
-          {/* Upgrade to Pro */}
-          <Button size="sm" className="hidden sm:flex gap-1.5 bg-primary hover:bg-primary/90" asChild>
-            <a href="https://thehiddenbag.com" target="_blank" rel="noopener noreferrer">
-              <Crown className="h-4 w-4" />
-              <span className="hidden md:inline">Upgrade to Pro</span>
-              <span className="md:hidden">Pro</span>
-            </a>
-          </Button>
+          {/* Auth / Upgrade */}
+          {user ? (
+            <Button size="sm" variant="ghost" className="hidden sm:flex gap-1.5" asChild>
+              <Link href="/account">
+                <UserIcon className="h-4 w-4" />
+                <span className="hidden md:inline">Account</span>
+              </Link>
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" className="hidden sm:flex" asChild>
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
+              <Button size="sm" className="hidden sm:flex gap-1.5 bg-primary hover:bg-primary/90" asChild>
+                <Link href="/pricing">
+                  <Crown className="h-4 w-4" />
+                  <span className="hidden md:inline">Go Premium</span>
+                  <span className="md:hidden">Pro</span>
+                </Link>
+              </Button>
+            </>
+          )}
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -165,14 +194,28 @@ export function Header() {
                   ))}
                 </div>
 
-                {/* Pro Upgrade */}
-                <div className="pt-4 border-t">
-                  <Button className="w-full gap-2" asChild>
-                    <a href="https://thehiddenbag.com" target="_blank" rel="noopener noreferrer">
-                      <Crown className="h-4 w-4" />
-                      Upgrade to HiddenBag Pro
-                    </a>
-                  </Button>
+                {/* Auth / Upgrade */}
+                <div className="pt-4 border-t space-y-2">
+                  {user ? (
+                    <Button className="w-full gap-2" variant="outline" asChild onClick={() => setIsOpen(false)}>
+                      <Link href="/account">
+                        <UserIcon className="h-4 w-4" />
+                        Account
+                      </Link>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button className="w-full gap-2" variant="outline" asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/auth/login">Sign In</Link>
+                      </Button>
+                      <Button className="w-full gap-2" asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/pricing">
+                          <Crown className="h-4 w-4" />
+                          Go Premium – $9.99/mo
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
 
               </div>

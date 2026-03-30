@@ -30,6 +30,9 @@ import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consen
 import { getYesterdaysScores, gradeConsensus } from '@/lib/data/espn-scores';
 import { getYesterdayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
+import { getCurrentUser, isPremium } from '@/lib/auth/subscription';
+
+const FREE_TIER_LIMIT = 5;
 
 /** Remove malformed picks (matchup-style text, parentheticals, etc.) */
 function filterMalformedPicks(picks: NormalizedPick[]): NormalizedPick[] {
@@ -62,6 +65,10 @@ export async function GET(request: Request) {
     const sport = searchParams.get('sport');
     const minCappers = parseInt(searchParams.get('minCappers') || '2');
     const dateParam = searchParams.get('date');
+
+    // Determine subscription tier
+    const user = await getCurrentUser();
+    const userIsPremium = user ? await isPremium(user.id) : false;
 
     // --- Yesterday's consensus with results ---
     if (dateParam === 'yesterday') {
@@ -108,7 +115,14 @@ export async function GET(request: Request) {
     const capperCount = Object.keys(picksByCapper).length;
     const insights = buildInsights(rawConsensus, todaysPicks);
 
-    logger.info('Consensus API', `Raw: ${rawPicks.length}, Filtered: ${todaysPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}`);
+    logger.info('Consensus API', `Raw: ${rawPicks.length}, Filtered: ${todaysPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}, Premium: ${userIsPremium}`);
+
+    // Free tier: cap results and hide detailed capper data
+    const responseConsensus = userIsPremium ? consensus : consensus.slice(0, FREE_TIER_LIMIT);
+    const responseTopOverall = userIsPremium ? formatted.topOverall : formatted.topOverall.slice(0, FREE_TIER_LIMIT);
+    const responseBySport = userIsPremium ? formatted.bySport : Object.fromEntries(
+      Object.entries(formatted.bySport).map(([s, picks]) => [s, picks.slice(0, FREE_TIER_LIMIT)])
+    );
 
     return NextResponse.json({
       success: true,
@@ -118,13 +132,17 @@ export async function GET(request: Request) {
       normalizedCount: todaysPicks.length,
       capperCount,
       consensusCount: consensus.length,
-      consensus,
-      topOverall: formatted.topOverall,
-      bySport: formatted.bySport,
-      fadeThePublic: formatted.fadeThePublic,
-      insights,
-      picksByCapper,
-      allPicks: todaysPicks,
+      consensus: responseConsensus,
+      topOverall: responseTopOverall,
+      bySport: responseBySport,
+      fadeThePublic: userIsPremium ? formatted.fadeThePublic : [],
+      insights: userIsPremium ? insights : insights.slice(0, 2),
+      picksByCapper: userIsPremium ? picksByCapper : {},
+      allPicks: userIsPremium ? todaysPicks : [],
+      // Tier metadata for the frontend to show upgrade prompts
+      tier: userIsPremium ? 'premium' : 'free',
+      freeTierLimit: FREE_TIER_LIMIT,
+      totalConsensusCount: consensus.length,
     }, {
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',

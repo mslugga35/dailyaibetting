@@ -5,9 +5,10 @@ import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
-import { Brain, Target, Lock, Trophy } from 'lucide-react';
+import { Brain, Target, Lock, Trophy, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
+import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 
 // Server-side data fetching
 async function getConsensusData() {
@@ -39,6 +40,9 @@ export default async function HomePage() {
   const bySport = data?.bySport || {};
   const totalPicks = data?.totalPicks || 0;
   const firePicksCount = topOverall.filter((p: { capperCount: number }) => p.capperCount >= 3).length;
+  const isPremium = data?.tier === 'premium';
+  const totalConsensusCount = data?.totalConsensusCount || topOverall.length;
+  const hiddenPicksCount = totalConsensusCount - topOverall.length;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -97,7 +101,7 @@ export default async function HomePage() {
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-3xl font-bold">{topOverall.length}</div>
+              <div className="text-3xl font-bold">{totalConsensusCount}</div>
               <p className="text-sm text-muted-foreground">Consensus Picks</p>
             </CardContent>
           </Card>
@@ -128,18 +132,39 @@ export default async function HomePage() {
                   <Target className="h-5 w-5 text-primary" />
                   Today&apos;s Consensus
                 </span>
-                <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
-                  <Lock className="h-3 w-3" />
-                  Free Preview
-                </Badge>
+                {isPremium ? (
+                  <Badge className="gap-1.5 bg-primary/20 text-primary border-primary/30">
+                    <Zap className="h-3 w-3" />
+                    Premium
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
+                    <Lock className="h-3 w-3" />
+                    Free Preview
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {topOverall.length > 0 ? (
-                <ConsensusReport
-                  topOverall={topOverall}
-                  bySport={bySport}
-                />
+                <>
+                  <ConsensusReport
+                    topOverall={topOverall}
+                    bySport={bySport}
+                  />
+                  {!isPremium && hiddenPicksCount > 0 && (
+                    <div className="mt-6 p-5 rounded-xl border border-primary/30 bg-primary/5 text-center">
+                      <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <p className="font-semibold mb-1">
+                        {hiddenPicksCount} more consensus picks locked
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upgrade to Premium for real-time access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
+                      </p>
+                      <UpgradeButton label="Unlock All Picks – $9.99/mo" />
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No consensus picks available yet.</p>
@@ -165,11 +190,11 @@ export default async function HomePage() {
             </CardContent>
           </Card>
 
-          {/* HiddenBag Upgrade CTA */}
-          <HiddenBagCTA />
+          {/* Show upgrade CTA only for free users */}
+          {!isPremium && <HiddenBagCTA />}
 
           {/* Free vs Pro */}
-          <ComparisonTable />
+          {!isPremium && <ComparisonTable />}
         </div>
       )}
     </div>
