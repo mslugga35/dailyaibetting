@@ -61,12 +61,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // Only handle subscription checkouts (not one-time payments)
+  if (session.mode !== 'subscription' || !session.subscription) {
+    console.log('[Stripe Webhook] Non-subscription checkout, skipping');
+    return;
+  }
+
   const subscriptionId = session.subscription as string;
   const customerId = session.customer as string;
 
-  // Fetch full subscription details
-  const subResponse = await stripe.subscriptions.retrieve(subscriptionId);
-  const subscription = subResponse as unknown as Stripe.Subscription;
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const periodStart = subscription.items.data[0]?.current_period_start;
+  const periodEnd = subscription.items.data[0]?.current_period_end;
 
   const { error } = await supabaseAdmin
     .from('user_subscriptions')
@@ -76,8 +82,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripe_subscription_id: subscriptionId,
       status: subscription.status === 'trialing' ? 'trialing' : 'active',
       price_id: subscription.items.data[0]?.price.id,
-      current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-      current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
     }, { onConflict: 'user_id' });
 
@@ -90,16 +96,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const sub = subscription as any;
+  const periodStart = subscription.items.data[0]?.current_period_start;
+  const periodEnd = subscription.items.data[0]?.current_period_end;
+
+  const statusMap: Record<string, string> = {
+    trialing: 'trialing', active: 'active', past_due: 'past_due',
+  };
+
   const { error } = await supabaseAdmin
     .from('user_subscriptions')
     .update({
-      status: subscription.status === 'trialing' ? 'trialing' :
-              subscription.status === 'active' ? 'active' :
-              subscription.status === 'past_due' ? 'past_due' : 'canceled',
+      status: statusMap[subscription.status] || 'canceled',
       price_id: subscription.items.data[0]?.price.id,
-      current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
     })
     .eq('stripe_subscription_id', subscription.id);

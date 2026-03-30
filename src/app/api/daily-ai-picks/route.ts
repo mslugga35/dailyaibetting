@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getTodayET } from '@/lib/utils/date';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export async function GET() {
   // Read-only: return cached report from Supabase (no generation, no credit burn)
   try {
     const supabase = await createServerSupabaseClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayET();
 
     const { data } = await supabase
       .from('daily_ai_report')
