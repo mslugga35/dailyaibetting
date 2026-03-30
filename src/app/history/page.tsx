@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Calendar, Filter, TrendingUp, CheckCircle, XCircle, MinusCircle, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { ProGateSection } from '@/components/pro/ProGateSection';
 
 interface HistoricalPick {
   id: string;
@@ -183,7 +184,8 @@ export default function HistoryPage() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters & Pick List — Pro only */}
+      <ProGateSection feature="full pick history">
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">
@@ -406,6 +408,8 @@ export default function HistoryPage() {
           )}
         </div>
       )}
+
+      </ProGateSection>
 
       {/* Cross Links */}
       <Card className="mt-8">

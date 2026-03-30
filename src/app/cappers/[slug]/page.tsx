@@ -6,6 +6,7 @@ import {
   MinusCircle, ArrowLeft, Flame, Snowflake, BarChart3
 } from 'lucide-react';
 import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
+import { ProGateSection } from '@/components/pro/ProGateSection';
 
 export const dynamic = 'force-dynamic';
 
@@ -173,7 +174,15 @@ export default async function CapperProfilePage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Recent Form */}
+      {/* Pro-gated: Recent form, by sport, and recent picks */}
+      <ProGateSection
+        feature="full capper stats"
+        preview={
+          <div className="mb-4 p-4 rounded-lg border border-dashed border-muted-foreground/20 text-center text-sm text-muted-foreground">
+            Sign up for Pro to see {capper.name}&apos;s recent form, sport breakdowns, and pick history
+          </div>
+        }
+      >
       {capper.recent_form && (
         <div className="mb-8 bg-card border rounded-xl p-4">
           <h2 className="font-semibold mb-3 flex items-center gap-2">
@@ -285,6 +294,8 @@ export default async function CapperProfilePage({ params }: PageProps) {
           </div>
         </section>
       )}
+
+      </ProGateSection>
 
       {/* CTA */}
       <section className="mt-12 text-center bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border rounded-xl p-8">

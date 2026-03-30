@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Target, Trophy, TrendingUp, Flame, BarChart3 } from 'lucide-react';
 import { ConfidenceBadge, getConfidenceInfo, getConfidenceTier, type ConfidenceTier } from '@/components/ConfidenceBadge';
+import { ProGateSection } from '@/components/pro/ProGateSection';
 
 interface GradedPick {
   id: string;
@@ -202,7 +203,8 @@ export default function StatsPage() {
             </Card>
           </div>
 
-          {/* Tier Stats */}
+          {/* Tier Stats — Pro only */}
+          <ProGateSection feature="detailed tier breakdowns">
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
@@ -308,6 +310,8 @@ export default function StatsPage() {
               </Card>
             )}
           </div>
+
+          </ProGateSection>
 
           {/* Legend */}
           <Card className="bg-card/50">
