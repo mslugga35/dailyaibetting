@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
-import type { User } from '@supabase/supabase-js';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -27,8 +25,11 @@ import {
   BarChart3,
   Brain,
   Crown,
-  User as UserIcon,
+  LogOut,
+  User,
 } from 'lucide-react';
+import { useSubscription } from '@/lib/hooks/use-subscription';
+import { createClient } from '@/lib/supabase/client';
 
 const sports = [
   { name: 'NFL', href: '/nfl-picks-today' },
@@ -50,19 +51,13 @@ const navItems = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isPro, loading } = useSubscription();
 
-  useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -80,7 +75,6 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {/* Sports Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-1">
@@ -99,7 +93,6 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Main Nav Items */}
           {navItems.map((item) => (
             <Button key={item.name} variant="ghost" asChild>
               <Link href={item.href} className="flex items-center gap-2">
@@ -112,32 +105,66 @@ export function Header() {
 
         {/* Right Side */}
         <div className="flex items-center gap-2">
-          {/* Live Badge */}
           <Badge variant="outline" className="hidden sm:flex items-center gap-1.5 border-primary/50">
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
             <span className="text-xs">Live</span>
           </Badge>
 
-          {/* Auth / Upgrade */}
-          {user ? (
-            <Button size="sm" variant="ghost" className="hidden sm:flex gap-1.5" asChild>
-              <Link href="/account">
-                <UserIcon className="h-4 w-4" />
-                <span className="hidden md:inline">Account</span>
-              </Link>
-            </Button>
-          ) : (
+          {!loading && (
             <>
-              <Button size="sm" variant="ghost" className="hidden sm:flex" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button size="sm" className="hidden sm:flex gap-1.5 bg-primary hover:bg-primary/90" asChild>
-                <Link href="/pricing">
-                  <Crown className="h-4 w-4" />
-                  <span className="hidden md:inline">Go Premium</span>
-                  <span className="md:hidden">Pro</span>
-                </Link>
-              </Button>
+              {user ? (
+                /* Logged in */
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1.5">
+                      {isPro ? (
+                        <Crown className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <User className="h-4 w-4" />
+                      )}
+                      <span className="hidden md:inline text-xs truncate max-w-[120px]">
+                        {user.email}
+                      </span>
+                      <ChevronDown className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {isPro ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/pro" className="flex items-center gap-2">
+                          <Crown className="h-4 w-4 text-emerald-400" />
+                          Manage Pro
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem asChild>
+                        <Link href="/pro" className="flex items-center gap-2">
+                          <Crown className="h-4 w-4" />
+                          Upgrade to Pro
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2">
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                /* Not logged in */
+                <>
+                  <Button size="sm" variant="ghost" className="hidden sm:flex" asChild>
+                    <Link href="/login">Sign in</Link>
+                  </Button>
+                  <Button size="sm" className="hidden sm:flex gap-1.5 bg-emerald-600 hover:bg-emerald-700" asChild>
+                    <Link href="/pro">
+                      <Crown className="h-4 w-4" />
+                      <span className="hidden md:inline">Try Pro Free</span>
+                      <span className="md:hidden">Pro</span>
+                    </Link>
+                  </Button>
+                </>
+              )}
             </>
           )}
 
@@ -158,7 +185,6 @@ export function Header() {
                   <span className="text-lg font-bold">DailyAI Betting</span>
                 </div>
 
-                {/* Sports Section */}
                 <div className="space-y-2">
                   <span className="text-sm font-medium text-muted-foreground">Sports</span>
                   <div className="flex flex-wrap gap-2">
@@ -176,7 +202,6 @@ export function Header() {
                   </div>
                 </div>
 
-                {/* Nav Items */}
                 <div className="space-y-1 pt-4 border-t">
                   {navItems.map((item) => (
                     <Button
@@ -194,30 +219,44 @@ export function Header() {
                   ))}
                 </div>
 
-                {/* Auth / Upgrade */}
                 <div className="pt-4 border-t space-y-2">
                   {user ? (
-                    <Button className="w-full gap-2" variant="outline" asChild onClick={() => setIsOpen(false)}>
-                      <Link href="/account">
-                        <UserIcon className="h-4 w-4" />
-                        Account
-                      </Link>
-                    </Button>
+                    <>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      {isPro ? (
+                        <Button className="w-full gap-2" variant="outline" asChild onClick={() => setIsOpen(false)}>
+                          <Link href="/pro">
+                            <Crown className="h-4 w-4 text-emerald-400" />
+                            Manage Pro
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" asChild onClick={() => setIsOpen(false)}>
+                          <Link href="/pro">
+                            <Crown className="h-4 w-4" />
+                            Upgrade to Pro
+                          </Link>
+                        </Button>
+                      )}
+                      <Button variant="ghost" className="w-full gap-2" onClick={() => { handleSignOut(); setIsOpen(false); }}>
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </Button>
+                    </>
                   ) : (
                     <>
-                      <Button className="w-full gap-2" variant="outline" asChild onClick={() => setIsOpen(false)}>
-                        <Link href="/auth/login">Sign In</Link>
+                      <Button variant="outline" className="w-full gap-2" asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/login">Sign in</Link>
                       </Button>
-                      <Button className="w-full gap-2" asChild onClick={() => setIsOpen(false)}>
-                        <Link href="/pricing">
+                      <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" asChild onClick={() => setIsOpen(false)}>
+                        <Link href="/pro">
                           <Crown className="h-4 w-4" />
-                          Go Premium – $9.99/mo
+                          Try Pro Free
                         </Link>
                       </Button>
                     </>
                   )}
                 </div>
-
               </div>
             </SheetContent>
           </Sheet>

@@ -1,22 +1,17 @@
-/**
- * Next.js Middleware
- * - Refreshes Supabase auth sessions on every request (keeps cookies fresh)
- * - Protects /account route: redirects unauthenticated users to /auth/login
- * - Stripe webhook route bypasses cookie handling (needs raw body)
- */
-
-import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip Stripe webhook — needs raw body, no cookie interference
-  if (pathname === '/api/stripe/webhook') {
+  if (pathname === '/api/webhooks/stripe') {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,8 +22,12 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -37,29 +36,14 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session (important for SSR auth state)
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Protect /account — redirect to login if not authenticated
-  if (pathname.startsWith('/account') && !user) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = '/auth/login';
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Redirect logged-in users away from login/signup pages
-  if (user && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup'))) {
-    const accountUrl = request.nextUrl.clone();
-    accountUrl.pathname = '/account';
-    return NextResponse.redirect(accountUrl);
-  }
+  // Refresh session if needed
+  await supabase.auth.getUser();
 
   return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|opengraph-image|robots.txt|sitemap.xml).*)',
+    '/((?!_next/static|_next/image|favicon.ico|opengraph-image|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
