@@ -236,7 +236,7 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
         </TabsContent>
       </Tabs>
 
-      {/* HiddenBag Upgrade CTA */}
+      {/* Upgrade CTA */}
       <div className="mt-8">
         <HiddenBagCTA />
       </div>

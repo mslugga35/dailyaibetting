@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { isProStatus, type SubscriptionStatus } from '@/lib/constants/subscription';
+import { isProStatus, SUBSCRIPTION_STATUSES, type SubscriptionStatus } from '@/lib/constants/subscription';
 
 interface SubscriptionState {
   status: SubscriptionStatus | 'loading';
@@ -43,7 +43,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           .eq('user_id', user.id)
           .single();
 
-        const status = (sub?.status as SubscriptionStatus) || 'inactive';
+        const rawStatus = sub?.status;
+        const status: SubscriptionStatus = rawStatus && SUBSCRIPTION_STATUSES.includes(rawStatus as SubscriptionStatus) ? rawStatus as SubscriptionStatus : 'inactive';
         setState({
           status,
           isPro: isProStatus(status),
@@ -57,8 +58,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     check();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      check();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        check();
+      }
     });
 
     return () => subscription.unsubscribe();

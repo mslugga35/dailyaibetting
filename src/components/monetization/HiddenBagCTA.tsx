@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
 
 export function HiddenBagCTA() {
   return (
@@ -53,11 +54,11 @@ export function HiddenBagCTA() {
           <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white mb-3" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
-              Try Pro Free for 7 Days
+              Try Pro Free for {TRIAL_DAYS} Days
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground">
-            $20/mo after trial. Cancel anytime.
+            {PRO_PRICE_DISPLAY} after trial. Cancel anytime.
           </p>
         </div>
       </CardContent>

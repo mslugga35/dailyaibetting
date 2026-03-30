@@ -148,12 +148,10 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
             <span className="font-semibold">Want full pick history and capper grades?</span>
           </div>
           <p className="text-sm text-muted-foreground mb-4">
-            HiddenBag Pro tracks 200+ cappers with W/L records, ROI, and 30-day history.
+            DailyAI Pro tracks 200+ cappers with W/L records, ROI, and 30-day history.
           </p>
           <Link
-            href="https://thehiddenbag.com"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/pro"
             className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
           >
             <Crown className="h-4 w-4" />

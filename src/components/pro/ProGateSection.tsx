@@ -4,6 +4,7 @@ import { useSubscription } from '@/lib/hooks/use-subscription';
 import { Button } from '@/components/ui/button';
 import { Lock, Crown } from 'lucide-react';
 import Link from 'next/link';
+import { PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
 
 interface ProGateSectionProps {
   children: React.ReactNode;
@@ -35,7 +36,7 @@ export function ProGateSection({ children, preview, feature = 'this content' }: 
           <Button className="bg-emerald-600 hover:bg-emerald-700" asChild>
             <Link href={user ? '/pro' : '/login'}>
               <Crown className="h-4 w-4 mr-2" />
-              {user ? 'Upgrade to Pro — $20/mo' : 'Sign in to upgrade'}
+              {user ? `Upgrade to Pro — ${PRO_PRICE_DISPLAY}` : 'Sign in to upgrade'}
             </Link>
           </Button>
         </div>

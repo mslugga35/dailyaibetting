@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { isProStatus, TRIAL_DAYS } from '@/lib/constants/subscription';
 
 export async function POST() {
   try {
@@ -11,20 +12,18 @@ export async function POST() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Check if user already has an active subscription
     const { data: existing } = await supabase
       .from('user_subscriptions')
       .select('status, stripe_customer_id')
       .eq('user_id', user.id)
       .single();
 
-    if (existing?.status === 'active' || existing?.status === 'trialing') {
+    if (isProStatus(existing?.status)) {
       return NextResponse.json({ error: 'Already subscribed' }, { status: 400 });
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
 
-    // Create or reuse Stripe customer
     let customerId = existing?.stripe_customer_id;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -33,7 +32,6 @@ export async function POST() {
       });
       customerId = customer.id;
 
-      // Persist customer ID immediately to prevent duplicate customers on retry
       await supabase.from('user_subscriptions').upsert({
         user_id: user.id,
         stripe_customer_id: customerId,
@@ -41,7 +39,6 @@ export async function POST() {
       }, { onConflict: 'user_id' });
     }
 
-    // Create Checkout Session — 7-day free trial, then $20/mo
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -53,7 +50,7 @@ export async function POST() {
         },
       ],
       subscription_data: {
-        trial_period_days: 7,
+        trial_period_days: TRIAL_DAYS,
         metadata: { user_id: user.id },
       },
       metadata: { user_id: user.id },

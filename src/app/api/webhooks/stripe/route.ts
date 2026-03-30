@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         break;
       }
       default:
-        console.log(`[Stripe Webhook] Unhandled event: ${event.type}`);
+        break;
     }
   } catch (err) {
     console.error(`[Stripe Webhook] Error handling ${event.type}:`, err);
@@ -66,7 +66,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Only handle subscription checkouts (not one-time payments)
   if (session.mode !== 'subscription' || !session.subscription) {
-    console.log('[Stripe Webhook] Non-subscription checkout, skipping');
     return;
   }
 
@@ -95,7 +94,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw error;
   }
 
-  console.log(`[Stripe Webhook] Subscription created for user ${userId}`);
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {

@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { X, Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/lib/hooks/use-subscription';
+import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
 
 export function ProPopup() {
   const [isVisible, setIsVisible] = useState(false);
@@ -13,7 +14,6 @@ export function ProPopup() {
   const { isPro, loading } = useSubscription();
 
   useEffect(() => {
-    // Don't show to Pro users, while loading, or on auth/pro pages
     if (loading || isPro) return;
     const path = window.location.pathname;
     if (path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/pro')) return;
@@ -84,10 +84,10 @@ export function ProPopup() {
             </div>
             <h3 className="text-2xl font-bold mb-2">Wait! Don&apos;t Miss Out</h3>
             <p className="text-lg font-semibold text-emerald-400 mb-2">
-              Try DailyAI Pro free for 7 days
+              Try DailyAI Pro free for {TRIAL_DAYS} days
             </p>
             <p className="text-muted-foreground text-sm">
-              Then just $20/mo. Cancel anytime.
+              Then just {PRO_PRICE_DISPLAY}. Cancel anytime.
             </p>
           </div>
 
@@ -115,7 +115,7 @@ export function ProPopup() {
             >
               <Link href="/pro">
                 <Crown className="h-5 w-5 mr-2" />
-                Start Free 7-Day Trial
+                Start Free {TRIAL_DAYS}-Day Trial
               </Link>
             </Button>
 
