@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SportsbookLinks, SPORTSBOOKS } from '@/components/monetization/SportsbookLinks';
 import { ExternalLink, Zap, Shield, Award, Clock } from 'lucide-react';
