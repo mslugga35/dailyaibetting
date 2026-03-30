@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Users, TrendingUp, Clock, ChevronRight } from 'lucide-react';
 import { Consensus, formatOdds, getConfidenceLabel } from '@/types';
 import Link from 'next/link';
+import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
 
 interface ConsensusCardProps {
   consensus: Consensus;
@@ -68,6 +69,12 @@ export function ConsensusCard({ consensus, showAnalysis = true }: ConsensusCardP
               {oddsDisplay}
             </div>
           </div>
+        </div>
+
+        {/* Sportsbook Links */}
+        <div className="border-t pt-3">
+          <div className="text-xs text-muted-foreground mb-2 font-medium">Place your bet:</div>
+          <SportsbookLinks variant="inline" />
         </div>
 
         {/* Capper Agreement */}

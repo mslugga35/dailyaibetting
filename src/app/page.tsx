@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
+import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
 import { Brain, Target, Lock, Trophy } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
@@ -68,6 +69,10 @@ export default async function HomePage() {
             View All Picks
           </Link>
         </Button>
+        <div className="mt-8 flex justify-center">
+          <div className="text-sm text-muted-foreground mb-3">Place your bets at:</div>
+          <SportsbookLinks variant="compact" />
+        </div>
       </section>
 
       {/* Date & Refresh */}

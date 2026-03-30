@@ -1,10 +1,11 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { 
-  Trophy, TrendingUp, Calendar, Target, CheckCircle, XCircle, 
-  MinusCircle, ArrowLeft, Flame, Snowflake, BarChart3 
+import {
+  Trophy, TrendingUp, Calendar, Target, CheckCircle, XCircle,
+  MinusCircle, ArrowLeft, Flame, Snowflake, BarChart3
 } from 'lucide-react';
+import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
 
 export const dynamic = 'force-dynamic';
 
@@ -288,16 +289,27 @@ export default async function CapperProfilePage({ params }: PageProps) {
       {/* CTA */}
       <section className="mt-12 text-center bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border rounded-xl p-8">
         <h2 className="text-2xl font-bold mb-2">Want to see when {capper.name} agrees with others?</h2>
-        <p className="text-muted-foreground mb-4">
+        <p className="text-muted-foreground mb-6">
           Our consensus picks show when multiple cappers like {capper.name} agree on the same play.
         </p>
-        <Link 
+        <Link
           href="/consensus"
           className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
         >
           <Trophy className="h-5 w-5" />
           View Consensus Picks
         </Link>
+
+        {/* Sportsbook Links */}
+        <div className="mt-8 pt-8 border-t">
+          <div className="text-sm text-muted-foreground mb-3 font-medium">Place {capper.name}'s picks:</div>
+          <SportsbookLinks variant="inline" />
+          <p className="text-xs text-muted-foreground mt-3">
+            <Link href="/sportsbooks" className="text-primary hover:underline">
+              Compare all sportsbooks →
+            </Link>
+          </p>
+        </div>
       </section>
     </main>
   );

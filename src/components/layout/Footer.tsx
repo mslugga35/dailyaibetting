@@ -35,6 +35,12 @@ export function Footer() {
               All Picks
             </Link>
             <Link
+              href="/sportsbooks"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Sportsbooks
+            </Link>
+            <Link
               href="/blog"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
