@@ -13,8 +13,10 @@ export function ProPopup() {
   const { isPro, loading } = useSubscription();
 
   useEffect(() => {
-    // Don't show to Pro users or while loading
+    // Don't show to Pro users, while loading, or on auth/pro pages
     if (loading || isPro) return;
+    const path = window.location.pathname;
+    if (path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/pro')) return;
 
     // Check if user has already seen the popup in the last 24h
     const lastShown = localStorage.getItem('dailyai-pro-popup-shown');
@@ -47,7 +49,7 @@ export function ProPopup() {
     const timeout = setTimeout(() => {
       document.addEventListener('mouseleave', handleMouseLeave);
       window.addEventListener('scroll', handleScroll);
-    }, 5000);
+    }, 30000);
 
     return () => {
       clearTimeout(timeout);
