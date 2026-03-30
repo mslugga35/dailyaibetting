@@ -136,7 +136,7 @@ export async function GET(request: Request) {
       topOverall: responseTopOverall,
       bySport: responseBySport,
       fadeThePublic: userIsPremium ? formatted.fadeThePublic : [],
-      insights: userIsPremium ? insights : insights.slice(0, 2),
+      insights: userIsPremium ? insights : {},
       picksByCapper: userIsPremium ? picksByCapper : {},
       allPicks: userIsPremium ? todaysPicks : [],
       // Tier metadata for the frontend to show upgrade prompts
