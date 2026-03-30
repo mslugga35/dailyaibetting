@@ -249,15 +249,15 @@ async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
   ];
 
   const schedule: Record<string, ESPNGame[]> = {};
-  for (const sport of sports) {
-    try {
+  const results = await Promise.allSettled(
+    sports.map(async (sport) => {
       const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport.path}/scoreboard`, {
         next: { revalidate: 3600 },
       });
-      if (!res.ok) continue;
+      if (!res.ok) return { key: sport.key, games: [] as ESPNGame[] };
       const data = await res.json();
 
-      schedule[sport.key] = (data.events || []).map((e: Record<string, unknown>) => {
+      const games: ESPNGame[] = (data.events || []).map((e: Record<string, unknown>) => {
         const comp = (e.competitions as Array<Record<string, unknown>>)?.[0];
         const competitors = comp?.competitors as Array<Record<string, unknown>> || [];
         const home = competitors.find((c: Record<string, unknown>) => c.homeAway === 'home') as Record<string, unknown> | undefined;
@@ -275,7 +275,13 @@ async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
           awayRecord: awayRecords?.[0]?.summary || '',
         };
       });
-    } catch { /* skip sport */ }
+      return { key: sport.key, games };
+    })
+  );
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value.games.length > 0) {
+      schedule[r.value.key] = r.value.games;
+    }
   }
   return schedule;
 }

@@ -28,7 +28,7 @@ import {
 } from '@/lib/consensus/consensus-builder';
 import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consensus/game-schedule';
 import { getYesterdaysScores, gradeConsensus } from '@/lib/data/espn-scores';
-import { getYesterdayET } from '@/lib/utils/date';
+import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
 import { getCurrentUser, isPremium } from '@/lib/auth/subscription';
 
@@ -127,7 +127,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayET(),
       totalPicks: todaysPicks.length,
       normalizedCount: todaysPicks.length,
       capperCount,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllPicksFromSources } from '@/lib/data/google-sheets';
 import { normalizePicks } from '@/lib/consensus/consensus-builder';
+import { getTodayET } from '@/lib/utils/date';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Disable static generation
@@ -48,7 +49,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayET(),
       total,
       limit,
       offset,

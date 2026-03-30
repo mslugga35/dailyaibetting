@@ -19,11 +19,11 @@
     },
     {
       "path": "/api/cron/generate-blog-recap",
-      "schedule": "0 14 * * *"
+      "schedule": "10 14 * * *"
     },
     {
       "path": "/api/cron/daily-ai-picks",
-      "schedule": "0 14 * * *"
+      "schedule": "5 14 * * *"
     },
     {
       "path": "/api/cron/daily-ai-picks",
