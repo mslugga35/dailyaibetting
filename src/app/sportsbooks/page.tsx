@@ -1,4 +1,4 @@
-export const dynamic = 'force-dynamic';
+'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SportsbookLinks, SPORTSBOOKS } from '@/components/monetization/SportsbookLinks';
