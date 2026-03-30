@@ -11,7 +11,10 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const signature = req.headers.get('stripe-signature')!;
+  const signature = req.headers.get('stripe-signature');
+  if (!signature) {
+    return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+  }
 
   let event: Stripe.Event;
 
@@ -99,14 +102,25 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const periodStart = subscription.items.data[0]?.current_period_start;
   const periodEnd = subscription.items.data[0]?.current_period_end;
 
-  const statusMap: Record<string, string> = {
-    trialing: 'trialing', active: 'active', past_due: 'past_due',
+  const STATUS_MAP: Record<string, string> = {
+    trialing: 'trialing',
+    active: 'active',
+    past_due: 'past_due',
+    canceled: 'canceled',
+    unpaid: 'past_due',
+    incomplete: 'inactive',
+    incomplete_expired: 'canceled',
+    paused: 'inactive',
   };
+  const mappedStatus = STATUS_MAP[subscription.status];
+  if (!mappedStatus) {
+    console.warn(`[Stripe Webhook] Unknown subscription status: ${subscription.status}`);
+  }
 
   const { error } = await supabaseAdmin
     .from('user_subscriptions')
     .update({
-      status: statusMap[subscription.status] || 'canceled',
+      status: mappedStatus || 'inactive',
       price_id: subscription.items.data[0]?.price.id,
       current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,

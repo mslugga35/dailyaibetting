@@ -11,10 +11,6 @@ interface ProGateProps {
   fallback?: React.ReactNode;
 }
 
-/**
- * Wraps content that should only be visible to Pro subscribers.
- * Shows an upgrade prompt for free users.
- */
 export function ProGate({ children, fallback }: ProGateProps) {
   const { isPro, loading, user } = useSubscription();
 

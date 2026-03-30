@@ -5,32 +5,7 @@
  */
 
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-/** Create a server-side Supabase client using the request cookies. */
-export async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Ignore: called from Server Component where cookies are read-only
-          }
-        },
-      },
-    }
-  );
-}
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 /** Create a service-role Supabase client (bypasses RLS). */
 function createServiceClient() {
@@ -43,7 +18,7 @@ function createServiceClient() {
 
 /** Get the current authenticated user (or null). */
 export async function getCurrentUser() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
   return user;
 }
@@ -106,7 +81,7 @@ export async function upsertSubscription(data: {
   cancelAtPeriodEnd: boolean;
 }) {
   const supabase = createServiceClient();
-  await supabase.from('user_subscriptions').upsert(
+  const { error } = await supabase.from('user_subscriptions').upsert(
     {
       user_id: data.userId,
       stripe_customer_id: data.stripeCustomerId,
@@ -118,6 +93,10 @@ export async function upsertSubscription(data: {
     },
     { onConflict: 'user_id' }
   );
+  if (error) {
+    console.error('[Subscription] upsert error:', error);
+    throw error;
+  }
 }
 
 /** Get userId from a Stripe customer ID (used in webhook). */

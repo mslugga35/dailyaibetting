@@ -17,7 +17,7 @@ export default async function AccountPage({
 }) {
   const user = await getCurrentUser();
   if (!user) {
-    redirect('/auth/login?redirect=/account');
+    redirect('/login?redirect=/account');
   }
 
   const sub = await getUserSubscription(user.id);

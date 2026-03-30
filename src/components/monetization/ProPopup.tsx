@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Crown, Users, Award, Clock } from 'lucide-react';
@@ -9,7 +9,7 @@ import { useSubscription } from '@/lib/hooks/use-subscription';
 
 export function ProPopup() {
   const [isVisible, setIsVisible] = useState(false);
-  const [hasTriggered, setHasTriggered] = useState(false);
+  const hasTriggeredRef = useRef(false);
   const { isPro, loading } = useSubscription();
 
   useEffect(() => {
@@ -30,18 +30,18 @@ export function ProPopup() {
     let exitTriggered = false;
 
     const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !exitTriggered && !hasTriggered) {
+      if (e.clientY <= 0 && !exitTriggered && !hasTriggeredRef.current) {
         exitTriggered = true;
-        setHasTriggered(true);
+        hasTriggeredRef.current = true;
         setIsVisible(true);
       }
     };
 
     const handleScroll = () => {
       const scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
-      if (scrollPercent > 70 && !scrollTriggered && !hasTriggered) {
+      if (scrollPercent > 70 && !scrollTriggered && !hasTriggeredRef.current) {
         scrollTriggered = true;
-        setHasTriggered(true);
+        hasTriggeredRef.current = true;
         setIsVisible(true);
       }
     };
@@ -56,7 +56,7 @@ export function ProPopup() {
       document.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [hasTriggered, isPro, loading]);
+  }, [isPro, loading]);
 
   const handleClose = () => {
     setIsVisible(false);

@@ -8,7 +8,7 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 
 export const metadata = {
   title: 'Pricing – DailyAI Betting Premium',
-  description: 'Get real-time consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards for $9.99/mo.',
+  description: 'Get real-time consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards for $20/mo.',
 };
 
 export default async function PricingPage() {
@@ -66,7 +66,7 @@ export default async function PricingPage() {
             ))}
             {!user ? (
               <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/auth/signup">Get Started Free</Link>
+                <Link href="/login">Get Started Free</Link>
               </Button>
             ) : !isPremium ? (
               <Button variant="outline" className="w-full mt-4" disabled>
@@ -87,7 +87,7 @@ export default async function PricingPage() {
               Premium
             </CardTitle>
             <div className="mt-2">
-              <span className="text-4xl font-bold">$9.99</span>
+              <span className="text-4xl font-bold">$20</span>
               <span className="text-muted-foreground">/mo</span>
             </div>
             <p className="text-sm text-muted-foreground">Cancel anytime</p>
@@ -114,7 +114,7 @@ export default async function PricingPage() {
               <UpgradeButton className="w-full mt-4" />
             ) : (
               <Button className="w-full mt-4" asChild>
-                <Link href="/auth/signup?redirect=/pricing">Start Premium – $9.99/mo</Link>
+                <Link href="/login?redirect=/pricing">Start Premium – $20/mo</Link>
               </Button>
             )}
           </CardContent>

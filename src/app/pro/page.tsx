@@ -4,7 +4,8 @@ import { useSubscription } from '@/lib/hooks/use-subscription';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Check, Loader2, Zap, Target, BarChart3, Clock, Users } from 'lucide-react';
+import { Crown, Loader2, Zap, Target, BarChart3, Clock, Users } from 'lucide-react';
+import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -15,23 +16,34 @@ export default function ProPage() {
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);
-    const res = await fetch('/api/checkout', { method: 'POST' });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
+    try {
+      const res = await fetch('/api/checkout', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Something went wrong');
+      }
+    } catch {
+      alert('Network error — please try again');
+    } finally {
       setCheckoutLoading(false);
-      alert(data.error || 'Something went wrong');
     }
   };
 
   const handleManage = async () => {
     setPortalLoading(true);
-    const res = await fetch('/api/billing-portal', { method: 'POST' });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
+    try {
+      const res = await fetch('/api/billing-portal', { method: 'POST' });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Could not open billing portal');
+      }
+    } catch {
+      alert('Network error — please try again');
+    } finally {
       setPortalLoading(false);
     }
   };
@@ -146,43 +158,7 @@ export default function ProPage() {
       </div>
 
       {/* Comparison */}
-      <Card>
-        <CardContent className="p-6">
-          <h2 className="text-lg font-bold text-center mb-4">Free vs Pro</h2>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2">Feature</th>
-                <th className="text-center py-2">Free</th>
-                <th className="text-center py-2">
-                  <Badge className="bg-emerald-600 text-xs">Pro</Badge>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                ['Consensus picks', 'Top 5', 'Unlimited'],
-                ['Pick delay', '5 minutes', 'Real-time'],
-                ['Capper stats', 'Basic W/L', 'Full ROI & streaks'],
-                ['Individual picks', '—', '200+ cappers'],
-                ['Pick history', '3 days', '30 days'],
-                ['Early access', '—', 'Before lines move'],
-              ].map(([feature, free, pro]) => (
-                <tr key={feature} className="border-b border-border/50">
-                  <td className="py-3">{feature}</td>
-                  <td className="text-center text-muted-foreground">{free}</td>
-                  <td className="text-center">
-                    <span className="flex items-center justify-center gap-1">
-                      <Check className="h-3 w-3 text-emerald-500" />
-                      <span className="text-emerald-400">{pro}</span>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <ComparisonTable />
     </div>
   );
 }

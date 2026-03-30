@@ -161,7 +161,7 @@ export default async function HomePage() {
                       <p className="text-sm text-muted-foreground mb-4">
                         Upgrade to Premium for real-time access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
                       </p>
-                      <UpgradeButton label="Unlock All Picks – $9.99/mo" />
+                      <UpgradeButton label="Unlock All Picks – $20/mo" />
                     </div>
                   )}
                 </>

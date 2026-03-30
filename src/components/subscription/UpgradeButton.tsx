@@ -22,7 +22,7 @@ export function UpgradeButton({ className, variant = 'default', label }: Upgrade
       if (data.url) {
         window.location.href = data.url;
       } else if (data.error === 'Unauthorized') {
-        window.location.href = '/auth/login?redirect=/pricing';
+        window.location.href = '/login?redirect=/pricing';
       }
     } catch {
       setLoading(false);
@@ -37,7 +37,7 @@ export function UpgradeButton({ className, variant = 'default', label }: Upgrade
       className={cn(className)}
     >
       <Zap className="h-4 w-4 mr-2" />
-      {loading ? 'Redirecting…' : (label || 'Upgrade to Premium – $9.99/mo')}
+      {loading ? 'Redirecting…' : (label || 'Upgrade to Premium – $20/mo')}
     </Button>
   );
 }
