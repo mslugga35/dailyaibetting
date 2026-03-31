@@ -22,11 +22,14 @@ import { logger } from '@/lib/utils/logger';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Create Supabase client for API route
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Client created lazily inside request handlers to avoid build-time failures
+// when NEXT_PUBLIC_SUPABASE_URL is not set in the CI build environment.
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function GET(request: Request) {
   try {
@@ -38,7 +41,7 @@ export async function GET(request: Request) {
     logger.info('Consensus SQL', `Fetching consensus: sport=${sport}, minCappers=${minCappers}, date=${dateParam}`);
 
     // Call the Supabase RPC function
-    const { data: consensus, error } = await supabase.rpc('get_betting_consensus', {
+    const { data: consensus, error } = await getSupabase().rpc('get_betting_consensus', {
       p_date: dateParam,
       p_sport: sport,
       p_min_cappers: minCappers
