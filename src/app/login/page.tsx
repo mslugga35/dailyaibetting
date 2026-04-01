@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, Mail, Loader2, CheckCircle } from 'lucide-react';
@@ -35,7 +35,13 @@ function LoginContent() {
     setLoading(true);
     setError('');
 
-    const supabase = createClient();
+    // Use standard client (not @supabase/ssr) so flowType: 'implicit' is respected.
+    // @supabase/ssr forces PKCE which breaks magic links opened in different browser contexts.
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { flowType: 'implicit' } }
+    );
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
