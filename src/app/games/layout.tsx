@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Today's Games - Expert Picks by Matchup | DailyAI Betting",
+  title: "Today's Games - Expert Picks by Matchup",
   description: 'Browse expert consensus picks organized by game. See which matchups have the strongest capper agreement for NFL, NBA, MLB, NHL, and college sports.',
   keywords: [
     'sports betting picks by game',

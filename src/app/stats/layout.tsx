@@ -3,7 +3,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Consensus Performance Stats - Win Rate by Confidence Tier | DailyAI Betting',
+  title: 'Consensus Performance Stats - Win Rate by Confidence Tier',
   description:
     'Track how consensus picks perform by confidence tier. See win rates, ROI, and performance breakdowns for lock, strong, and lean consensus plays.',
   keywords: [

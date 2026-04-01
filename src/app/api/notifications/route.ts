@@ -132,6 +132,13 @@ function getFireEmoji(count: number): string {
 // POST - Send notification to Discord/Telegram (webhook trigger)
 export async function POST(request: Request) {
   try {
+    // Auth check — require CRON_SECRET
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { platform, webhookUrl } = body;
 
@@ -140,6 +147,20 @@ export async function POST(request: Request) {
         { success: false, error: 'Missing platform or webhookUrl' },
         { status: 400 }
       );
+    }
+
+    // Validate webhook URL — only allow Discord and Telegram domains
+    const allowedHosts = ['discord.com', 'discordapp.com', 'api.telegram.org'];
+    try {
+      const url = new URL(webhookUrl);
+      if (!allowedHosts.some(h => url.hostname.endsWith(h))) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid webhook URL — only Discord and Telegram allowed' },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json({ success: false, error: 'Invalid URL' }, { status: 400 });
     }
 
     // Get formatted picks

@@ -103,7 +103,7 @@ Requirements:
   return data.choices?.[0]?.message?.content || '';
 }
 
-export async function POST(req: NextRequest) {
+export async function GET(req: NextRequest) {
   // Auth check
   const secret = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {

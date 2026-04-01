@@ -63,7 +63,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sport = searchParams.get('sport');
-    const minCappers = parseInt(searchParams.get('minCappers') || '2');
+    const minCappers = parseInt(searchParams.get('minCappers') || '2') || 2;
     const dateParam = searchParams.get('date');
 
     // Determine subscription tier
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
 
     // --- Yesterday's consensus with results ---
     if (dateParam === 'yesterday') {
-      return handleYesterday(sport, minCappers);
+      return handleYesterday(sport, minCappers, userIsPremium);
     }
 
     // --- Today's consensus (default) ---
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
 /**
  * Handle yesterday's consensus with W/L results
  */
-async function handleYesterday(sport: string | null, minCappers: number) {
+async function handleYesterday(sport: string | null, minCappers: number, userIsPremium: boolean = false) {
   try {
     const [rawPicks, scores] = await Promise.all([
       getAllYesterdayPicksFromSources(),
@@ -214,8 +214,8 @@ async function handleYesterday(sport: string | null, minCappers: number) {
       isYesterday: true,
       totalPicks: cleanPicks.length,
       consensusCount: consensus.length,
-      consensus: gradedConsensus,
-      topOverall: formatted.topOverall.map(pick => ({
+      consensus: userIsPremium ? gradedConsensus : gradedConsensus.slice(0, FREE_TIER_LIMIT),
+      topOverall: (userIsPremium ? formatted.topOverall : formatted.topOverall.slice(0, FREE_TIER_LIMIT)).map(pick => ({
         ...pick,
         result: gradeConsensus(pick, scores),
       })),

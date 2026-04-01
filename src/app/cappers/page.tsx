@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Trophy, TrendingUp, Flame, Snowflake, ArrowUpRight, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Capper Leaderboard - Top Sports Betting Experts | DailyAI Betting',
+  title: 'Capper Leaderboard - Top Sports Betting Experts',
   description: 'See which sports betting cappers have the best track records. Verified win rates, ROI, and performance stats for top betting experts.',
   keywords: 'sports betting cappers, best handicappers, betting experts leaderboard, capper rankings, handicapper win rates',
 };
@@ -29,7 +29,7 @@ interface Capper {
 }
 
 async function getLeaderboard(): Promise<Capper[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || '3000'}`;
   
   try {
     const response = await fetch(`${baseUrl}/api/cappers?view=leaderboard&limit=50`, {
@@ -44,7 +44,7 @@ async function getLeaderboard(): Promise<Capper[]> {
 }
 
 async function getHotStreaks() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || '3000'}`;
   
   try {
     const response = await fetch(`${baseUrl}/api/cappers?view=hot-streaks&limit=5`, {

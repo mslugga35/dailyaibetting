@@ -12,8 +12,8 @@ export async function GET(request: Request) {
     const sport = searchParams.get('sport');
     const capper = searchParams.get('capper');
     const date = searchParams.get('date');
-    const limit = parseInt(searchParams.get('limit') || '100');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100') || 100, 1), 500);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
 
     // Fetch all picks from data sources
     const rawPicks = await getAllPicksFromSources();

@@ -16,7 +16,7 @@ export function ProPopup() {
   useEffect(() => {
     if (loading || isPro) return;
     const path = window.location.pathname;
-    if (path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/pro')) return;
+    if (path.startsWith('/login') || path.startsWith('/auth') || path.startsWith('/pro') || path.startsWith('/pricing')) return;
 
     // Check if user has already seen the popup in the last 24h
     const lastShown = localStorage.getItem('dailyai-pro-popup-shown');
