@@ -5,18 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 
-/** Inline email capture banner for embedding in pages */
 export function EmailCaptureBanner() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    setError('');
+    setLoading(true);
 
-    // Email capture demo - stores in localStorage only
-    localStorage.setItem('emailSubscribed', 'true');
-    setSubmitted(true);
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setSubmitted(true);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? 'Something went wrong. Try again.');
+      }
+    } catch {
+      setError('Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -39,17 +56,23 @@ export function EmailCaptureBanner() {
               Top consensus picks delivered to your inbox every morning.
             </p>
           </div>
-          <form onSubmit={handleSubmit} className="flex gap-2 w-full md:w-auto">
-            <Input
-              type="email"
-              placeholder="Your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full md:w-64"
-              required
-            />
-            <Button type="submit">Subscribe</Button>
-          </form>
+          <div className="flex flex-col gap-1 w-full md:w-auto">
+            <form onSubmit={handleSubmit} className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full md:w-64"
+                required
+                disabled={loading}
+              />
+              <Button type="submit" disabled={loading}>
+                {loading ? 'Subscribing…' : 'Subscribe'}
+              </Button>
+            </form>
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
         </div>
       </CardContent>
     </Card>

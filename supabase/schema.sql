@@ -331,3 +331,20 @@ INSERT INTO cappers (name, slug, source, total_picks, wins, losses, pushes, win_
   ('Chris Vasile', 'chris-vasile', 'Covers', 167, 95, 68, 4, 0.583, 22.8, 0.137, ARRAY['NFL', 'NCAAF'], 4, 'W'),
   ('Pure Lock', 'pure-lock', 'BetFirm', 134, 72, 58, 4, 0.554, 15.6, 0.116, ARRAY['MLB'], 0, NULL)
 ON CONFLICT (slug) DO NOTHING;
+
+-- =====================================================
+-- EMAIL SUBSCRIBERS TABLE
+-- Captures email sign-ups from the site
+-- =====================================================
+CREATE TABLE IF NOT EXISTS email_subscribers (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  email text UNIQUE NOT NULL,
+  site text DEFAULT 'dailyaibetting',
+  source text DEFAULT 'banner',
+  subscribed_at timestamptz DEFAULT now(),
+  unsubscribed_at timestamptz
+);
+
+-- Composite index for multi-site queries ordered by date
+CREATE INDEX IF NOT EXISTS idx_email_subscribers_site_date
+  ON email_subscribers(site, subscribed_at DESC);
