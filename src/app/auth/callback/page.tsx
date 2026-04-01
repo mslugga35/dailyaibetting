@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Suspense } from 'react';
 
 function CallbackHandler() {
   const router = useRouter();
@@ -12,7 +11,9 @@ function CallbackHandler() {
 
   useEffect(() => {
     const code = searchParams.get('code');
-    const next = searchParams.get('next') || '/';
+    // Sanitize redirect — only allow relative paths (prevent open redirect)
+    const rawNext = searchParams.get('next') || '/';
+    const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
 
     async function handleCallback() {
       const supabase = createClient();
