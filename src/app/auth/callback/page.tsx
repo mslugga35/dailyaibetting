@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@supabase/supabase-js';
 
 function CallbackHandler() {
   const router = useRouter();
@@ -10,49 +10,53 @@ function CallbackHandler() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Sanitize redirect — only allow relative paths (prevent open redirect)
     const rawNext = searchParams.get('next') || '/';
     const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
 
     async function handleCallback() {
-      const supabase = createClient();
-      const hash = window.location.hash;
+      // Use standard client (not @supabase/ssr) — matches the login page.
+      // @supabase/ssr forces PKCE and can't parse implicit flow hash tokens.
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { flowType: 'implicit', detectSessionInUrl: true } }
+      );
 
-      // Implicit flow: tokens arrive in URL hash fragment
-      if (hash && hash.includes('access_token')) {
-        const { data, error } = await supabase.auth.getSession();
-        if (data?.session) {
-          router.replace(next);
-          return;
-        }
-        setError(error?.message || 'Session failed');
-        setTimeout(() => router.replace('/login?error=session_failed'), 2000);
+      // Implicit flow: Supabase auto-detects #access_token in URL on init.
+      // Give it a moment to process, then check for session.
+      const { data, error } = await supabase.auth.getSession();
+
+      if (data?.session) {
+        // Session established — persist via the SSR client cookie mechanism
+        const { createClient: createSSR } = await import('@/lib/supabase/client');
+        const ssrClient = createSSR();
+        await ssrClient.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        router.replace(next);
         return;
       }
 
-      // PKCE fallback: code arrives as query param
+      // Fallback: try PKCE code exchange
       const code = searchParams.get('code');
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
+        const { createClient: createSSR } = await import('@/lib/supabase/client');
+        const ssrClient = createSSR();
+        const { error: codeError } = await ssrClient.auth.exchangeCodeForSession(code);
+        if (!codeError) {
           router.replace(next);
           return;
         }
-        setError(error.message);
-        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(error.message)}`), 2000);
+        setError(codeError.message);
+        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(codeError.message)}`), 2000);
         return;
       }
 
-      // Hash error from Supabase
-      if (hash && hash.includes('error')) {
-        const params = new URLSearchParams(hash.substring(1));
-        const errDesc = params.get('error_description') || 'Authentication failed';
-        router.replace(`/login?error=${encodeURIComponent(errDesc)}`);
-        return;
-      }
-
-      // Nothing to process
-      router.replace('/login?error=no_auth_data');
+      // Nothing worked
+      const msg = error?.message || 'session_failed';
+      setError(msg);
+      setTimeout(() => router.replace(`/login?error=${encodeURIComponent(msg)}`), 2000);
     }
 
     handleCallback();
