@@ -4,8 +4,16 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip routes that handle their own auth/cookies
-  if (pathname === '/api/webhooks/stripe' || pathname === '/auth/callback') {
+  // Skip public routes and routes that handle their own auth/cookies
+  if (
+    pathname === '/api/webhooks/stripe' ||
+    pathname === '/auth/callback' ||
+    pathname === '/api/subscribe' ||
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/picks') ||
+    pathname.startsWith('/api/consensus') ||
+    pathname.startsWith('/api/blog')
+  ) {
     return NextResponse.next();
   }
 

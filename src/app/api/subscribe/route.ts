@@ -9,13 +9,24 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Basic in-memory rate limiter: max 5 requests per IP per minute
+// In-memory rate limiter: max 5 requests per IP per minute
+// Expired entries pruned every 100 calls to prevent unbounded growth
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60_000;
+let _callsSinceCleanup = 0;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
+
+  // Prune expired entries periodically (every 100 calls)
+  if (++_callsSinceCleanup >= 100) {
+    _callsSinceCleanup = 0;
+    for (const [key, val] of rateLimitMap) {
+      if (now > val.resetAt) rateLimitMap.delete(key);
+    }
+  }
+
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
     rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });

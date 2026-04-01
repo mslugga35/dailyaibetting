@@ -42,31 +42,38 @@ export async function GET(req: NextRequest) {
   // that initializes the Supabase client to pick up the tokens.
   const html = `<!DOCTYPE html>
 <html><head><title>Signing in...</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
+  onerror="window.location.replace('/login?error=script_load_failed')"></script>
 </head>
 <body>
 <p>Signing you in...</p>
 <script>
+  // Timeout: if auth hasn't completed in 8s, redirect to login
+  var _authTimeout = setTimeout(function() {
+    window.location.replace('/login?error=session_timeout');
+  }, 8000);
+
   (async function() {
-    const hash = window.location.hash;
+    var hash = window.location.hash;
     if (hash && hash.includes('access_token')) {
-      // Initialize Supabase client to process the hash tokens
-      const supabase = window.supabase.createClient(
+      var supabase = window.supabase.createClient(
         '${process.env.NEXT_PUBLIC_SUPABASE_URL}',
         '${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}'
       );
-      // getSession() will parse the hash fragment and set cookies
-      const { data, error } = await supabase.auth.getSession();
-      if (data?.session) {
+      var result = await supabase.auth.getSession();
+      clearTimeout(_authTimeout);
+      if (result.data?.session) {
         window.location.replace('${next}');
       } else {
-        window.location.replace('/login?error=' + encodeURIComponent(error?.message || 'session_failed'));
+        window.location.replace('/login?error=' + encodeURIComponent(result.error?.message || 'session_failed'));
       }
     } else if (hash && hash.includes('error')) {
-      const params = new URLSearchParams(hash.substring(1));
-      const errDesc = params.get('error_description') || 'Authentication failed';
+      clearTimeout(_authTimeout);
+      var params = new URLSearchParams(hash.substring(1));
+      var errDesc = params.get('error_description') || 'Authentication failed';
       window.location.replace('/login?error=' + encodeURIComponent(errDesc));
     } else {
+      clearTimeout(_authTimeout);
       window.location.replace('/login?error=no_auth_data');
     }
   })();
