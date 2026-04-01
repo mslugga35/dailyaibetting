@@ -10,29 +10,15 @@ function CallbackHandler() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const code = searchParams.get('code');
     // Sanitize redirect — only allow relative paths (prevent open redirect)
     const rawNext = searchParams.get('next') || '/';
     const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
 
     async function handleCallback() {
       const supabase = createClient();
-
-      if (code) {
-        // PKCE flow: exchange auth code for session (browser has the code_verifier)
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (!error) {
-          router.replace(next);
-          return;
-        }
-        console.error('[auth/callback] code exchange failed:', error.message);
-        setError(error.message);
-        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(error.message)}`), 2000);
-        return;
-      }
-
-      // Implicit flow fallback: tokens may be in hash fragment
       const hash = window.location.hash;
+
+      // Implicit flow: tokens arrive in URL hash fragment
       if (hash && hash.includes('access_token')) {
         const { data, error } = await supabase.auth.getSession();
         if (data?.session) {
@@ -44,7 +30,28 @@ function CallbackHandler() {
         return;
       }
 
-      // No code or hash — redirect to login
+      // PKCE fallback: code arrives as query param
+      const code = searchParams.get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) {
+          router.replace(next);
+          return;
+        }
+        setError(error.message);
+        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(error.message)}`), 2000);
+        return;
+      }
+
+      // Hash error from Supabase
+      if (hash && hash.includes('error')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const errDesc = params.get('error_description') || 'Authentication failed';
+        router.replace(`/login?error=${encodeURIComponent(errDesc)}`);
+        return;
+      }
+
+      // Nothing to process
       router.replace('/login?error=no_auth_data');
     }
 
