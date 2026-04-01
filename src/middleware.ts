@@ -4,8 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip Stripe webhook — needs raw body, no cookie interference
-  if (pathname === '/api/webhooks/stripe') {
+  // Skip routes that handle their own auth/cookies
+  if (pathname === '/api/webhooks/stripe' || pathname === '/auth/callback') {
     return NextResponse.next();
   }
 

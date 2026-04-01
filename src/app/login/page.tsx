@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const callbackError = searchParams.get('error');
+    if (callbackError) {
+      setError(callbackError === 'auth' ? 'Sign-in failed. Please try again.' : callbackError);
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
