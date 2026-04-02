@@ -1,10 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 
-function CallbackHandler() {
+export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState('');
 
@@ -17,27 +16,28 @@ function CallbackHandler() {
         return;
       }
 
-      // Parse tokens directly from hash — most reliable method
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
+
+      // Clear tokens from browser history to prevent leakage
+      window.history.replaceState(null, '', window.location.pathname);
 
       if (!accessToken || !refreshToken) {
         router.replace('/login?error=missing_tokens');
         return;
       }
 
-      // Set session on the SSR client (stores in cookies for server-side access)
       const { createClient: createSSRClient } = await import('@/lib/supabase/client');
       const ssrClient = createSSRClient();
-      const { error } = await ssrClient.auth.setSession({
+      const { error: authError } = await ssrClient.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       });
 
-      if (error) {
-        setError(error.message);
-        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(error.message)}`), 2000);
+      if (authError) {
+        setError(authError.message);
+        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(authError.message)}`), 2000);
         return;
       }
 
@@ -63,13 +63,5 @@ function CallbackHandler() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function AuthCallbackPage() {
-  return (
-    <Suspense>
-      <CallbackHandler />
-    </Suspense>
   );
 }
