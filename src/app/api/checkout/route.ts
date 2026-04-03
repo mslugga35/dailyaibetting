@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       .from('user_subscriptions')
       .select('status, stripe_customer_id')
       .eq('user_id', user.id)
-      .single() as { data: { status: string; stripe_customer_id: string } | null };
+      .single();
 
     if (isProStatus(existing?.status)) {
       return NextResponse.json({ error: 'Already subscribed' }, { status: 400 });
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       });
       customerId = customer.id;
 
-      await (db.from('user_subscriptions') as any).upsert({
+      await db.from('user_subscriptions').upsert({
         user_id: user.id,
         stripe_customer_id: customerId,
         status: 'incomplete',

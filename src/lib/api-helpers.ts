@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/supabase/database.types';
 
 /**
  * Shared helpers for API routes.
@@ -74,12 +75,12 @@ export async function resolveUser(request: Request) {
 
 // --- Supabase Admin ---
 
-let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+let _supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
-/** Lazy-initialized Supabase admin client (service role). */
+/** Lazy-initialized typed Supabase admin client (service role). */
 export function getSupabaseAdmin() {
   if (!_supabaseAdmin) {
-    _supabaseAdmin = createClient(
+    _supabaseAdmin = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );

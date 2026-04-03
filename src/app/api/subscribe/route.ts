@@ -62,12 +62,12 @@ export async function POST(request: Request) {
     const db = getSupabaseAdmin();
 
     // Upsert: single roundtrip instead of SELECT + INSERT
-    const { data: row, error } = await (db.from('email_subscribers') as any)
+    const { data: row, error } = await db.from('email_subscribers')
       .upsert(
         { email, site: 'dailyaibetting', source: 'banner' },
         { onConflict: 'email', ignoreDuplicates: true }
       )
-      .select('created_at')
+      .select('subscribed_at')
       .single();
 
     if (error) {
@@ -75,8 +75,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
     }
 
-    // Only send welcome email for genuinely new subscribers (created in last 5s)
-    const isNew = row?.created_at && (Date.now() - new Date(row.created_at).getTime()) < 5000;
+    // Only send welcome email for genuinely new subscribers (subscribed in last 5s)
+    const isNew = row?.subscribed_at && (Date.now() - new Date(row.subscribed_at).getTime()) < 5000;
     if (isNew) {
       Promise.allSettled([
         appendToGoogleSheet(email),

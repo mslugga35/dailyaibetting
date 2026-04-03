@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     }
 
     const db = getSupabaseAdmin();
-    const { error: dbError } = await (db.from('contact_messages') as any)
+    const { error: dbError } = await db.from('contact_messages')
       .insert({ name, email, message, site: 'dailyaibetting' });
 
     if (dbError) {
