@@ -12,13 +12,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 // --- Rate Limiting ---
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-let _cleanupCounter = 0;
+let _lastCleanup = Date.now();
 
 export function isRateLimited(ip: string, maxRequests = 5, windowMs = 60_000): boolean {
   const now = Date.now();
 
-  if (++_cleanupCounter >= 100) {
-    _cleanupCounter = 0;
+  // Time-based cleanup: sweep expired entries every 60s (not counter-based)
+  if (now - _lastCleanup > 60_000) {
+    _lastCleanup = now;
     for (const [key, val] of rateLimitMap) {
       if (now > val.resetAt) rateLimitMap.delete(key);
     }

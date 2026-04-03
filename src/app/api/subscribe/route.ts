@@ -61,37 +61,34 @@ export async function POST(request: Request) {
 
     const db = getSupabaseAdmin();
 
-    // Check if already subscribed
-    const { data: existing } = await db
-      .from('email_subscribers')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existing) {
-      return NextResponse.json({ success: true });
-    }
-
-    // New subscriber — save to DB
-    const { error } = await (db.from('email_subscribers') as any)
-      .insert({ email, site: 'dailyaibetting', source: 'banner' });
+    // Upsert: single roundtrip instead of SELECT + INSERT
+    const { data: row, error } = await (db.from('email_subscribers') as any)
+      .upsert(
+        { email, site: 'dailyaibetting', source: 'banner' },
+        { onConflict: 'email', ignoreDuplicates: true }
+      )
+      .select('created_at')
+      .single();
 
     if (error) {
       console.error('[subscribe] DB error:', error.message);
       return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
     }
 
-    // New subscriber: log to sheet + trigger welcome email via n8n (non-blocking)
-    Promise.allSettled([
-      appendToGoogleSheet(email),
-      triggerWelcomeEmail(email),
-    ]).then(results => {
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') {
-          console.error(`[subscribe] Webhook ${i} failed:`, r.reason);
-        }
+    // Only send welcome email for genuinely new subscribers (created in last 5s)
+    const isNew = row?.created_at && (Date.now() - new Date(row.created_at).getTime()) < 5000;
+    if (isNew) {
+      Promise.allSettled([
+        appendToGoogleSheet(email),
+        triggerWelcomeEmail(email),
+      ]).then(results => {
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') {
+            console.error(`[subscribe] Webhook ${i} failed:`, r.reason);
+          }
+        });
       });
-    });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
