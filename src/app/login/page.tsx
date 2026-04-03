@@ -81,7 +81,7 @@ function LoginContent() {
               <p className="text-sm text-muted-foreground">
                 We sent a sign-in link to <strong className="text-foreground">{email}</strong>
               </p>
-              <div className="bg-muted/30 rounded-lg p-4 text-xs text-muted-foreground space-y-1">
+              <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
                 <p>The link will expire in 1 hour.</p>
                 <p>Check your spam folder if you don&apos;t see it.</p>
               </div>
@@ -130,7 +130,7 @@ function LoginContent() {
                 )}
               </Button>
 
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-sm text-muted-foreground text-center">
                 We&apos;ll send you a secure sign-in link. No password required.
               </p>
             </form>

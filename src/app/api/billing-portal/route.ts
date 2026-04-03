@@ -1,17 +1,40 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
-export async function POST() {
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+export async function POST(request: Request) {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authHeader = request.headers.get('Authorization');
+    let user;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const sb = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } }
+      );
+      const { data } = await sb.auth.getUser(token);
+      user = data.user;
+    } else {
+      const supabase = await createServerSupabaseClient();
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const { data: sub } = await supabase
+    const { data: sub } = await getSupabaseAdmin()
       .from('user_subscriptions')
       .select('stripe_customer_id')
       .eq('user_id', user.id)

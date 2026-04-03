@@ -32,7 +32,7 @@ export function ComparisonTable() {
                   <Badge variant="secondary" className="text-xs">Free</Badge>
                 </th>
                 <th className="text-center py-3 px-2">
-                  <Badge className="bg-emerald-600 hover:bg-emerald-700 text-xs">
+                  <Badge className="bg-emerald-600 hover:bg-emerald-700 text-xs text-white">
                     <Crown className="h-3 w-3 mr-1" />
                     Pro
                   </Badge>
@@ -66,7 +66,7 @@ export function ComparisonTable() {
           <p className="text-sm text-muted-foreground mb-3">
             Ready to upgrade your betting strategy?
           </p>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" asChild>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
             <Link href="/pro">
               <Crown className="h-4 w-4 mr-2" />
               Start Free 7-Day Trial

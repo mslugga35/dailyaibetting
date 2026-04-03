@@ -27,13 +27,13 @@ export function ProGateSection({ children, preview, feature = 'this content' }: 
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/80 to-background z-10 pointer-events-none" />
         <div className="relative z-20 text-center py-12 px-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted/50 mx-auto mb-4">
-            <Lock className="h-6 w-6 text-muted-foreground/60" />
+            <Lock className="h-6 w-6 text-muted-foreground/80" />
           </div>
           <h3 className="font-semibold text-lg mb-1">Upgrade to unlock {feature}</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
             Get full access to detailed stats, complete pick history, and real-time consensus data.
           </p>
-          <Button className="bg-emerald-600 hover:bg-emerald-700" asChild>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
             <Link href={user ? '/pro' : '/login'}>
               <Crown className="h-4 w-4 mr-2" />
               {user ? `Upgrade to Pro — ${PRO_PRICE_DISPLAY}` : 'Sign in to upgrade'}

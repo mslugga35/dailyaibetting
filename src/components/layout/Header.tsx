@@ -156,7 +156,7 @@ export function Header() {
                   <Button size="sm" variant="ghost" className="hidden sm:flex" asChild>
                     <Link href="/login">Sign in</Link>
                   </Button>
-                  <Button size="sm" className="hidden sm:flex gap-1.5 bg-emerald-600 hover:bg-emerald-700" asChild>
+                  <Button size="sm" className="hidden sm:flex gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
                     <Link href="/pro">
                       <Crown className="h-4 w-4" />
                       <span className="hidden md:inline">Try Pro Free</span>
@@ -231,7 +231,7 @@ export function Header() {
                           </Link>
                         </Button>
                       ) : (
-                        <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" asChild onClick={() => setIsOpen(false)}>
+                        <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" asChild onClick={() => setIsOpen(false)}>
                           <Link href="/pro">
                             <Crown className="h-4 w-4" />
                             Upgrade to Pro
@@ -248,7 +248,7 @@ export function Header() {
                       <Button variant="outline" className="w-full gap-2" asChild onClick={() => setIsOpen(false)}>
                         <Link href="/login">Sign in</Link>
                       </Button>
-                      <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700" asChild onClick={() => setIsOpen(false)}>
+                      <Button className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" asChild onClick={() => setIsOpen(false)}>
                         <Link href="/pro">
                           <Crown className="h-4 w-4" />
                           Try Pro Free

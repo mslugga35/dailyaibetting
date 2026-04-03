@@ -17,7 +17,15 @@ export default function ProPage() {
   const handleCheckout = async () => {
     setCheckoutLoading(true);
     try {
-      const res = await fetch('/api/checkout', { method: 'POST' });
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -34,7 +42,15 @@ export default function ProPage() {
   const handleManage = async () => {
     setPortalLoading(true);
     try {
-      const res = await fetch('/api/billing-portal', { method: 'POST' });
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/billing-portal', {
+        method: 'POST',
+        headers: session?.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : {},
+      });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -65,7 +81,7 @@ export default function ProPage() {
         </div>
         <h1 className="text-2xl font-bold mb-2">You&apos;re a Pro!</h1>
         <p className="text-muted-foreground mb-2">
-          Status: <Badge className="bg-emerald-600">{status}</Badge>
+          Status: <Badge className="bg-emerald-600 text-white">{status}</Badge>
         </p>
         <p className="text-sm text-muted-foreground mb-6">
           You have full access to all premium features.
@@ -93,7 +109,7 @@ export default function ProPage() {
     <div className="container px-4 py-12 max-w-3xl mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
-        <Badge className="bg-emerald-600 mb-4">DailyAI Pro</Badge>
+        <Badge className="bg-emerald-600 text-white mb-4">DailyAI Pro</Badge>
         <h1 className="text-3xl md:text-4xl font-bold mb-3">
           Upgrade Your Edge
         </h1>
@@ -151,7 +167,7 @@ export default function ProPage() {
             </div>
             <div>
               <h3 className="font-semibold text-sm">{f.title}</h3>
-              <p className="text-xs text-muted-foreground">{f.desc}</p>
+              <p className="text-sm text-muted-foreground">{f.desc}</p>
             </div>
           </div>
         ))}

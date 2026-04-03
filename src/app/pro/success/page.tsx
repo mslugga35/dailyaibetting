@@ -18,7 +18,7 @@ export default function ProSuccessPage() {
             You now have full access to all premium features. Your 7-day free trial has started.
           </p>
           <div className="space-y-3">
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700" asChild>
+            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
               <Link href="/consensus">
                 View All Consensus Picks
                 <ArrowRight className="h-4 w-4 ml-2" />
