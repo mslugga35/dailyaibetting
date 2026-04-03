@@ -91,6 +91,7 @@ export function Breadcrumbs({ items, className = '' }: BreadcrumbsProps) {
                   href={crumb.href}
                   className="hover:text-primary transition-colors flex items-center"
                   itemProp="item"
+                  aria-label={index === 0 ? 'Home' : crumb.label}
                 >
                   <span itemProp="name">
                     {index === 0 ? <Home className="h-4 w-4" /> : crumb.label}

@@ -81,11 +81,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
     }
 
-    // New subscriber: log to sheet + trigger welcome email via n8n
+    // New subscriber: log to sheet + trigger welcome email via n8n (non-blocking)
     Promise.allSettled([
       appendToGoogleSheet(email),
       triggerWelcomeEmail(email),
-    ]).catch(() => {});
+    ]).then(results => {
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`[subscribe] Webhook ${i} failed:`, r.reason);
+        }
+      });
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

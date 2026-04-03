@@ -36,14 +36,14 @@ export async function POST(request: Request) {
     const email: string = body?.email?.trim()?.toLowerCase() ?? '';
     const message: string = body?.message?.trim() ?? '';
 
-    if (!name || name.length < 2) {
-      return NextResponse.json({ error: 'Name must be at least 2 characters' }, { status: 400 });
+    if (!name || name.length < 2 || name.length > 100) {
+      return NextResponse.json({ error: 'Name must be 2-100 characters' }, { status: 400 });
     }
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
     }
-    if (!message || message.length < 10) {
-      return NextResponse.json({ error: 'Message must be at least 10 characters' }, { status: 400 });
+    if (!message || message.length < 10 || message.length > 5000) {
+      return NextResponse.json({ error: 'Message must be 10-5000 characters' }, { status: 400 });
     }
 
     const db = getSupabaseAdmin();

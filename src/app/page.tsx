@@ -167,13 +167,13 @@ export default async function HomePage() {
               ) : (
                 <div className="text-center py-16">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/50 mx-auto mb-4">
-                    <CalendarClock className="h-7 w-7 text-muted-foreground/60" />
+                    <CalendarClock className="h-7 w-7 text-muted-foreground/80" />
                   </div>
                   <p className="font-medium text-foreground/70 mb-1">No consensus picks yet today</p>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                     Picks build throughout the day as cappers post. Check back when games are approaching.
                   </p>
-                  <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/60">
+                  <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/80">
                     <Clock className="h-3 w-3" />
                     Updates every 5 minutes
                   </div>

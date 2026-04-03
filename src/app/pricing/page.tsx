@@ -60,8 +60,8 @@ export default async function PricingPage() {
               'Historical data access',
             ].map(f => (
               <div key={f} className="flex items-start gap-2 text-sm">
-                <Lock className="h-4 w-4 text-muted-foreground/40 mt-0.5 shrink-0" />
-                <span className="text-muted-foreground/40">{f}</span>
+                <Lock className="h-4 w-4 text-muted-foreground/70 mt-0.5 shrink-0" />
+                <span className="text-muted-foreground/70">{f}</span>
               </div>
             ))}
             {!user ? (
