@@ -33,7 +33,7 @@ export function ProGateSection({ children, preview, feature = 'this content' }: 
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
             Get full access to detailed stats, complete pick history, and real-time consensus data.
           </p>
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
+          <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
             <Link href={user ? '/pro' : '/login'}>
               <Crown className="h-4 w-4 mr-2" />
               {user ? `Upgrade to Pro — ${PRO_PRICE_DISPLAY}` : 'Sign in to upgrade'}

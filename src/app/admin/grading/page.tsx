@@ -40,7 +40,7 @@ export default function GradingAdminPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-950">
         <form onSubmit={(e) => { e.preventDefault(); if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) setIsAuthed(true); }} className="space-y-4">
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Admin password" className="px-4 py-2 bg-gray-800 border border-gray-700 rounded text-white" />
-          <button type="submit" className="px-4 py-2 bg-emerald-600 rounded text-white ml-2">Enter</button>
+          <button type="submit" className="px-4 py-2 bg-emerald-700 rounded text-white ml-2">Enter</button>
         </form>
       </div>
     );
@@ -132,7 +132,7 @@ export default function GradingAdminPage() {
           <button
             onClick={runAutoGrader}
             disabled={grading}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800"
           >
             <Play className={`h-4 w-4 ${grading ? 'animate-pulse' : ''}`} />
             {grading ? 'Grading...' : 'Run Auto-Grader'}

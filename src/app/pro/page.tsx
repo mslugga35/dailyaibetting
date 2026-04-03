@@ -81,7 +81,7 @@ export default function ProPage() {
         </div>
         <h1 className="text-2xl font-bold mb-2">You&apos;re a Pro!</h1>
         <p className="text-muted-foreground mb-2">
-          Status: <Badge className="bg-emerald-600 text-white">{status}</Badge>
+          Status: <Badge className="bg-emerald-700 text-white">{status}</Badge>
         </p>
         <p className="text-sm text-muted-foreground mb-6">
           You have full access to all premium features.
@@ -109,7 +109,7 @@ export default function ProPage() {
     <div className="container px-4 py-12 max-w-3xl mx-auto">
       {/* Header */}
       <div className="text-center mb-10">
-        <Badge className="bg-emerald-600 text-white mb-4">DailyAI Pro</Badge>
+        <Badge className="bg-emerald-700 text-white mb-4">DailyAI Pro</Badge>
         <h1 className="text-3xl md:text-4xl font-bold mb-3">
           Upgrade Your Edge
         </h1>
@@ -132,7 +132,7 @@ export default function ProPage() {
           {user ? (
             <Button
               size="lg"
-              className="w-full max-w-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full max-w-sm bg-emerald-700 hover:bg-emerald-800 text-white"
               onClick={handleCheckout}
               disabled={checkoutLoading}
             >
@@ -146,7 +146,7 @@ export default function ProPage() {
           ) : (
             <Button
               size="lg"
-              className="w-full max-w-sm bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full max-w-sm bg-emerald-700 hover:bg-emerald-800 text-white"
               asChild
             >
               <Link href="/login">

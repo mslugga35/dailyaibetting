@@ -305,7 +305,7 @@ export default async function CapperProfilePage({ params }: PageProps) {
         </p>
         <Link
           href="/consensus"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-lg transition-colors"
         >
           <Trophy className="h-5 w-5" />
           View Consensus Picks

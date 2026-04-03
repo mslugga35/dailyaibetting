@@ -51,7 +51,7 @@ export function HiddenBagCTA() {
         </div>
 
         <div className="text-center">
-          <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white mb-3" asChild>
+          <Button size="lg" className="bg-emerald-700 hover:bg-emerald-800 text-white mb-3" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
               Try Pro Free for {TRIAL_DAYS} Days

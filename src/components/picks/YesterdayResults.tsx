@@ -14,7 +14,7 @@ interface YesterdayResultsProps {
 }
 
 function getResultBadge(result: 'W' | 'L' | 'P' | null | undefined) {
-  if (result === 'W') return <Badge className="bg-emerald-600 text-white">W</Badge>;
+  if (result === 'W') return <Badge className="bg-emerald-700 text-white">W</Badge>;
   if (result === 'L') return <Badge variant="destructive">L</Badge>;
   if (result === 'P') return <Badge variant="outline">P</Badge>;
   return <Badge variant="secondary">TBD</Badge>;
@@ -152,7 +152,7 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
           </p>
           <Link
             href="/pro"
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-medium transition-colors"
           >
             <Crown className="h-4 w-4" />
             See Full History in Pro

@@ -117,7 +117,7 @@ function LoginContent() {
 
               <Button
                 type="submit"
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 h-auto"
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 h-auto"
                 disabled={loading}
               >
                 {loading ? (

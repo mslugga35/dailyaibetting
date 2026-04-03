@@ -37,7 +37,7 @@ export function ProGate({ children, fallback }: ProGateProps) {
         <p className="text-sm text-muted-foreground mb-4">
           Upgrade to DailyAI Pro to unlock this content
         </p>
-        <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" asChild>
+        <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
           <Link href={user ? '/pro' : '/login'}>
             <Crown className="h-4 w-4 mr-2" />
             {user ? `Upgrade to Pro — ${PRO_PRICE_DISPLAY}` : 'Sign in to upgrade'}

@@ -22,7 +22,7 @@ export default function SoccerPicksToday() {
         </p>
         <a
           href="/consensus?sport=SOCCER"
-          className="inline-block bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700"
+          className="inline-block bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-800"
         >
           View Soccer Consensus Picks →
         </a>
