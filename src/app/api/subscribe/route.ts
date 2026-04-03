@@ -1,38 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { isRateLimited, isValidEmail, getClientIp, getSupabaseAdmin } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-let _cleanupCounter = 0;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-
-  if (++_cleanupCounter >= 100) {
-    _cleanupCounter = 0;
-    for (const [key, val] of rateLimitMap) {
-      if (now > val.resetAt) rateLimitMap.delete(key);
-    }
-  }
-
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
-    return false;
-  }
-  entry.count++;
-  return entry.count > 5;
-}
-
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 async function appendToGoogleSheet(email: string) {
   const webhookUrl = process.env.GOOGLE_SHEET_WEBHOOK;
@@ -54,7 +23,6 @@ async function appendToGoogleSheet(email: string) {
     console.error('[subscribe] Sheet webhook error:', res.status);
   }
 }
-
 
 async function triggerWelcomeEmail(email: string) {
   const webhookUrl = process.env.N8N_WELCOME_EMAIL_WEBHOOK;
@@ -79,7 +47,7 @@ async function triggerWelcomeEmail(email: string) {
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+    const ip = getClientIp(request);
     if (isRateLimited(ip)) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
     }
@@ -91,8 +59,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
     }
 
+    const db = getSupabaseAdmin();
+
     // Check if already subscribed
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await db
       .from('email_subscribers')
       .select('email')
       .eq('email', email)
@@ -103,8 +73,7 @@ export async function POST(request: Request) {
     }
 
     // New subscriber — save to DB
-    const { error } = await supabaseAdmin
-      .from('email_subscribers')
+    const { error } = await (db.from('email_subscribers') as any)
       .insert({ email, site: 'dailyaibetting', source: 'banner' });
 
     if (error) {
