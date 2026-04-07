@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import harborPosts from '@/lib/harbor-posts.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,10 +80,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Failed to fetch posts' }, { status: 500 });
     }
 
+    // Merge Harbor SEO posts (dedupe by slug)
+    const dbPosts = data || [];
+    const dbSlugs = new Set(dbPosts.map((p: { slug: string }) => p.slug));
+    const harbor = (harborPosts as Array<Record<string, unknown>>)
+      .filter(p => !dbSlugs.has(p.slug as string))
+      .map(p => ({
+        id: `harbor-${p.slug}`,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.description,
+        category: 'analysis',
+        tags: p.tags || [],
+        featured_image: null,
+        published_at: p.date,
+        view_count: 0,
+        author: p.author || 'DailyAI Betting',
+      }));
+    const allPosts = [...dbPosts, ...harbor].sort((a: { published_at: string }, b: { published_at: string }) =>
+      new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+    );
+
     return NextResponse.json({
       success: true,
-      posts: data || [],
-      total: count || 0,
+      posts: allPosts,
+      total: (count || 0) + harbor.length,
       limit,
       offset
     });

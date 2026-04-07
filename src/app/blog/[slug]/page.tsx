@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Eye, ArrowLeft, Share2 } from 'lucide-react';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
+import harborPosts from '@/lib/harbor-posts.json';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +58,30 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
       .eq('status', 'published')
       .single();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      // Fallback: check Harbor SEO posts
+      const harbor = (harborPosts as Array<Record<string, unknown>>).find(p => p.slug === slug);
+      if (harbor) {
+        return {
+          id: `harbor-${harbor.slug}`,
+          slug: harbor.slug as string,
+          title: harbor.title as string,
+          excerpt: harbor.description as string,
+          content: harbor.content as string,
+          category: 'analysis',
+          tags: (harbor.tags as string[]) || [],
+          seo_title: null,
+          seo_description: harbor.description as string,
+          featured_image: null,
+          published_at: harbor.date as string,
+          view_count: 0,
+          ai_model: 'harbor-seo',
+          author: (harbor.author as string) || 'DailyAI Betting',
+          read_time: `${harbor.readTime || 5} min read`,
+        };
+      }
+      return null;
+    }
     return data as unknown as BlogPost;
   } catch (error) {
     console.error('Failed to fetch blog post:', error);
