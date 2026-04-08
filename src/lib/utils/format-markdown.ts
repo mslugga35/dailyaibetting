@@ -1,4 +1,5 @@
 const ALLOWED_TAGS = new Set(['h1', 'h2', 'h3', 'strong', 'br', 'li', 'ul', 'p']);
+const TAG_RE = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
 
 /**
  * Sanitize HTML by stripping tags not in the allowlist.
@@ -6,7 +7,7 @@ const ALLOWED_TAGS = new Set(['h1', 'h2', 'h3', 'strong', 'br', 'li', 'ul', 'p']
  * Safe here because input is our own AI-generated markdown, not user content.
  */
 function sanitize(html: string): string {
-  return html.replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (match, tag) =>
+  return html.replace(TAG_RE, (match, tag) =>
     ALLOWED_TAGS.has(tag.toLowerCase()) ? match : ''
   );
 }
