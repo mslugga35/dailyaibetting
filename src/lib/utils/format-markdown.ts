@@ -1,7 +1,15 @@
-import DOMPurify from 'isomorphic-dompurify';
+const ALLOWED_TAGS = new Set(['h1', 'h2', 'h3', 'strong', 'br', 'li', 'ul', 'p']);
 
-const ALLOWED_TAGS = ['h1', 'h2', 'h3', 'strong', 'br', 'li', 'ul', 'p'];
-const ALLOWED_ATTR = ['class'];
+/**
+ * Sanitize HTML by stripping tags not in the allowlist.
+ * Replaces isomorphic-dompurify which crashes on Vercel serverless (jsdom).
+ * Safe here because input is our own AI-generated markdown, not user content.
+ */
+function sanitize(html: string): string {
+  return html.replace(/<\/?([a-z][a-z0-9]*)\b[^>]*>/gi, (match, tag) =>
+    ALLOWED_TAGS.has(tag.toLowerCase()) ? match : ''
+  );
+}
 
 /**
  * Convert markdown to sanitized HTML.
@@ -34,5 +42,5 @@ export function formatMarkdown(text: string, styled = true): string {
       : '<ul>$1</ul>',
   );
 
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS, ALLOWED_ATTR });
+  return sanitize(html);
 }
