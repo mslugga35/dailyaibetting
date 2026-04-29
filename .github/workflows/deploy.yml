@@ -1,0 +1,54 @@
+name: Deploy to Hetzner
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  SITE: dailyaibetting
+  HEALTH_URL: https://dailyaibetting.com/
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 87.99.132.176
+          username: root
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: /root/scripts/gh-deploy.sh ${{ env.SITE }}
+          command_timeout: 12m
+
+      - name: Health check
+        id: health
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$HEALTH_URL" || echo "000")
+            echo "Attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+      - name: Notify Discord (success)
+        if: success()
+        run: |
+          curl -sS -X POST -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"Deploy succeeded — ${SITE}\",\"description\":\"[\`${GITHUB_SHA::7}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) by **${GITHUB_ACTOR}**\\n${HEALTH_URL} returned 200\",\"color\":3066993,\"footer\":{\"text\":\"${GITHUB_REPOSITORY}\"}}]}" \
+            "${{ secrets.DEPLOY_WEBHOOK }}"
+
+      - name: Notify Discord (failure)
+        if: failure()
+        run: |
+          curl -sS -X POST -H "Content-Type: application/json" \
+            -d "{\"embeds\":[{\"title\":\"Deploy FAILED — ${SITE}\",\"description\":\"[\`${GITHUB_SHA::7}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) by **${GITHUB_ACTOR}**\\n[View logs](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})\",\"color\":15158332,\"footer\":{\"text\":\"${GITHUB_REPOSITORY}\"}}]}" \
+            "${{ secrets.DEPLOY_WEBHOOK }}"
