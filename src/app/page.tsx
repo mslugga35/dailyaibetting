@@ -5,7 +5,7 @@ import { ConsensusReport } from '@/components/picks/ConsensusReport';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import { SportsbookLinks } from '@/components/monetization/SportsbookLinks';
-import { Brain, Target, Lock, Trophy, Zap, Clock, CalendarClock } from 'lucide-react';
+import { Brain, Target, Lock, Trophy, Zap, Clock, CalendarClock, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
@@ -66,12 +66,20 @@ export default async function HomePage() {
           Find value bets where multiple expert cappers agree. We analyze picks from top sources
           and highlight the strongest consensus plays.
         </p>
-        <Button size="lg" asChild>
-          <Link href="/consensus">
-            <Target className="h-5 w-5 mr-2" />
-            View All Picks
-          </Link>
-        </Button>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button size="lg" asChild>
+            <Link href="/consensus">
+              <Target className="h-5 w-5 mr-2" />
+              View All Picks
+            </Link>
+          </Button>
+          <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
+            <Link href="/pro">
+              <Crown className="h-5 w-5 mr-2" />
+              Start Free 7-Day Trial
+            </Link>
+          </Button>
+        </div>
         <div className="mt-8 flex flex-col items-center gap-3">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Place your bets at</span>
           <SportsbookLinks variant="compact" />
