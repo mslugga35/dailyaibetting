@@ -97,10 +97,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+    // Route through the proper session handler (parses the token hash + setSession),
+    // same path as normal login — landing on /pro directly would not establish the session.
     const provisioned = await provisionGuestAndMagicLink(
       getSupabaseAdmin(),
       guestEmail,
-      `${baseUrl}/pro`,
+      `${baseUrl}/auth/callback`,
     );
     userId = provisioned.userId;
     guestActionLink = provisioned.actionLink;
