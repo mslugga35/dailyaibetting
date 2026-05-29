@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
+import { provisionGuestAndMagicLink, sendGuestAccessEmail } from '@/lib/guest-checkout';
 
 // Lazy singleton — avoids module-load failure when env vars absent during build
 let _supabaseAdmin: SupabaseClient | null = null;
@@ -72,15 +73,37 @@ export async function POST(req: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const userId = session.metadata?.user_id;
-  if (!userId) {
-    console.error('[Stripe Webhook] No user_id in session metadata');
-    return;
-  }
-
   // Only handle subscription checkouts (not one-time payments)
   if (session.mode !== 'subscription' || !session.subscription) {
     return;
+  }
+
+  let userId = session.metadata?.user_id || null;
+  let guestEmail: string | null = null;
+  let guestActionLink: string | null = null;
+
+  // --- Guest checkout: no pre-existing account; create it from the paid email ---
+  if (!userId) {
+    guestEmail = (
+      session.metadata?.guest_email ||
+      session.customer_details?.email ||
+      session.customer_email ||
+      ''
+    ).toLowerCase().trim() || null;
+
+    if (!guestEmail) {
+      console.error('[Stripe Webhook] No user_id and no guest email in session');
+      return;
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+    const provisioned = await provisionGuestAndMagicLink(
+      getSupabaseAdmin(),
+      guestEmail,
+      `${baseUrl}/pro`,
+    );
+    userId = provisioned.userId;
+    guestActionLink = provisioned.actionLink;
   }
 
   const subscriptionId = session.subscription as string;
@@ -108,6 +131,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw error;
   }
 
+  // Guest: access is now granted — email them the magic link to sign in.
+  // Failure here must NOT throw: payment + access already succeeded, and the
+  // user can request a fresh link from the sign-in page.
+  if (guestEmail && guestActionLink) {
+    try {
+      await sendGuestAccessEmail(guestEmail, guestActionLink);
+    } catch (e) {
+      console.error('[Stripe Webhook] Failed to send guest access email:', e);
+    }
+  }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {

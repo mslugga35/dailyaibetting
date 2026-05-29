@@ -2,12 +2,43 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { resolveUser, getSupabaseAdmin } from '@/lib/api-helpers';
 import { isProStatus, TRIAL_DAYS } from '@/lib/constants/subscription';
+import {
+  isGuestCheckoutEnabled,
+  isValidGuestEmail,
+  findOrCreateStripeCustomer,
+} from '@/lib/guest-checkout';
 
 export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
     const user = await resolveUser(request);
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+
+    // --- Guest checkout: pay first, account created by the webhook afterward ---
     if (!user) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      if (!isGuestCheckoutEnabled()) {
+        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      }
+      const guestEmail = String(body?.guestEmail || '').trim().toLowerCase();
+      if (!isValidGuestEmail(guestEmail)) {
+        return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
+      }
+      const customerId = await findOrCreateStripeCustomer(stripe, guestEmail);
+      const guestSession = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'subscription',
+        // Omit payment_method_types so Stripe auto-enables Apple Pay / Google Pay / Link.
+        line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+        subscription_data: {
+          trial_period_days: TRIAL_DAYS,
+          metadata: { guest_email: guestEmail },
+        },
+        metadata: { guest_email: guestEmail },
+        success_url: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}&guest=1`,
+        cancel_url: `${baseUrl}/pro`,
+        allow_promotion_codes: true,
+      });
+      return NextResponse.json({ url: guestSession.url, guest: true });
     }
 
     const db = getSupabaseAdmin();
@@ -20,8 +51,6 @@ export async function POST(request: Request) {
     if (isProStatus(existing?.status)) {
       return NextResponse.json({ error: 'Already subscribed' }, { status: 400 });
     }
-
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
 
     let customerId = existing?.stripe_customer_id;
     if (!customerId) {
