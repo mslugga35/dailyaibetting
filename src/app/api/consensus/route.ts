@@ -31,6 +31,7 @@ import { getYesterdaysScores, gradeConsensus } from '@/lib/data/espn-scores';
 import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
 import { getCurrentUser, isPremium } from '@/lib/auth/subscription';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 const FREE_TIER_LIMIT = 5;
 
@@ -61,9 +62,12 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const sport = searchParams.get('sport');
-    const minCappers = parseInt(searchParams.get('minCappers') || '2') || 2;
+    const minCappers = parseIntParam(searchParams.get('minCappers'), 2, 1, 100);
     const dateParam = searchParams.get('date');
 
     // Determine subscription tier

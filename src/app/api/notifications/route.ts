@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Fetch fire picks formatted for notifications
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') || 'json'; // json, discord, telegram
-    const minCappers = parseInt(searchParams.get('minCappers') || '3');
+    const minCappers = parseIntParam(searchParams.get('minCappers'), 3, 1, 100);
 
     // Fetch consensus data
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -149,11 +153,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate webhook URL — only allow Discord and Telegram domains
+    // Validate webhook URL — only allow Discord and Telegram domains.
+    // Exact host or true subdomain match only — endsWith() alone would let
+    // "evildiscord.com" or "api.telegram.org.attacker.com" through.
     const allowedHosts = ['discord.com', 'discordapp.com', 'api.telegram.org'];
+    const hostAllowed = (host: string) =>
+      allowedHosts.some(h => host === h || host.endsWith(`.${h}`));
     try {
       const url = new URL(webhookUrl);
-      if (!allowedHosts.some(h => url.hostname.endsWith(h))) {
+      if (url.protocol !== 'https:' || !hostAllowed(url.hostname)) {
         return NextResponse.json(
           { success: false, error: 'Invalid webhook URL — only Discord and Telegram allowed' },
           { status: 400 }
