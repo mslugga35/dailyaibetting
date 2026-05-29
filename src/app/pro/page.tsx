@@ -9,10 +9,42 @@ import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import Link from 'next/link';
 import { useState } from 'react';
 
+const GUEST_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_GUEST_CHECKOUT_ENABLED === 'true';
+
 export default function ProPage() {
   const { isPro, status, user, loading } = useSubscription();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+
+  const handleGuestCheckout = async () => {
+    setGuestError(null);
+    const email = guestEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setGuestError('Enter a valid email');
+      return;
+    }
+    setGuestLoading(true);
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guestEmail: email }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setGuestError(data.error || 'Something went wrong');
+        setGuestLoading(false);
+      }
+    } catch {
+      setGuestError('Network error — please try again');
+      setGuestLoading(false);
+    }
+  };
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);
@@ -143,6 +175,36 @@ export default function ProPage() {
               )}
               Start Free 7-Day Trial
             </Button>
+          ) : GUEST_CHECKOUT_ENABLED ? (
+            <div className="w-full max-w-sm mx-auto">
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@email.com"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                className="w-full mb-3 px-4 py-3 rounded-lg bg-background border border-border text-center"
+              />
+              <Button
+                size="lg"
+                className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+                onClick={handleGuestCheckout}
+                disabled={guestLoading}
+              >
+                {guestLoading ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <Crown className="h-5 w-5 mr-2" />
+                )}
+                Start Free 7-Day Trial
+              </Button>
+              {guestError && <p className="text-sm text-red-400 mt-2">{guestError}</p>}
+              <p className="text-xs text-muted-foreground mt-3">
+                Pay now, no signup. We&apos;ll email you a one-tap link to access your picks.{' '}
+                <Link href="/login" className="underline">Already a member? Sign in</Link>
+              </p>
+            </div>
           ) : (
             <Button
               size="lg"
