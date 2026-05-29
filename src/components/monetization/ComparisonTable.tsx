@@ -1,10 +1,16 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Crown } from 'lucide-react';
 import Link from 'next/link';
+import { useSubscription } from '@/lib/context/subscription-context';
 
 export function ComparisonTable() {
+  const { isPro } = useSubscription();
+  if (isPro) return null; // Members don't need the free-vs-pro pitch.
+
   const features = [
     { feature: 'Consensus picks', free: 'Top 5 only', pro: 'Unlimited', freeIcon: 'limited' },
     { feature: 'Pick delay', free: '5 minutes', pro: 'Real-time', freeIcon: 'limited' },

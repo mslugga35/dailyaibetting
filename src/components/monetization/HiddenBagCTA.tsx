@@ -1,10 +1,16 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
+import { useSubscription } from '@/lib/context/subscription-context';
 
 export function HiddenBagCTA() {
+  const { isPro } = useSubscription();
+  if (isPro) return null; // Already a member — don't show the upgrade pitch.
+
   return (
     <Card className="mt-8 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border-emerald-200/20">
       <CardContent className="p-8">
