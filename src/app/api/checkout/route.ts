@@ -41,7 +41,8 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      payment_method_types: ['card'],
+      // Omit payment_method_types so Stripe auto-enables Apple Pay, Google Pay,
+      // and Link (one-tap) per the Dashboard's automatic payment methods setting.
       line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
       subscription_data: {
         trial_period_days: TRIAL_DAYS,
