@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trophy, TrendingUp, Crown } from 'lucide-react';
 import Link from 'next/link';
 import type { ConsensusPick, YesterdayStats } from '@/types';
+import { useSubscription } from '@/lib/context/subscription-context';
 
 interface YesterdayResultsProps {
   consensus: ConsensusPick[];
@@ -29,6 +30,7 @@ function getFireEmoji(count: number): string {
 const SPORT_ORDER = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA'];
 
 export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayResultsProps) {
+  const { isPro } = useSubscription();
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -140,25 +142,27 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
         </CardContent>
       </Card>
 
-      {/* Pro CTA */}
-      <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-900/20 to-blue-900/20">
-        <CardContent className="p-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <TrendingUp className="h-5 w-5 text-emerald-400" />
-            <span className="font-semibold">Want full pick history and capper grades?</span>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            DailyAI Pro tracks 200+ cappers with W/L records, ROI, and 30-day history.
-          </p>
-          <Link
-            href="/pro"
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-medium transition-colors"
-          >
-            <Crown className="h-4 w-4" />
-            See Full History in Pro
-          </Link>
-        </CardContent>
-      </Card>
+      {/* Pro CTA — hidden for members */}
+      {!isPro && (
+        <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-900/20 to-blue-900/20">
+          <CardContent className="p-6 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <TrendingUp className="h-5 w-5 text-emerald-400" />
+              <span className="font-semibold">Want full pick history and capper grades?</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              DailyAI Pro tracks 200+ cappers with W/L records, ROI, and 30-day history.
+            </p>
+            <Link
+              href="/pro"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-medium transition-colors"
+            >
+              <Crown className="h-4 w-4" />
+              See Full History in Pro
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
