@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Target, TrendingUp, Users, ExternalLink } from 'lucide-react';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
+import { authHeaders } from '@/lib/data/server-fetch';
 import { SportsEventJsonLd } from '@/components/seo/JsonLd';
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +45,7 @@ async function getConsensusData(): Promise<ConsensusPick[]> {
   try {
     const response = await fetch(`${baseUrl}/api/consensus`, {
       cache: 'no-store',
+      headers: await authHeaders(),
     });
     const result = await response.json();
     return result.success ? result.data?.topOverall || [] : [];

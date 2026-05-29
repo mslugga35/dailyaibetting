@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getConsensusData, getYesterdayConsensusData } from '@/lib/data/server-fetch';
+import { authHeaders } from '@/lib/data/server-fetch';
 import { ConsensusContent } from '../ConsensusContent';
 
 export const dynamic = 'force-dynamic';
@@ -101,9 +101,10 @@ export default async function SportConsensusPage({ params }: PageProps) {
   let todayData = null;
   let yesterdayData = null;
   try {
+    const headers = await authHeaders();
     const [todayRes, yesterdayRes] = await Promise.all([
-      fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}`, { cache: 'no-store' }),
-      fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}&date=yesterday`, { cache: 'no-store' }),
+      fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}`, { cache: 'no-store', headers }),
+      fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}&date=yesterday`, { cache: 'no-store', headers }),
     ]);
     if (todayRes.ok) todayData = await todayRes.json();
     if (yesterdayRes.ok) yesterdayData = await yesterdayRes.json();
