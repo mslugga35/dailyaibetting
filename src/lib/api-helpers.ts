@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/database.types';
@@ -41,8 +42,36 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+/**
+ * Parse a query-string integer with a NaN guard and bounds.
+ * Returns `fallback` when the value is missing or non-numeric,
+ * then clamps to [min, max].
+ */
+export function parseIntParam(
+  raw: string | null,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const n = parseInt(raw ?? '', 10);
+  if (Number.isNaN(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
 export function getClientIp(request: Request): string {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+}
+
+/**
+ * Rate-limit guard for public API GET routes.
+ * Returns a 429 JSON response when the client IP exceeds `max` requests per
+ * `windowMs`, otherwise null (caller proceeds normally).
+ */
+export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000): NextResponse | null {
+  if (isRateLimited(getClientIp(request), max, windowMs)) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+  return null;
 }
 
 // --- Auth ---
@@ -80,10 +109,13 @@ let _supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 /** Lazy-initialized typed Supabase admin client (service role). */
 export function getSupabaseAdmin() {
   if (!_supabaseAdmin) {
-    _supabaseAdmin = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !serviceKey) {
+      // Fail loudly — never silently fall back to the anon key for admin ops.
+      throw new Error('Supabase admin client requires NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+    }
+    _supabaseAdmin = createClient<Database>(url, serviceKey);
   }
   return _supabaseAdmin;
 }

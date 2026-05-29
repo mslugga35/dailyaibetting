@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -199,11 +200,14 @@ async function getTopStreaks(db: SupabaseClient, limit: number = 5) {
 
 export async function GET(request: NextRequest) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const db = getSupabase();
     if (!db) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Database not configured' 
+      return NextResponse.json({
+        success: false,
+        error: 'Database not configured'
       }, { status: 503 });
     }
 
@@ -211,7 +215,7 @@ export async function GET(request: NextRequest) {
     const view = searchParams.get('view') || 'leaderboard';
     const slug = searchParams.get('slug');
     const sport = searchParams.get('sport') || undefined;
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseIntParam(searchParams.get('limit'), 20, 1, 100);
 
     switch (view) {
       case 'leaderboard': {

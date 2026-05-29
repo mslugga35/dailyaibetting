@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -24,6 +25,9 @@ export const dynamic = 'force-dynamic';
 // GET - Fetch results and performance stats
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const db = getSupabase();
 
     // Return mock data if Supabase not configured
@@ -43,7 +47,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get('view') || 'recent'; // recent, daily, monthly, sport
     const sport = searchParams.get('sport');
-    const days = parseInt(searchParams.get('days') || '30');
+    const days = parseIntParam(searchParams.get('days'), 30, 1, 365);
 
     let data;
     let error;

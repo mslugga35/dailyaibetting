@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import harborPosts from '@/lib/harbor-posts.json';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +20,15 @@ function getSupabaseAdmin() {
 // GET - Fetch blog posts
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get('slug');
     const category = searchParams.get('category');
     const sport = searchParams.get('sport');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = parseIntParam(searchParams.get('limit'), 10, 1, 100);
+    const offset = parseIntParam(searchParams.get('offset'), 0, 0, 100_000);
 
     const supabase = getSupabaseAdmin();
 

@@ -9,6 +9,7 @@ import { Calendar, Eye, ArrowLeft, Share2 } from 'lucide-react';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
 import harborPosts from '@/lib/harbor-posts.json';
+import DOMPurify from 'isomorphic-dompurify';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,7 +184,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         {/* Article Content */}
         <div
           className="prose prose-invert max-w-none mb-8"
-          dangerouslySetInnerHTML={{ __html: post.content.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '').replace(/on\w+\s*=/gi, 'data-removed=') }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
         />
 
         {/* Tags */}

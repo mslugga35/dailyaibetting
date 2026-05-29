@@ -18,6 +18,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getTodayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,9 +34,12 @@ function getSupabase() {
 
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const sport = searchParams.get('sport') || null;
-    const minCappers = parseInt(searchParams.get('minCappers') || '2');
+    const minCappers = parseIntParam(searchParams.get('minCappers'), 2, 1, 100);
     const dateParam = searchParams.get('date') || getTodayET();
 
     logger.info('Consensus SQL', `Fetching consensus: sport=${sport}, minCappers=${minCappers}, date=${dateParam}`);

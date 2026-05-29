@@ -2,18 +2,22 @@ import { NextResponse } from 'next/server';
 import { getAllPicksFromSources } from '@/lib/data/google-sheets';
 import { normalizePicks } from '@/lib/consensus/consensus-builder';
 import { getTodayET } from '@/lib/utils/date';
+import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // Disable static generation
 
 export async function GET(request: Request) {
   try {
+    const limited = rateLimitGuard(request);
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     const sport = searchParams.get('sport');
     const capper = searchParams.get('capper');
     const date = searchParams.get('date');
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '100') || 100, 1), 500);
-    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
+    const limit = parseIntParam(searchParams.get('limit'), 100, 1, 500);
+    const offset = parseIntParam(searchParams.get('offset'), 0, 0, 100_000);
 
     // Fetch all picks from data sources
     const rawPicks = await getAllPicksFromSources();
