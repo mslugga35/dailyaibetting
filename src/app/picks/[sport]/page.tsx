@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getConsensusData } from '@/lib/data/server-fetch';
+import { authHeaders } from '@/lib/data/server-fetch';
 import { PicksContent } from '../PicksContent';
 
 export const dynamic = 'force-dynamic';
@@ -106,7 +106,7 @@ export default async function SportPicksPage({ params }: PageProps) {
   const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
   let data = null;
   try {
-    const res = await fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}`, { cache: 'no-store' });
+    const res = await fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}`, { cache: 'no-store', headers: await authHeaders() });
     if (res.ok) data = await res.json();
   } catch {
     // fall through — PicksContent handles null gracefully

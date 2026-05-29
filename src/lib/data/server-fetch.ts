@@ -17,7 +17,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com
  * logged-in user. Without this, server-to-server fetches are anonymous and
  * premium/trialing members are wrongly served the free tier.
  */
-async function authHeaders(): Promise<HeadersInit> {
+export async function authHeaders(): Promise<HeadersInit> {
   const cookieHeader = (await cookies()).getAll().map((c) => `${c.name}=${c.value}`).join('; ');
   return cookieHeader ? { cookie: cookieHeader } : {};
 }
