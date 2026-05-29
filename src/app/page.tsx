@@ -9,13 +9,19 @@ import { Brain, Target, Lock, Trophy, Zap, Clock, CalendarClock, Crown } from 'l
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { cookies } from 'next/headers';
 
 // Server-side data fetching
 async function getConsensusData() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+    // Forward the caller's auth cookie so /api/consensus can see the logged-in
+    // user — otherwise this server-to-server fetch is anonymous and everyone
+    // (including paying/trialing members) is served the free tier.
+    const cookieHeader = (await cookies()).getAll().map((c) => `${c.name}=${c.value}`).join('; ');
     const response = await fetch(`${baseUrl}/api/consensus`, {
       cache: 'no-store',
+      headers: cookieHeader ? { cookie: cookieHeader } : {},
     });
 
     if (!response.ok) {
