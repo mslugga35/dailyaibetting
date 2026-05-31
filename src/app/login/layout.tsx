@@ -12,6 +12,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://dailyaibetting.com/login',
   },
+  robots: { index: false, follow: false },
 };
 
 export default function LoginLayout({
