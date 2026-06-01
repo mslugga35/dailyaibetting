@@ -158,9 +158,19 @@ export async function GET(request: Request) {
   }
 }
 
-// POST - Save today's top picks or grade a pick
+// POST - Save today's top picks or grade a pick (writes the public track record).
+// Auth-gated: only the grade-and-persist cron (CRON_SECRET) may write, so the
+// track record can't be forged.
 export async function POST(request: Request) {
   try {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      return NextResponse.json({ success: false, error: 'Service misconfigured' }, { status: 500 });
+    }
+    if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const db = getSupabase();
     if (!db) {
       return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 });
