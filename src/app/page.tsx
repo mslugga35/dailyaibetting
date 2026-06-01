@@ -36,11 +36,25 @@ async function getConsensusData() {
   }
 }
 
+// Verified track record — only shows once real graded data exists (never 0-0).
+async function getTrackRecord() {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+    const res = await fetch(`${baseUrl}/api/results?view=stats`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data?.allTime || null;
+  } catch {
+    return null;
+  }
+}
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function HomePage() {
-  const data = await getConsensusData();
+  const [data, trackRecord] = await Promise.all([getConsensusData(), getTrackRecord()]);
+  const hasTrackRecord = trackRecord && trackRecord.total > 0;
 
   const topOverall = data?.topOverall || [];
   const bySport = data?.bySport || {};
@@ -73,6 +87,15 @@ export default async function HomePage() {
           Find value bets where multiple expert cappers agree. We analyze picks from top sources
           and highlight the strongest consensus plays.
         </p>
+        {hasTrackRecord && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-6">
+            <Trophy className="h-4 w-4 text-emerald-400" />
+            <span className="text-sm">
+              <span className="font-bold text-emerald-400">{trackRecord.winPct}% win rate</span>
+              <span className="text-muted-foreground"> on fire picks (3+ cappers) · {trackRecord.wins}-{trackRecord.losses} graded</span>
+            </span>
+          </div>
+        )}
         {(totalConsensusCount > 0 || capperCount > 0) && (
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8 text-sm">
             {firePicksCount > 0 && (
