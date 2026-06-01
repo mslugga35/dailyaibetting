@@ -105,6 +105,7 @@ CREATE OR REPLACE FUNCTION save_daily_consensus(p_picks jsonb)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public  -- pin search_path (SECURITY DEFINER hardening)
 AS $$
 DECLARE
   inserted integer := 0;
