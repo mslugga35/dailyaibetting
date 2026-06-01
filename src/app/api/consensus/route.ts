@@ -70,9 +70,13 @@ export async function GET(request: Request) {
     const minCappers = parseIntParam(searchParams.get('minCappers'), 2, 1, 100);
     const dateParam = searchParams.get('date');
 
-    // Determine subscription tier
-    const user = await getCurrentUser();
-    const userIsPremium = user ? await isPremium(user.id) : false;
+    // Determine subscription tier.
+    // Internal bypass: the grade-and-persist cron passes Bearer CRON_SECRET to get
+    // the FULL (unsliced) consensus so it can snapshot every fire pick.
+    const cronSecret = process.env.CRON_SECRET;
+    const isInternal = !!cronSecret && request.headers.get('authorization') === `Bearer ${cronSecret}`;
+    const user = isInternal ? null : await getCurrentUser();
+    const userIsPremium = isInternal || (user ? await isPremium(user.id) : false);
 
     // --- Yesterday's consensus with results ---
     if (dateParam === 'yesterday') {
