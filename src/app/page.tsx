@@ -49,6 +49,7 @@ export default async function HomePage() {
   const isPremium = data?.tier === 'premium';
   const totalConsensusCount = data?.totalConsensusCount || topOverall.length;
   const hiddenPicksCount = totalConsensusCount - topOverall.length;
+  const capperCount = data?.capperCount || 0;
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -72,6 +73,26 @@ export default async function HomePage() {
           Find value bets where multiple expert cappers agree. We analyze picks from top sources
           and highlight the strongest consensus plays.
         </p>
+        {(totalConsensusCount > 0 || capperCount > 0) && (
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8 text-sm">
+            {firePicksCount > 0 && (
+              <span className="font-semibold text-orange-400">
+                🔥 {firePicksCount} fire pick{firePicksCount !== 1 ? 's' : ''} today
+              </span>
+            )}
+            {totalConsensusCount > 0 && (
+              <span className="text-muted-foreground">
+                <span className="font-bold text-foreground">{totalConsensusCount}</span> consensus plays
+              </span>
+            )}
+            {capperCount > 0 && (
+              <span className="text-muted-foreground">
+                <span className="font-bold text-foreground">{capperCount}</span> cappers tracked
+              </span>
+            )}
+            <span className="text-muted-foreground">Auto-graded via ESPN</span>
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Button size="lg" asChild>
             <Link href="/consensus">
