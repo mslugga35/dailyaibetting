@@ -117,6 +117,19 @@ export async function generateDailyReport(): Promise<GenerateResult | null> {
  */
 export async function generateFreshReport(): Promise<GenerateResult> {
   const context = await collectAllData();
+
+  // Environment guard — the premium BallparkPal + Statcast caches live on the
+  // LOCAL box (where hiddenbag-v2/scripts/daily-ai-report.mjs runs the canonical
+  // $0 generation). If BOTH are absent we are NOT on that box (e.g. Vercel/Hetzner),
+  // so refuse: generating here would produce an inferior report via PAID OpenRouter
+  // AND overwrite today's good local report in Supabase. Bail before the LLM call.
+  if (!context.ballparkPal && !context.statcast) {
+    throw new Error(
+      'Premium caches (BallparkPal + Statcast) unavailable in this environment — ' +
+      'refusing to overwrite the local-generated report. Generation runs locally only.'
+    );
+  }
+
   const system = buildSystemPrompt();
   const user = buildUserPrompt(context);
   const report = await callOpenRouter(system, user, { maxTokens: 12000 });
