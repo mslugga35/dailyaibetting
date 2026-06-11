@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Saira_Condensed } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
@@ -18,6 +18,14 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Athletic condensed display face — sharp sportsbook headline voice,
+// consistent with the wider betting-property family.
+const sairaCondensed = Saira_Condensed({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -118,7 +126,7 @@ export default function RootLayout({
         <meta name="impact-site-verification" content="27678012-a389-4e37-a055-37d59ed4ebf1" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${sairaCondensed.variable} antialiased min-h-screen flex flex-col`}
       >
         <SubscriptionProvider>
           <Header />

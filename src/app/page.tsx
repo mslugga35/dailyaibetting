@@ -75,12 +75,14 @@ export default async function HomePage() {
   return (
     <div className="container px-4 py-8">
       {/* Hero Section */}
-      <section className="text-center mb-16 pb-12 border-b border-border/40">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-4">
+      <section className="relative overflow-hidden text-center mb-16 pb-12 border-b border-border/40">
+        <div className="absolute inset-0 hero-grid pointer-events-none" aria-hidden />
+        <div className="relative pt-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary mb-5">
           <Brain className="h-4 w-4" />
-          AI-Powered Picks
+          <span className="font-mono uppercase tracking-[0.2em] text-xs">AI-Powered Picks</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+        <h1 className="font-display uppercase text-5xl md:text-7xl font-extrabold tracking-tight leading-[0.95] mb-4">
           Daily AI Betting Consensus
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
@@ -91,7 +93,7 @@ export default async function HomePage() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-6">
             <Trophy className="h-4 w-4 text-emerald-400" />
             <span className="text-sm">
-              <span className="font-bold text-emerald-400">{trackRecord.winPct}% win rate</span>
+              <span className="font-mono font-bold tabular-nums text-emerald-400">{trackRecord.winPct}% win rate</span>
               <span className="text-muted-foreground"> on fire picks (3+ cappers) · {trackRecord.wins}-{trackRecord.losses} graded</span>
             </span>
           </div>
@@ -134,12 +136,13 @@ export default async function HomePage() {
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Place your bets at</span>
           <SportsbookLinks variant="compact" />
         </div>
+        </div>
       </section>
 
       {/* Date & Refresh */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold">{today}</h2>
+          <h2 className="font-display uppercase tracking-tight text-3xl font-bold">{today}</h2>
           <p className="text-sm text-muted-foreground">
             Last updated: {new Date().toLocaleTimeString()}
           </p>
@@ -152,20 +155,20 @@ export default async function HomePage() {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-primary">{totalPicks.toLocaleString()}</div>
-              <p className="text-sm text-muted-foreground">Total Picks Analyzed</p>
+              <div className="font-mono text-4xl font-bold tabular-nums text-primary leading-none">{totalPicks.toLocaleString()}</div>
+              <p className="eyebrow mt-2">Total Picks Analyzed</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-3xl font-bold">{totalConsensusCount}</div>
-              <p className="text-sm text-muted-foreground">Consensus Picks</p>
+              <div className="font-mono text-4xl font-bold tabular-nums leading-none">{totalConsensusCount}</div>
+              <p className="eyebrow mt-2">Consensus Picks</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
-              <div className="text-3xl font-bold text-orange-500">{firePicksCount}</div>
-              <p className="text-sm text-muted-foreground">Fire Picks (3+)</p>
+              <div className="font-mono text-4xl font-bold tabular-nums text-orange-500 leading-none">{firePicksCount}</div>
+              <p className="eyebrow mt-2">Fire Picks (3+)</p>
             </CardContent>
           </Card>
         </div>
