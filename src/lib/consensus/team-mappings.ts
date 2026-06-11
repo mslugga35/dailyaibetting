@@ -531,7 +531,8 @@ export function standardizeTeamName(input: string, sport?: string): string {
     // Stage 4: Word-by-word matching (careful with short/generic words)
     for (const word of inputWords) {
       if (word.length <= 2) continue; // Skip very short words
-      
+      if (GENERIC_CITIES.has(word)) continue; // Skip generic cities that appear in surnames
+
       for (const [canonical, aliases] of Object.entries(teamMappings[sportKey])) {
         for (const alias of aliases) {
           if (normalizeForMatch(alias) === word) {
@@ -556,6 +557,18 @@ const GENERIC_MASCOTS = new Set([
   'rebels', 'pirates', 'cougars', 'huskies', 'knights', 'falcons',
   // Cross-sport mascots (appear in 2+ pro sports)
   'jets', 'rangers', 'kings', 'stars', 'bruins', 'flames',
+]);
+
+/**
+ * Generic cities that appear across multiple sports or as surnames.
+ * Skip these in word-match stages to avoid resolving player names (e.g. "Aliyah Boston")
+ * to sports teams via bare city words.
+ */
+const GENERIC_CITIES = new Set([
+  'boston', 'newyork', 'losangeles', 'chicago', 'washington',
+  'detroit', 'philadelphia', 'phoenix', 'denver', 'dallas',
+  'houston', 'atlanta', 'miami', 'cleveland', 'minnesota',
+  'portland', 'sanfrancisco', 'oakland', 'brooklyn',
 ]);
 
 /**
@@ -601,9 +614,10 @@ export function identifySport(teamName: string): string {
     for (const [, aliases] of Object.entries(teams)) {
       for (const alias of aliases) {
         const aliasNorm = normalizeForMatch(alias);
-        // Only single-word aliases, 3+ chars, not generic mascots
+        // Only single-word aliases, 3+ chars, not generic mascots or cities
         if (aliasNorm.length >= 3 && !aliasNorm.includes(' ') &&
             !GENERIC_MASCOTS.has(aliasNorm) &&
+            !GENERIC_CITIES.has(aliasNorm) &&
             inputWords.includes(aliasNorm)) {
           return sport;
         }
