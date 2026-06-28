@@ -390,14 +390,27 @@ async function collectPolymarket(): Promise<PolymarketOdds[]> {
 
 // ── Collect All ───────────────────────────────────────────────────────────────
 
+/**
+ * Bound a collector so one hung upstream API can't consume the whole maxDuration (120s).
+ * Uses Promise.race (NOT an AbortSignal) on purpose — adding a signal to the inner
+ * fetch() would opt it out of Next.js's `revalidate` cache. Collectors already
+ * try/catch to safe defaults, so the fallback here only fires on a true hang.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 export async function collectAllData(): Promise<ReportContext> {
   const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket, kalshi] = await Promise.all([
-    collectExpertPicks(),
-    collectPrizePicks(),
-    collectMLBSchedule(),
-    collectESPN(),
-    collectPolymarket(),
-    collectKalshi(),
+    withTimeout(collectExpertPicks(), 20000, { picks: [], capperCount: 0 }),
+    withTimeout(collectPrizePicks(), 15000, []),
+    withTimeout(collectMLBSchedule(), 15000, []),
+    withTimeout(collectESPN(), 15000, {} as Record<string, ESPNGame[]>),
+    withTimeout(collectPolymarket(), 15000, []),
+    withTimeout(collectKalshi(), 20000, []),
   ]);
 
   return {
