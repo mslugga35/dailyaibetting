@@ -39,6 +39,23 @@ jobs:
           echo "Health check failed after 3 attempts"
           exit 1
 
+      - name: Verify deploy commit hash
+        run: |
+          sleep 5
+          LIVE_HASH=$(curl -sf --max-time 10 https://dailyaibetting.com/.well-known/commit-info.json | jq -r '.commitHash // empty')
+          EXPECTED="${{ github.sha }}"
+          echo "Live: $LIVE_HASH"
+          echo "Expected: $EXPECTED"
+          if [ -z "$LIVE_HASH" ]; then
+            echo "[WARN] commit-info.json not available yet — skipping verification"
+            exit 0
+          fi
+          if [ "$LIVE_HASH" != "$EXPECTED" ]; then
+            echo "[ERROR] STALE DEPLOY: site running $LIVE_HASH, expected $EXPECTED"
+            exit 1
+          fi
+          echo "[OK] Deploy verified: correct commit running"
+
       - name: Notify Discord (success)
         if: success()
         run: |

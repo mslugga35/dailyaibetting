@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/gen-commit-info.mjs",
     "build": "node scripts/sync-harbor-blogs.mjs && next build",
     "sync:harbor": "node scripts/sync-harbor-blogs.mjs",
     "start": "next start",

@@ -47,3 +47,6 @@ scrape.txt
 /scripts/
 n8n/*.html
 supabase/.temp/
+
+# Generated commit info (deploy verification)
+public/.well-known/commit-info.json
