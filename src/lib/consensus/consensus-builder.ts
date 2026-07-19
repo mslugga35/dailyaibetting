@@ -6,7 +6,7 @@
  * @module lib/consensus/consensus-builder
  */
 
-import { standardizeTeamName, identifySport } from './team-mappings';
+import { standardizeTeamName, identifySport, teamMappings } from './team-mappings';
 import { getTodayET, getCurrentYearET } from '../utils/date';
 import { logger } from '../utils/logger';
 
@@ -508,12 +508,48 @@ function normalizeSpreadLine(line: string): string {
   return `${sign}${num}`;
 }
 
+// Canonical team names that exist in multiple sports — validated at module load
+const CROSS_SPORT_TEAMS: Map<string, string[]> = (() => {
+  const nameToSports = new Map<string, string[]>();
+  for (const [sport, teams] of Object.entries(teamMappings)) {
+    for (const canonical of Object.keys(teams)) {
+      if (!nameToSports.has(canonical)) nameToSports.set(canonical, []);
+      nameToSports.get(canonical)!.push(sport);
+    }
+  }
+  const collisions = new Map<string, string[]>();
+  nameToSports.forEach((sports, name) => {
+    if (sports.length > 1) collisions.set(name, sports);
+  });
+  return collisions;
+})();
+
+/**
+ * For picks with cross-sport ambiguous teams, validate sport using isInSeason().
+ * If only one candidate sport is in season, correct to that sport.
+ */
+function validatePickSports(picks: NormalizedPick[]): NormalizedPick[] {
+  return picks.map(pick => {
+    const candidates = CROSS_SPORT_TEAMS.get(pick.standardizedTeam);
+    if (!candidates) return pick;
+    if (!candidates.includes(pick.sport)) return pick;
+
+    const inSeasonCandidates = candidates.filter(s => isInSeason(s));
+    if (inSeasonCandidates.length === 1 && inSeasonCandidates[0] !== pick.sport) {
+      return { ...pick, sport: inSeasonCandidates[0] };
+    }
+    return pick;
+  });
+}
+
 /**
  * Build consensus from normalized picks
  * One vote per capper per unique bet
  */
 export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick[] {
-  // Group by unique bet (team + betType + line)
+  const picks = validatePickSports(normalizedPicks);
+
+  // Group by unique bet (team + sport + betType + line)
   const betGroups = new Map<string, {
     cappers: Set<string>;
     sport: string;
@@ -529,7 +565,7 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
     'btts', 'both teams to score', 'draw', 'clean sheet', 'parlay', 'teaser',
   ]);
 
-  for (const pick of normalizedPicks) {
+  for (const pick of picks) {
     // Skip picks with no identifiable game (e.g. "Total Under 224", "BTTS ML")
     if (CONTEXTLESS_TEAMS.has(pick.standardizedTeam.toLowerCase())) {
       continue;
@@ -552,8 +588,8 @@ export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick
       // Line used as-is — Over 222 ≠ Over 224
     }
 
-    // Create unique bet key: Team + BetType + Line (if applicable)
-    let betKey = `${teamForKey}_${pick.betType}`;
+    // Create unique bet key: Team + Sport + BetType + Line (if applicable)
+    let betKey = `${teamForKey}_${pick.sport}_${pick.betType}`;
     if (lineForKey) {
       betKey += `_${lineForKey}`;
     }
