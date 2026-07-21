@@ -543,11 +543,70 @@ function validatePickSports(picks: NormalizedPick[]): NormalizedPick[] {
 }
 
 /**
+ * Reconcile mixed-sport consensus groups.
+ * When multiple picks target the same team+betType+line but disagree on sport
+ * (e.g. "Cardinals ML" split between MLB and NFL), unify them under one sport.
+ * Resolves by: (1) filter to in-season, (2) majority vote among remaining.
+ */
+export function reconcileMixedSportGroups(picks: NormalizedPick[]): NormalizedPick[] {
+  const groups = new Map<string, number[]>();
+
+  for (let i = 0; i < picks.length; i++) {
+    const p = picks[i];
+    const key = `${p.standardizedTeam}\t${p.betType}\t${p.line ?? ''}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(i);
+  }
+
+  const result = [...picks];
+
+  for (const indices of groups.values()) {
+    const sports = new Set(indices.map(i => result[i].sport));
+    if (sports.size <= 1) continue;
+
+    const team = result[indices[0]].standardizedTeam;
+    const candidates = CROSS_SPORT_TEAMS.get(team);
+    if (!candidates) continue;
+
+    const sportCounts = new Map<string, number>();
+    for (const idx of indices) {
+      const s = result[idx].sport;
+      sportCounts.set(s, (sportCounts.get(s) ?? 0) + 1);
+    }
+
+    const inSeasonSports = [...sportCounts.keys()].filter(s => isInSeason(s));
+
+    let winner: string | undefined;
+    if (inSeasonSports.length === 1) {
+      winner = inSeasonSports[0];
+    } else if (inSeasonSports.length > 1) {
+      winner = inSeasonSports.reduce((a, b) =>
+        (sportCounts.get(a) ?? 0) >= (sportCounts.get(b) ?? 0) ? a : b
+      );
+    }
+
+    if (winner) {
+      const corrected = indices.filter(i => result[i].sport !== winner);
+      if (corrected.length > 0) {
+        logger.debug('Consensus', `Sport reconcile: ${team} — merged ${[...sports].join('+')} → ${winner} (${corrected.length} picks corrected)`);
+      }
+      for (const idx of indices) {
+        if (result[idx].sport !== winner) {
+          result[idx] = { ...result[idx], sport: winner };
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Build consensus from normalized picks
  * One vote per capper per unique bet
  */
 export function buildConsensus(normalizedPicks: NormalizedPick[]): ConsensusPick[] {
-  const picks = validatePickSports(normalizedPicks);
+  const picks = reconcileMixedSportGroups(validatePickSports(normalizedPicks));
 
   // Group by unique bet (team + sport + betType + line)
   const betGroups = new Map<string, {
