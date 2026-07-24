@@ -29,6 +29,20 @@ export async function findOrCreateStripeCustomer(stripe: Stripe, email: string):
 }
 
 /**
+ * True if this Stripe customer already has a subscription that is billing them
+ * (active or trialing). Stripe lets you stack multiple subs on one customer, so
+ * without this guard a repeat checkout silently double-charges the same card
+ * (this happened on 2026-05-29 — two live $20/mo subs on one customer).
+ */
+export async function hasActiveSubscription(stripe: Stripe, customerId: string): Promise<boolean> {
+  for (const status of ['active', 'trialing'] as const) {
+    const subs = await stripe.subscriptions.list({ customer: customerId, status, limit: 1 });
+    if (subs.data.length > 0) return true;
+  }
+  return false;
+}
+
+/**
  * Ensure a Supabase auth user exists for this email and mint a one-time magic
  * link they can use to sign in. Works whether the user is brand-new or already
  * exists (idempotent — safe across Stripe webhook retries).

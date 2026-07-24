@@ -6,6 +6,7 @@ import {
   isGuestCheckoutEnabled,
   isValidGuestEmail,
   findOrCreateStripeCustomer,
+  hasActiveSubscription,
 } from '@/lib/guest-checkout';
 
 export async function POST(request: Request) {
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
       }
       const customerId = await findOrCreateStripeCustomer(stripe, guestEmail);
+      // Block a repeat checkout on a customer that's already paying — prevents
+      // stacking duplicate subscriptions (double-charge) on the same card.
+      if (await hasActiveSubscription(stripe, customerId)) {
+        return NextResponse.json({ error: 'This email already has an active subscription' }, { status: 400 });
+      }
       const guestSession = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'subscription',
@@ -65,6 +71,12 @@ export async function POST(request: Request) {
         stripe_customer_id: customerId,
         status: 'incomplete',
       }, { onConflict: 'user_id' });
+    }
+
+    // DB status can lag the webhook — verify against Stripe before creating a
+    // second session so we never stack duplicate subs on the same customer.
+    if (await hasActiveSubscription(stripe, customerId)) {
+      return NextResponse.json({ error: 'Already subscribed' }, { status: 400 });
     }
 
     const session = await stripe.checkout.sessions.create({
