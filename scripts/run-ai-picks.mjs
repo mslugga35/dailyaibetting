@@ -5,7 +5,7 @@
  * Run: node scripts/run-ai-picks.mjs
  */
 
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -232,6 +232,31 @@ for (const [sport, games] of Object.entries(espnGames)) {
 prompt += '\n---\nGenerate 8-15 structured picks as a JSON array. Output ONLY valid JSON, no markdown fences.';
 
 console.log(`Prompt: ${prompt.length} chars`);
+
+// Single source of truth: the dumped fixture and the live API call must send
+// the identical system prompt, or the benchmark measures something production
+// never runs.
+const SYSTEM_PROMPT = 'You are an AI sports betting analyst. Output ONLY a JSON array of picks. Each pick: {sport, team, opponent, bet_type (ML/SPREAD/OVER/UNDER/K_OVER/K_UNDER/NRFI/YRFI/PROP), line, confidence (1-10), reasoning, data_sources}. Generate 8-15 picks. Prioritize where multiple signals align.';
+
+// Writes the assembled prompt to a file and exits before any paid API call.
+// Used to freeze benchmark fixtures — see ~/.claude/skills/benchmark.
+if (process.argv.includes('--dump-prompt')) {
+  const dir = join(homedir(), '.claude', 'config', 'benchmark', 'fixtures');
+  const out = join(dir, 'dailyai-picks.json');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(out, JSON.stringify({
+    id: 'dailyai-picks',
+    name: 'DailyAIPicks daily picks',
+    capturedAt: new Date().toISOString(),
+    systemPrompt: SYSTEM_PROMPT,
+    prompt,
+    production: { model: 'anthropic/claude-sonnet-4-6', max_tokens: 6000, temperature: 0.3, via: 'openrouter' },
+    runs_per_month: 30,
+  }, null, 2));
+  console.log(`Prompt dumped to ${out} (no API call made)`);
+  process.exit(0);
+}
+
 console.log('\nCalling Claude via OpenRouter...');
 
 // ── Call Claude ──────────────────────────────────────────────────────────────
@@ -251,7 +276,7 @@ const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     max_tokens: 6000,
     temperature: 0.3,
     messages: [
-      { role: 'system', content: `You are an AI sports betting analyst. Output ONLY a JSON array of picks. Each pick: {sport, team, opponent, bet_type (ML/SPREAD/OVER/UNDER/K_OVER/K_UNDER/NRFI/YRFI/PROP), line, confidence (1-10), reasoning, data_sources}. Generate 8-15 picks. Prioritize where multiple signals align.` },
+      { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: prompt },
     ],
   }),
