@@ -3,6 +3,12 @@ name: Deploy to Hetzner
 on:
   push:
     branches: [master]
+    # Harbor SEO commits land here but must NOT auto-deploy.
+    # Harbor only ever writes public/blog/** — a push touching only that
+    # path is skipped. Ship it deliberately with:
+    #   gh workflow run deploy.yml --repo mslugga35/<repo>
+    paths-ignore:
+      - 'public/blog/**'
   workflow_dispatch:
 
 concurrency:
