@@ -124,6 +124,9 @@ export default function RootLayout({
         <Script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4971966903803570" crossOrigin="anonymous" strategy="lazyOnload" />
         {/* Impact.com Verification */}
         <meta name="impact-site-verification" content="27678012-a389-4e37-a055-37d59ed4ebf1" />
+        {/* WebMCP - exposes consensus lookup to an agent in the visitor's browser.
+            Inert until this origin serves a valid origin-trial token. */}
+        <script src="/webmcp.js" defer></script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${sairaCondensed.variable} antialiased min-h-screen flex flex-col`}
