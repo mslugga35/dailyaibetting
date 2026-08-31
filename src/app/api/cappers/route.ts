@@ -148,12 +148,25 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     .order('posted_at', { ascending: false })
     .limit(50);
 
+  // Fail loudly. `picks` and `sportStats` both feed numbers a visitor reads as
+  // a track record - recent_form, recent_win_pct, by_sport. A failed query here
+  // used to fall through to `|| []` and render an empty form line and 0% as if
+  // they were the real answer, which is worse than an error: it is a wrong
+  // record presented confidently.
+  if (picksError) {
+    throw new Error(`Failed to fetch capper picks: ${picksError.message}`);
+  }
+
   // Get performance by sport
-  const { data: sportStats } = await db
+  const { data: sportStats, error: sportError } = await db
     .from('hb_picks')
     .select('sport, result')
     .eq('capper_id', capper.capper_id)
     .neq('result', 'pending');
+
+  if (sportError) {
+    throw new Error(`Failed to fetch capper sport stats: ${sportError.message}`);
+  }
 
   // Calculate per-sport stats
   const sportPerformance: Record<string, { wins: number; losses: number; pushes: number }> = {};
