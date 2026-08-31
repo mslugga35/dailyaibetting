@@ -63,45 +63,73 @@ interface CapperPick {
 
 // ============ HANDLERS ============
 
+/**
+ * Leaderboard from hb_capper_stats.
+ *
+ * NOT `cappers` - that table is a Discord registry (id, name, discord_user_id,
+ * sheet_tab_name), holds zero rows, and has no stats columns at all, so
+ * `.gt('total_picks', 0)` against it returned
+ * "column cappers.total_picks does not exist" and 500'd this endpoint for every
+ * visitor. The real per-capper stats live in hb_capper_stats (346 rows).
+ *
+ * SCALES (verified against live data, do not "helpfully" convert):
+ *   win_rate and roi are ALREADY PERCENTAGES - 100 means 100%, 92.59 means
+ *   92.59%. The old code did `win_rate * 1000 / 10` on the assumption they were
+ *   0-1 fractions, which would render 100% as 10000%.
+ *   current_streak is a SIGNED integer: +2 = won last two, -2 = lost last two.
+ *   There is no streak_type column; derive it from the sign.
+ */
 async function getLeaderboard(db: SupabaseClient, sport?: string, limit: number = 20) {
-  let query = db
-    .from('cappers')
+  // Floor out one-pick wonders. Without it the top of the board is parse
+  // artifacts like "Why I am betting Bethune -5.5" sitting at 100% off a single
+  // graded pick. 231 of 346 cappers clear 10 picks.
+  const MIN_PICKS = 10;
+
+  const { data, error } = await db
+    .from('hb_capper_stats')
     .select('*')
-    .gt('total_picks', 0) // Only cappers with graded picks
+    .gte('total_picks', MIN_PICKS)
     .order('win_rate', { ascending: false })
-    .limit(limit);
-
-  // Filter by sport specialty if provided
-  if (sport) {
-    query = query.contains('specialties', [sport.toUpperCase()]);
-  }
-
-  const { data, error } = await query;
+    .limit(sport ? 200 : limit); // over-fetch when filtering in memory
 
   if (error) {
     throw new Error(`Failed to fetch leaderboard: ${error.message}`);
   }
 
-  // Calculate additional stats
-  const enrichedData = (data || []).map((capper: Capper) => ({
-    ...capper,
-    win_pct: Math.round(capper.win_rate * 1000) / 10, // 0.599 -> 59.9%
-    roi_pct: Math.round(capper.roi * 1000) / 10,
-    record: `${capper.wins}-${capper.losses}${capper.pushes > 0 ? `-${capper.pushes}` : ''}`,
-    streak_display: capper.streak > 0 && capper.streak_type 
-      ? `${capper.streak}${capper.streak_type}` 
-      : '-',
-    hot: capper.streak >= 3 && capper.streak_type === 'W',
-    cold: capper.streak >= 3 && capper.streak_type === 'L',
-  }));
+  // sport_records is a JSON object keyed by sport, e.g.
+  // {"mlb": "6-13 (31.6%)", "nba": "2-3 (40.0%)"} - so filtering by sport is a
+  // key-presence check, not the array `.contains()` the old code used.
+  let rows = data || [];
+  if (sport) {
+    const want = sport.toLowerCase();
+    rows = rows
+      .filter((c: any) => c.sport_records && Object.keys(c.sport_records).some((s) => s.toLowerCase() === want))
+      .slice(0, limit);
+  }
 
-  return enrichedData;
+  return rows.map((c: any) => {
+    const streak = Math.abs(c.current_streak || 0);
+    const streakType = c.current_streak > 0 ? 'W' : c.current_streak < 0 ? 'L' : null;
+    return {
+      ...c,
+      id: c.capper_id,
+      total_units: c.units_won,
+      win_pct: Math.round((c.win_rate ?? 0) * 10) / 10,
+      roi_pct: Math.round((c.roi ?? 0) * 10) / 10,
+      record: `${c.wins}-${c.losses}${c.pushes > 0 ? `-${c.pushes}` : ''}`,
+      streak,
+      streak_type: streakType,
+      streak_display: streak > 0 && streakType ? `${streak}${streakType}` : '-',
+      hot: c.current_streak >= 3,
+      cold: c.current_streak <= -3,
+    };
+  });
 }
 
 async function getCapperProfile(db: SupabaseClient, slug: string) {
   // Get capper info
   const { data: capper, error: capperError } = await db
-    .from('cappers')
+    .from('hb_capper_stats')   // not `cappers` - see getLeaderboard note
     .select('*')
     .eq('slug', slug)
     .single();
@@ -112,17 +140,19 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
 
   // Get capper's recent picks
   const { data: picks, error: picksError } = await db
-    .from('picks')
+    // `picks` is empty and has no capper_id column; hb_picks is the real table
+    // (61,748 rows) and its timestamp is posted_at, not date.
+    .from('hb_picks')
     .select('*')
-    .eq('capper_id', capper.id)
-    .order('date', { ascending: false })
+    .eq('capper_id', capper.capper_id)
+    .order('posted_at', { ascending: false })
     .limit(50);
 
   // Get performance by sport
   const { data: sportStats } = await db
-    .from('picks')
+    .from('hb_picks')
     .select('sport, result')
-    .eq('capper_id', capper.id)
+    .eq('capper_id', capper.capper_id)
     .neq('result', 'pending');
 
   // Calculate per-sport stats
@@ -155,21 +185,27 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
 
   return {
     ...capper,
-    win_pct: Math.round(capper.win_rate * 1000) / 10,
-    roi_pct: Math.round(capper.roi * 1000) / 10,
+    // Already percentages in hb_capper_stats - do not rescale. See getLeaderboard.
+    win_pct: Math.round((capper.win_rate ?? 0) * 10) / 10,
+    roi_pct: Math.round((capper.roi ?? 0) * 10) / 10,
+    id: capper.capper_id,
+    total_units: capper.units_won,
+    streak: Math.abs(capper.current_streak || 0),
+    streak_type: capper.current_streak > 0 ? 'W' : capper.current_streak < 0 ? 'L' : null,
     record: `${capper.wins}-${capper.losses}${capper.pushes > 0 ? `-${capper.pushes}` : ''}`,
-    streak_display: capper.streak > 0 && capper.streak_type 
-      ? `${capper.streak}${capper.streak_type}` 
+    streak_display: capper.current_streak
+      ? `${Math.abs(capper.current_streak)}${capper.current_streak > 0 ? 'W' : 'L'}`
       : '-',
     recent_form: recentForm,
     recent_win_pct: recentTotal > 0 ? Math.round((recentWins / recentTotal) * 1000) / 10 : 0,
     by_sport: bySport,
     recent_picks: (picks || []).slice(0, 20).map((p: any) => ({
       id: p.id,
-      date: p.date,
+      // hb_picks stores posted_at / team / line - there is no date|game|pick column
+      date: p.posted_at,
       sport: p.sport,
-      game: p.game,
-      pick: p.pick,
+      game: p.opponent ? `${p.team} vs ${p.opponent}` : p.team,
+      pick: [p.team, p.line].filter(Boolean).join(' '),
       pick_type: p.pick_type,
       odds: p.odds,
       result: p.result,
@@ -178,21 +214,28 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
 }
 
 async function getTopStreaks(db: SupabaseClient, limit: number = 5) {
+  // hb_capper_stats has no streak_type column - a winning streak is simply a
+  // positive current_streak. The old query filtered `.eq('streak_type','W')` on
+  // the empty `cappers` table, so this rail silently returned [] rather than
+  // erroring, and nobody noticed it was always empty.
   const { data, error } = await db
-    .from('cappers')
-    .select('name, slug, streak, streak_type, win_rate')
-    .eq('streak_type', 'W')
-    .gt('streak', 0)
-    .order('streak', { ascending: false })
+    .from('hb_capper_stats')
+    .select('name, slug, current_streak, win_rate, total_picks')
+    .gte('total_picks', 10)
+    .gt('current_streak', 0)
+    .order('current_streak', { ascending: false })
     .limit(limit);
 
-  if (error) return [];
+  if (error) {
+    console.error('[cappers] hot-streaks query failed:', error.message);
+    return [];
+  }
 
   return (data || []).map((c: any) => ({
     name: c.name,
     slug: c.slug,
-    streak: c.streak,
-    win_pct: Math.round(c.win_rate * 1000) / 10,
+    streak: c.current_streak,
+    win_pct: Math.round((c.win_rate ?? 0) * 10) / 10, // already a percentage
   }));
 }
 
