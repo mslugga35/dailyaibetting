@@ -62,11 +62,13 @@ export default function BlogPage() {
   }, []);
 
   const formatDate = (dateStr: string) => {
+    // Date-only values are UTC midnight - render them in UTC or readers west of UTC see the day before.
     return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? { timeZone: 'UTC' } : {}),
     });
   };
 

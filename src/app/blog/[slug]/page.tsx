@@ -120,11 +120,14 @@ export default async function BlogPostPage({ params }: PageProps) {
   }
 
   const formatDate = (dateStr: string) => {
+    // Date-only values (Harbor posts: "2026-09-14") are UTC midnight; formatting them in
+    // the server/reader timezone showed the previous day. Render those in UTC.
     return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? { timeZone: 'UTC' } : {}),
     });
   };
 
