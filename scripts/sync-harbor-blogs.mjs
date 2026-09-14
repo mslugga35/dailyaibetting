@@ -30,7 +30,14 @@ function extractPost(filePath) {
   if (!title || !content) { console.warn(`⚠️  Skipping ${slug}`); return null }
   const wordCount = content.replace(/<[^>]+>/g, '').split(/\s+/).length
   const readTime = Math.max(1, Math.ceil(wordCount / 200))
-  return { slug, title, description, date, author, tags, content, readTime }
+  // Read by src/app/sitemap.ts: only self-canonical, indexable posts are listed,
+  // so a Harbor duplicate that canonicalises elsewhere never enters the sitemap.
+  const canonical = $('link[rel="canonical"]').attr('href') || ''
+  const noindex = /noindex/i.test($('meta[name="robots"]').attr('content') || '')
+  // The visible <time> is copied from Harbor's template page and can be months
+  // stale; article:published_time is set per article, so the sitemap uses it.
+  const published = ($('meta[property="article:published_time"]').attr('content') || dateRaw).split('T')[0]
+  return { slug, title, description, date, author, tags, content, readTime, canonical, noindex, published }
 }
 
 function main() {

@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import harborPosts from '@/lib/harbor-posts.json';
 
 const SPORTS = ['nba', 'nfl', 'nhl', 'mlb', 'ncaab', 'ncaaf'];
 
@@ -31,6 +32,30 @@ async function getBlogEntries(): Promise<MetadataRoute.Sitemap> {
   } catch {
     return [];
   }
+}
+
+type HarborSitemapPost = { slug: string; date?: string; published?: string; canonical?: string; noindex?: boolean };
+
+/**
+ * Harbor articles live as public/blog/*.html and are served at /blog/<slug> from
+ * harbor-posts.json, which `npm run build` regenerates from public/blog before
+ * `next build`. Until 2026-09-14 this sitemap only listed Supabase blog_posts
+ * rows, so 9 of 10 Harbor articles were missing and Google Search Console
+ * reported them "URL is unknown to Google".
+ *
+ * Lists only self-canonical, indexable posts, at the canonical URL.
+ */
+function getHarborEntries(already: Set<string>): MetadataRoute.Sitemap {
+  return (harborPosts as HarborSitemapPost[])
+    .filter((post) => post.slug && !post.noindex)
+    .filter((post) => !post.canonical || post.canonical.replace(/\/$/, '').endsWith(`/blog/${post.slug}`))
+    .map((post) => ({
+      url: `https://dailyaibetting.com/blog/${post.slug}`,
+      lastModified: post.published || post.date || undefined,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+    .filter((entry) => !already.has(entry.url));
 }
 
 async function getCapperEntries(): Promise<MetadataRoute.Sitemap> {
@@ -142,5 +167,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     getCapperEntries(),
   ]);
 
-  return [...staticRoutes, ...blogEntries, ...capperEntries];
+  const harborEntries = getHarborEntries(new Set(blogEntries.map((e) => e.url)));
+
+  return [...staticRoutes, ...blogEntries, ...harborEntries, ...capperEntries];
 }
