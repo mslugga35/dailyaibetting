@@ -12,7 +12,8 @@ import { SportsEventJsonLd } from '@/components/seo/JsonLd';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: { slug: string };
+  // Next 15+: params is a Promise (params.slug was undefined).
+  params: Promise<{ slug: string }>;
 }
 
 interface ConsensusPick {
@@ -78,7 +79,8 @@ function findMatchingPicks(topOverall: ConsensusPick[], team1: string, team2: st
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const gameInfo = parseGameSlug(params.slug);
+  const { slug } = await params;
+  const gameInfo = parseGameSlug(slug);
   
   if (!gameInfo) {
     return {
@@ -92,13 +94,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which handicappers agree on spreads, moneylines, and totals.`,
     keywords: `${gameInfo.team1} vs ${gameInfo.team2} picks, ${gameInfo.team1} ${gameInfo.team2} predictions, betting picks, spread picks`,
     alternates: {
-      canonical: `https://dailyaibetting.com/games/${params.slug}`,
+      canonical: `https://dailyaibetting.com/games/${slug}`,
     },
   };
 }
 
 export default async function GamePage({ params }: PageProps) {
-  const gameInfo = parseGameSlug(params.slug);
+  const { slug } = await params;
+  const gameInfo = parseGameSlug(slug);
   
   if (!gameInfo) {
     notFound();

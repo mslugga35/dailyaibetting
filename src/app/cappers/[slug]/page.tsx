@@ -11,7 +11,8 @@ import { ProGateSection } from '@/components/pro/ProGateSection';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: { slug: string };
+  // Next 15+: params is a Promise (params.slug was undefined).
+  params: Promise<{ slug: string }>;
 }
 
 interface CapperProfile {
@@ -68,7 +69,8 @@ async function getCapperProfile(slug: string): Promise<CapperProfile | null> {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const capper = await getCapperProfile(params.slug);
+  const { slug } = await params;
+  const capper = await getCapperProfile(slug);
   
   if (!capper) {
     return {
@@ -81,13 +83,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: `${capper.name} betting record: ${capper.record}. ${capper.win_pct}% win rate across ${capper.total_picks} picks. See full pick history and performance by sport.`,
     keywords: `${capper.name} picks, ${capper.name} record, betting handicapper, sports betting expert`,
     alternates: {
-      canonical: `https://dailyaibetting.com/cappers/${params.slug}`,
+      canonical: `https://dailyaibetting.com/cappers/${slug}`,
     },
   };
 }
 
 export default async function CapperProfilePage({ params }: PageProps) {
-  const capper = await getCapperProfile(params.slug);
+  const { slug } = await params;
+  const capper = await getCapperProfile(slug);
 
   if (!capper) {
     notFound();
@@ -313,7 +316,7 @@ export default async function CapperProfilePage({ params }: PageProps) {
 
         {/* Sportsbook Links */}
         <div className="mt-8 pt-8 border-t">
-          <div className="text-sm text-muted-foreground mb-3 font-medium">Place {capper.name}'s picks:</div>
+          <div className="text-sm text-muted-foreground mb-3 font-medium">Place {capper.name}&apos;s picks:</div>
           <SportsbookLinks variant="inline" />
           <p className="text-xs text-muted-foreground mt-3">
             <Link href="/sportsbooks" className="text-primary hover:underline">

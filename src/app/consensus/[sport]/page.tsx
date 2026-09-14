@@ -55,7 +55,8 @@ const SPORT_META: Record<SportSlug, {
 };
 
 interface PageProps {
-  params: { sport: string };
+  // Next 15+: params is a Promise. Reading params.sport directly gave undefined -> HTTP 500.
+  params: Promise<{ sport: string }>;
 }
 
 export async function generateStaticParams() {
@@ -63,7 +64,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const slug = params.sport.toLowerCase() as SportSlug;
+  const slug = (await params).sport.toLowerCase() as SportSlug;
   if (!SPORTS.includes(slug)) {
     return { title: 'Consensus Not Found | DailyAI Betting' };
   }
@@ -89,7 +90,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function SportConsensusPage({ params }: PageProps) {
-  const slug = params.sport.toLowerCase() as SportSlug;
+  const slug = (await params).sport.toLowerCase() as SportSlug;
   if (!SPORTS.includes(slug)) {
     notFound();
   }
