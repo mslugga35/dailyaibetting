@@ -11,6 +11,19 @@ function getSupabase() {
   return createClient(url, key);
 }
 
+/**
+ * Sitemap <lastmod> must be W3C datetime WITH a timezone. blog_posts.published_at
+ * comes back as "2026-02-20T19:00:11.67" (no zone), which Next writes verbatim;
+ * Search Console counted all 27 as sitemap errors from 2026-04 to 2026-09-14.
+ * Postgres/Supabase timestamps are UTC, so a zone-less value is read as UTC.
+ */
+function w3cDate(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const zoned = /T\d{2}:\d{2}/.test(value) && !/(Z|[+-]\d{2}:?\d{2})$/.test(value) ? `${value}Z` : value;
+  const d = new Date(zoned);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
 async function getBlogEntries(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = getSupabase();
@@ -25,7 +38,7 @@ async function getBlogEntries(): Promise<MetadataRoute.Sitemap> {
     if (!data) return [];
     return data.map((post) => ({
       url: `https://dailyaibetting.com/blog/${post.slug}`,
-      lastModified: post.published_at || new Date().toISOString(),
+      lastModified: w3cDate(post.published_at) || new Date().toISOString(),
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     }));
@@ -51,7 +64,7 @@ function getHarborEntries(already: Set<string>): MetadataRoute.Sitemap {
     .filter((post) => !post.canonical || post.canonical.replace(/\/$/, '').endsWith(`/blog/${post.slug}`))
     .map((post) => ({
       url: `https://dailyaibetting.com/blog/${post.slug}`,
-      lastModified: post.published || post.date || undefined,
+      lastModified: w3cDate(post.published || post.date),
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     }))
@@ -73,7 +86,7 @@ async function getCapperEntries(): Promise<MetadataRoute.Sitemap> {
       .filter((c) => c.slug)
       .map((capper) => ({
         url: `https://dailyaibetting.com/cappers/${capper.slug}`,
-        lastModified: capper.updated_at || new Date().toISOString(),
+        lastModified: w3cDate(capper.updated_at) || new Date().toISOString(),
         changeFrequency: 'daily' as const,
         priority: 0.65,
       }));
