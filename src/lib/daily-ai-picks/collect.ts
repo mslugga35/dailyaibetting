@@ -13,7 +13,7 @@
  * @created 2026-03-27
  */
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createPicksReaderClient } from '@/lib/supabase/picks-reader';
 import { getTodayET } from '@/lib/utils/date';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -99,7 +99,7 @@ interface ESPNGame {
 
 async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createPicksReaderClient();
     const today = getTodayET();
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 

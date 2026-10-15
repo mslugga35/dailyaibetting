@@ -72,6 +72,12 @@ Shared utilities:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+# HiddenBag reader account (server-only, never NEXT_PUBLIC_): a dedicated
+# HiddenBag user with is_comped, used by daily-ai-picks/collect.ts to read
+# today's pending hb_picks once HiddenBag's paywall RLS ships.
+# Unset = anon (works until then). See src/lib/supabase/picks-reader.ts.
+HB_READER_EMAIL=
+HB_READER_PASSWORD=
 
 # Google Sheets
 GOOGLE_SHEET_ID=

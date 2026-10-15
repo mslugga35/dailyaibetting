@@ -9,7 +9,8 @@
     "sync:harbor": "node scripts/sync-harbor-blogs.mjs",
     "start": "next start",
     "lint": "eslint",
-    "test:consensus": "node --test --experimental-strip-types src/lib/consensus/*.test.ts"
+    "test:consensus": "node --test --experimental-strip-types src/lib/consensus/*.test.ts",
+    "test:picks-reader": "node --test --experimental-strip-types src/lib/supabase/picks-reader.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
