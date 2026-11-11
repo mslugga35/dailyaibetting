@@ -56,14 +56,14 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
           <div>
             <div className="flex items-center gap-2 text-primary mb-2">
               <Zap className="h-5 w-5" />
-              <span className="text-sm font-medium">Top Picks</span>
+              <span className="text-sm font-medium">Ranked by Agreement</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
-              Best Bets Today
+              Ranked Consensus Picks Today
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              {today} &middot; Our highest-confidence plays ranked by expert consensus.
-              These picks have the strongest agreement from professional handicappers.
+              {today} &middot; Picks ranked by how many expert cappers chose the same bet.
+              Consensus means several cappers chose the same pick; no outcome is guaranteed.
             </p>
           </div>
           <Button
@@ -87,7 +87,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
               <Trophy className="h-4 w-4 text-yellow-500" />
             </div>
             <div className="text-3xl font-bold text-primary">{bestBets.length}</div>
-            <div className="text-sm text-muted-foreground">Best Bets Today</div>
+            <div className="text-sm text-muted-foreground">Ranked Picks Today</div>
           </CardContent>
         </Card>
         <Card>
@@ -98,7 +98,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
             <div className="text-3xl font-bold text-orange-500">
               {topPick?.capperCount || 0}
             </div>
-            <div className="text-sm text-muted-foreground">Top Pick Agreement</div>
+            <div className="text-sm text-muted-foreground">#1 Pick Agreement</div>
           </CardContent>
         </Card>
         <Card>
@@ -125,7 +125,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading best bets...</span>
+          <span className="ml-2">Loading ranked picks...</span>
         </div>
       )}
 
@@ -145,7 +145,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trophy className="h-6 w-6 text-yellow-500" />
-              Today&apos;s #1 Best Bet
+              Today&apos;s #1 Consensus Pick
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -168,12 +168,12 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
         </Card>
       )}
 
-      {/* Ranked Best Bets */}
+      {/* Ranked consensus picks */}
       {!isLoading && !error && (
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
-            Top 10 Best Bets
+            Top 10 by Capper Agreement
           </h2>
           {bestBets.length > 0 ? (
             <div className="space-y-3">
@@ -210,9 +210,9 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
           ) : (
             <Card className="p-8 text-center">
               <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">No best bets available yet today.</p>
+              <p className="text-muted-foreground">No ranked picks available yet today.</p>
               <p className="text-sm text-muted-foreground mt-2">
-                Best bets require 3+ cappers to agree. Check back as more picks come in!
+                A pick is ranked here once 3+ cappers agree. Check back as more picks come in!
               </p>
             </Card>
           )}
@@ -227,24 +227,23 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
       {/* SEO Content */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>What Makes a &quot;Best Bet&quot;?</CardTitle>
+          <CardTitle>How Picks Are Ranked</CardTitle>
         </CardHeader>
         <CardContent className="prose prose-sm dark:prose-invert max-w-none">
           <p>
-            Our Best Bets are picks with the <strong>highest expert consensus</strong> of the day.
-            These plays represent situations where multiple professional handicappers independently
-            arrived at the same conclusion.
+            This page ranks today&apos;s picks by <strong>capper agreement</strong>: how many
+            expert cappers independently chose the same bet.
           </p>
           <h4>Selection Criteria:</h4>
           <ul>
             <li><strong>Minimum 3 cappers</strong> must agree on the same bet</li>
             <li><strong>Ranked by agreement</strong> &ndash; more experts = higher ranking</li>
             <li><strong>Same bet type</strong> &ndash; spread, total, and moneyline bets are separate</li>
-            <li><strong>Updated in real-time</strong> as new picks are released</li>
+            <li><strong>Updated throughout the day</strong> as new picks are released</li>
           </ul>
           <p>
-            While no bet is guaranteed, consensus plays historically outperform random selection.
-            Use best bets as a starting point for your research, not as blind follows.
+            Consensus means several cappers chose the same pick. No outcome is guaranteed.
+            Use these rankings as a starting point for your research, not as blind follows.
           </p>
         </CardContent>
       </Card>

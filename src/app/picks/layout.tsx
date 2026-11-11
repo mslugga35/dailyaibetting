@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'All Expert Picks Today - Browse by Sport & Capper | DailyAI Betting',
   description:
-    'Browse all expert sports picks today from 10+ professional cappers. Filter by sport, capper, or bet type. NFL, NBA, MLB, NHL, college picks updated in real-time.',
+    'Browse all expert sports picks today from multiple expert cappers. Filter by sport, capper, or bet type. NFL, NBA, MLB, NHL, college picks updated throughout the day.',
   keywords: [
     'expert picks today',
     'all sports picks',
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'All Expert Picks Today - Browse by Sport & Capper',
     description:
-      'Browse picks from 10+ professional cappers. Filter by sport, capper, or bet type.',
+      'Browse picks from multiple expert cappers. Filter by sport, capper, or bet type.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'All Expert Picks Today | DailyAI Betting',
     description:
-      'Browse all sports picks from 10+ professional cappers, updated in real-time.',
+      'Browse all sports picks from multiple expert cappers, updated throughout the day.',
   },
   alternates: {
     canonical: 'https://dailyaibetting.com/picks',

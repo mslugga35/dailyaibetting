@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { Trophy, TrendingUp, Flame, Snowflake, ArrowUpRight, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Capper Leaderboard - Top Sports Betting Experts',
-  description: 'See which sports betting cappers have the best track records. Verified win rates, ROI, and performance stats for top betting experts.',
-  keywords: 'sports betting cappers, best handicappers, betting experts leaderboard, capper rankings, handicapper win rates',
+  title: 'Capper Leaderboard - Sports Betting Capper Records',
+  description: 'Graded results for the sports betting cappers we track: win-loss record, win percentage, and ROI estimated at -110 per pick.',
+  keywords: 'sports betting cappers, betting experts leaderboard, capper rankings, capper win-loss records, graded capper results',
 };
 
 export const dynamic = 'force-dynamic';
@@ -79,7 +79,7 @@ export default async function CappersPage() {
           Capper Leaderboard
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Track record of every capper we monitor. Click any capper to see their full pick history.
+          Graded win-loss record of every capper we monitor. Click any capper to see their full pick history.
         </p>
       </div>
 
@@ -260,13 +260,13 @@ export default async function CappersPage() {
                 <strong className="text-foreground">Win Rate:</strong> Calculated from all graded picks. Pushes are excluded from win/loss calculations.
               </p>
               <p>
-                <strong className="text-foreground">ROI:</strong> Return on investment assuming 1 unit per pick at -110 standard juice.
+                <strong className="text-foreground">ROI:</strong> Estimated return on investment, assuming 1 unit per pick at -110.
               </p>
               <p>
                 <strong className="text-foreground">Streaks:</strong> Current consecutive wins (🔥) or losses (❄️). 3+ game streaks are highlighted.
               </p>
               <p>
-                <strong className="text-foreground">Real-Time Updates:</strong> Stats update automatically as games complete and picks are graded.
+                <strong className="text-foreground">Updates:</strong> Stats update as games complete and picks are graded.
               </p>
             </div>
           </section>

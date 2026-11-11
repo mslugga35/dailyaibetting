@@ -11,7 +11,7 @@ import Link from 'next/link';
 export default function ExpertPicksPage() {
   const { topOverall, isLoading, error, refetch, data } = useConsensus();
 
-  // Expert picks = highest capper agreement
+  // Expert picks = picks with 2+ cappers agreeing, sorted by capper count
   const expertPicks = topOverall.filter(p => p.capperCount >= 2).sort((a, b) => b.capperCount - a.capperCount);
   const premiumPicks = expertPicks.filter(p => p.capperCount >= 4);
   const firePicks = expertPicks.filter(p => p.capperCount >= 3);
@@ -31,10 +31,10 @@ export default function ExpertPicksPage() {
   };
 
   const getConfidenceLabel = (count: number) => {
-    if (count >= 5) return { label: 'Very High', color: 'bg-green-500' };
-    if (count >= 4) return { label: 'High', color: 'bg-emerald-500' };
-    if (count >= 3) return { label: 'Strong', color: 'bg-yellow-500' };
-    return { label: 'Moderate', color: 'bg-blue-500' };
+    if (count >= 5) return { label: 'Top consensus', color: 'bg-green-500' };
+    if (count >= 4) return { label: 'Top consensus', color: 'bg-emerald-500' };
+    if (count >= 3) return { label: 'Fire', color: 'bg-yellow-500' };
+    return { label: 'Standard', color: 'bg-blue-500' };
   };
 
   const sportColors: Record<string, string> = {
@@ -60,8 +60,8 @@ export default function ExpertPicksPage() {
               Expert Sports Picks Today
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              {today} &middot; Curated picks from professional handicappers with proven track records.
-              Ranked by expert consensus agreement.
+              {today} &middot; Picks from the expert cappers we track,
+              ranked by how many chose the same bet.
             </p>
           </div>
           <Button
@@ -94,7 +94,7 @@ export default function ExpertPicksPage() {
               <Star className="h-4 w-4 text-yellow-500" />
             </div>
             <div className="text-3xl font-bold text-yellow-500">{premiumPicks.length}</div>
-            <div className="text-sm text-muted-foreground">Premium (4+)</div>
+            <div className="text-sm text-muted-foreground">Top consensus (4+)</div>
           </CardContent>
         </Card>
         <Card>
@@ -135,12 +135,12 @@ export default function ExpertPicksPage() {
         </Card>
       )}
 
-      {/* Premium Picks (4+) */}
+      {/* Top consensus picks (4+) */}
       {!isLoading && !error && premiumPicks.length > 0 && (
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-500" />
-            Premium Expert Picks (4+ Agree)
+            Top consensus picks (4+ agree)
           </h2>
           <div className="space-y-3">
             {premiumPicks.map((pick, index) => {
@@ -176,7 +176,7 @@ export default function ExpertPicksPage() {
         <div className="mb-8">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
             <Flame className="h-5 w-5 text-orange-500" />
-            Fire Expert Picks (3 Agree)
+            Fire picks (3 agree)
           </h2>
           {firePicks.filter(p => p.capperCount === 3).length > 0 ? (
             <div className="space-y-3">
@@ -218,7 +218,7 @@ export default function ExpertPicksPage() {
       {/* 2 Expert Agreement */}
       {!isLoading && !error && (
         <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4">Standard Expert Picks (2 Agree)</h2>
+          <h2 className="text-xl font-bold mb-4">Standard picks (2 agree)</h2>
           {expertPicks.filter(p => p.capperCount === 2).length > 0 ? (
             <div className="space-y-3">
               {expertPicks
@@ -266,19 +266,18 @@ export default function ExpertPicksPage() {
         </CardHeader>
         <CardContent className="prose prose-sm dark:prose-invert max-w-none">
           <p>
-            Our expert picks are curated from <strong>professional handicappers</strong> with
-            documented winning records. We track picks from services like BetFirm, Dimers,
+            Our expert picks are collected from the <strong>expert cappers</strong> we track.
+            We track picks from services like BetFirm, Dimers,
             Covers, and SportsLine to find consensus plays.
           </p>
-          <h4>Confidence Ratings:</h4>
+          <h4>Agreement Levels:</h4>
           <ul>
-            <li><strong>Premium (4+ experts)</strong> &ndash; Highest confidence, rare opportunities</li>
-            <li><strong>Fire (3 experts)</strong> &ndash; Strong consensus, reliable plays</li>
-            <li><strong>Standard (2 experts)</strong> &ndash; Moderate agreement, good value</li>
+            <li><strong>Top consensus (4+ experts)</strong> &ndash; four or more cappers chose the same pick</li>
+            <li><strong>Fire (3 experts)</strong> &ndash; three cappers chose the same pick</li>
+            <li><strong>Standard (2 experts)</strong> &ndash; two cappers chose the same pick</li>
           </ul>
           <p>
-            Expert consensus reduces variance by combining multiple professional opinions.
-            When the best in the business agree, it&apos;s worth paying attention.
+            Consensus means several cappers chose the same pick. No outcome is guaranteed.
           </p>
         </CardContent>
       </Card>
@@ -297,7 +296,7 @@ export default function ExpertPicksPage() {
               <Link href="/parlay-picks">Parlay Picks</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/best-bets">Best Bets</Link>
+              <Link href="/best-bets">Ranked Picks</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/consensus">Full Consensus</Link>

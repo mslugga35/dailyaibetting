@@ -7,23 +7,23 @@ const currentDate = new Date().toLocaleDateString('en-US', {
 });
 
 export const metadata: Metadata = {
-  title: `Expert Sports Picks Today (${currentDate}) - Pro Handicapper Consensus | DailyAI`,
-  description: `Get expert sports picks from professional handicappers. Ranked by consensus agreement. Premium picks (4+), fire picks (3+). NFL, NBA, MLB, NHL experts.`,
+  title: `Expert Sports Picks Today (${currentDate}) - Expert Capper Consensus | DailyAI`,
+  description: `Expert sports picks from the cappers we track, ranked by consensus agreement. Top consensus (4+), fire picks (3+). NFL, NBA, MLB, NHL.`,
   keywords: [
     'expert picks',
     'expert sports picks',
-    'professional handicapper picks',
-    'pro picks today',
+    'expert capper picks',
+    'expert picks today',
     'expert betting picks',
-    'handicapper consensus',
+    'capper consensus',
     'expert NFL picks',
     'expert NBA picks',
     'sports expert predictions',
-    'professional sports picks',
+    'consensus sports picks',
   ],
   openGraph: {
-    title: 'Expert Sports Picks Today - Pro Handicapper Consensus',
-    description: 'Curated picks from professional handicappers ranked by expert agreement.',
+    title: 'Expert Sports Picks Today - Expert Capper Consensus',
+    description: 'Picks from expert cappers ranked by how many chose the same bet.',
     type: 'website',
   },
   alternates: {
@@ -35,7 +35,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
   name: 'Expert Sports Picks Today',
-  description: 'Professional handicapper picks ranked by consensus agreement',
+  description: 'Expert capper picks ranked by consensus agreement',
   url: 'https://dailyaibetting.com/expert-picks',
   publisher: {
     '@type': 'Organization',
@@ -66,34 +66,34 @@ export default function ExpertPicksLayout({
         <div className="max-w-4xl mx-auto prose prose-invert">
           <h2 className="text-2xl font-bold mb-4">About Our Expert Picks</h2>
           <p className="text-muted-foreground mb-4">
-            Our expert picks are aggregated from professional handicappers with documented track records.
+            Our expert picks are aggregated from the expert cappers we track.
             We track services like BetFirm, Dimers, Covers, and SportsLine to identify consensus plays
-            where multiple experts independently arrive at the same conclusion.
+            where multiple experts independently arrive at the same pick.
           </p>
 
-          <h3 className="text-xl font-semibold mb-3">Expert Confidence Levels</h3>
+          <h3 className="text-xl font-semibold mb-3">Agreement Levels</h3>
           <ul className="text-muted-foreground space-y-2 mb-4">
-            <li>• <strong>Premium (4+ experts)</strong> - Highest confidence, rare opportunities</li>
-            <li>• <strong>Fire (3 experts)</strong> - Strong consensus, reliable plays</li>
-            <li>• <strong>Standard (2 experts)</strong> - Moderate agreement, good value potential</li>
+            <li>• <strong>Top consensus (4+ experts)</strong> - four or more cappers chose the same pick</li>
+            <li>• <strong>Fire (3 experts)</strong> - three cappers chose the same pick</li>
+            <li>• <strong>Standard (2 experts)</strong> - two cappers chose the same pick</li>
           </ul>
 
-          <h3 className="text-xl font-semibold mb-3">Why Expert Consensus Matters</h3>
+          <h3 className="text-xl font-semibold mb-3">How Expert Consensus Works</h3>
           <div className="grid md:grid-cols-2 gap-4 text-muted-foreground mb-4">
             <div className="p-4 rounded-lg bg-card border">
-              <strong className="text-foreground">Reduced Variance</strong>
-              <p className="text-sm mt-1">Multiple expert opinions smooth out individual handicapper streaks and biases.</p>
+              <strong className="text-foreground">Capper Count</strong>
+              <p className="text-sm mt-1">Each pick shows how many of the cappers we track chose the same bet.</p>
             </div>
             <div className="p-4 rounded-lg bg-card border">
               <strong className="text-foreground">Independent Analysis</strong>
-              <p className="text-sm mt-1">Each capper uses their own methodology - agreement signals strong value.</p>
+              <p className="text-sm mt-1">Each capper uses their own methodology. Agreement means they reached the same pick; no outcome is guaranteed.</p>
             </div>
           </div>
 
           <h3 className="text-xl font-semibold mb-3">Cappers We Track</h3>
           <p className="text-muted-foreground mb-4">
             We monitor picks from Dave Price, Jack Jones, Matt Fargo, Pure Lock (BetFirm), Chris Vasile,
-            Quinn Allen (Covers), Dimers AI, SportsLine projections, and other verified professionals.
+            Quinn Allen (Covers), Dimers AI, SportsLine projections, and other expert cappers.
           </p>
 
           <p className="text-sm text-muted-foreground">

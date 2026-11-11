@@ -1,30 +1,30 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Daily Bets - AI-Powered Sports Picks Updated Live | DailyAI Betting',
+  title: 'Daily Bets - AI Consensus Sports Picks Today | DailyAI Betting',
   description:
-    'Today\'s daily bets powered by AI consensus from 10+ expert cappers. Live-updating picks for NFL, NBA, MLB, NHL, and college sports. Spreads, moneylines, and totals.',
+    'Today\'s daily bets from AI consensus across multiple expert cappers. Picks for NFL, NBA, MLB, NHL, and college sports update throughout the day. Spreads, moneylines, and totals.',
   keywords: [
     'daily bets',
     'daily sports bets',
     'today bets',
     'daily betting picks',
-    'live sports picks',
+    'consensus picks today',
     'daily AI picks',
     'sports bets today',
     'daily free bets',
   ],
   openGraph: {
-    title: 'Daily Bets - AI-Powered Sports Picks Updated Live',
+    title: 'Daily Bets - AI Consensus Sports Picks Today',
     description:
-      'Live-updating daily bets from 10+ expert cappers. Spreads, moneylines, and totals across all sports.',
+      'Daily bets from multiple expert cappers, updated throughout the day. Spreads, moneylines, and totals across all sports.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Daily Bets | DailyAI Betting',
     description:
-      'AI-powered daily bets updated live. 10+ expert cappers, all major sports.',
+      'AI consensus daily bets from multiple expert cappers, updated throughout the day.',
   },
   alternates: {
     canonical: 'https://dailyaibetting.com/daily-bets',
@@ -35,7 +35,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
   name: 'Daily Bets',
-  description: 'AI-powered daily sports betting picks updated in real-time',
+  description: 'AI-powered daily sports betting picks updated throughout the day',
   url: 'https://dailyaibetting.com/daily-bets',
   publisher: {
     '@type': 'Organization',

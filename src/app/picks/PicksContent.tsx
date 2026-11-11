@@ -215,7 +215,7 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <p>No consensus picks available yet.</p>
-                      <p className="text-sm mt-2">Picks update every 5 minutes.</p>
+                      <p className="text-sm mt-2">Picks update throughout the day.</p>
                     </div>
                   )}
                 </CardContent>
@@ -230,7 +230,7 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
                   <p className="text-sm text-muted-foreground mt-2">
                     {totalPicks > 0
                       ? `${totalPicks.toLocaleString()} picks are being processed. Refresh to check for updates.`
-                      : 'Picks update every 5 minutes.'}
+                      : 'Picks update throughout the day.'}
                   </p>
                 </Card>
               ) : (
@@ -306,7 +306,7 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" asChild>
-                  <Link href="/daily-bets">Daily Best Bets</Link>
+                  <Link href="/daily-bets">Daily Bets</Link>
                 </Button>
                 <Button variant="outline" asChild>
                   <Link href="/nfl-picks-today">NFL Picks</Link>

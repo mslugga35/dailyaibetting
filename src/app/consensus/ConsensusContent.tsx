@@ -98,7 +98,7 @@ function TodayTab({ initialData }: { initialData: unknown }) {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No consensus picks available yet.</p>
-                    <p className="text-sm mt-2">Picks update every 5 minutes.</p>
+                    <p className="text-sm mt-2">Picks update throughout the day.</p>
                   </div>
                 )}
               </CardContent>
@@ -260,7 +260,7 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
               <div className="text-4xl font-bold text-primary">1</div>
               <h3 className="font-semibold">Aggregate Picks</h3>
               <p className="text-sm text-muted-foreground">
-                We collect picks from top betting sources including BetFirm, Dimers, Covers, and SportsLine.
+                We collect picks from betting sources including BetFirm, Dimers, Covers, and SportsLine.
               </p>
             </div>
             <div className="space-y-2">

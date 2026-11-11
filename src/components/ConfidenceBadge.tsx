@@ -24,23 +24,23 @@ export function getConfidenceInfo(tier: ConfidenceTier) {
     case "lock":
       return {
         emoji: "💎",
-        label: "Lock",
+        label: "Top consensus",
         color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-        description: "4+ cappers agree - highest confidence",
+        description: "4+ cappers chose the same pick",
       };
     case "strong":
       return {
         emoji: "🔥",
         label: "Strong",
         color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-        description: "3 cappers agree - strong consensus",
+        description: "3 cappers chose the same pick",
       };
     case "lean":
       return {
         emoji: "📍",
         label: "Lean",
         color: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-        description: "2 cappers agree - slight lean",
+        description: "2 cappers chose the same pick",
       };
     default:
       return {
@@ -106,7 +106,7 @@ export function SideConfidenceBadge({
   const homeTier = getConfidenceTier(homeCappers);
   const awayTier = getConfidenceTier(awayCappers);
   
-  // Determine which side has the stronger consensus
+  // Determine which side has more cappers agreeing
   const showHome = side === 'home' || (!side && homeTier !== "none" && homeCappers >= awayCappers);
   const showAway = side === 'away' || (!side && awayTier !== "none" && awayCappers > homeCappers);
   

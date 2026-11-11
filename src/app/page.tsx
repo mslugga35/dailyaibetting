@@ -36,7 +36,7 @@ async function getConsensusData() {
   }
 }
 
-// Verified track record — only shows once real graded data exists (never 0-0).
+// Graded results record — only shows once real graded data exists (never 0-0).
 async function getTrackRecord() {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
@@ -86,8 +86,8 @@ export default async function HomePage() {
           Daily AI Betting Consensus
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
-          Find value bets where multiple expert cappers agree. We analyze picks from top sources
-          and highlight the strongest consensus plays.
+          See where multiple expert cappers chose the same pick. We collect picks from several sources
+          and show how many cappers agree on each one. No outcome is guaranteed.
         </p>
         {hasTrackRecord && (
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-6">
@@ -219,7 +219,7 @@ export default async function HomePage() {
                         {hiddenPicksCount} more consensus picks locked
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Upgrade to Premium for real-time access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
+                        Upgrade to Premium for access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
                       </p>
                       <UpgradeButton label="Unlock All Picks – $20/mo" />
                     </div>
@@ -236,7 +236,7 @@ export default async function HomePage() {
                   </p>
                   <div className="flex items-center justify-center gap-1.5 mt-4 text-xs text-muted-foreground/80">
                     <Clock className="h-3 w-3" />
-                    Updates every 5 minutes
+                    Picks update throughout the day
                   </div>
                 </div>
               )}

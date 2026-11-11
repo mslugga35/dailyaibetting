@@ -60,7 +60,7 @@ export function AllPicksByCapper({ picksByCapper, allPicks }: AllPicksByCapperPr
     return (
       <Card className="p-8 text-center">
         <p className="text-muted-foreground">No picks available yet.</p>
-        <p className="text-sm text-muted-foreground mt-2">Picks update every 5 minutes.</p>
+        <p className="text-sm text-muted-foreground mt-2">Picks update throughout the day.</p>
       </Card>
     );
   }
@@ -172,7 +172,7 @@ export function AllPicksByCapper({ picksByCapper, allPicks }: AllPicksByCapperPr
 export function CapperPicksCompact({ picksByCapper }: { picksByCapper: Record<string, NormalizedPick[]> }) {
   const sortedCappers = Object.entries(picksByCapper)
     .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 5); // Top 5 cappers
+    .slice(0, 5); // First 5 cappers by pick count
 
   return (
     <div className="space-y-4">

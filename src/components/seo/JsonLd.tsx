@@ -138,7 +138,7 @@ export function FAQJsonLd() {
         name: 'What is a consensus pick?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'A consensus pick is a bet where 2 or more expert cappers agree on the same selection. The more cappers that agree, the stronger the consensus signal.',
+          text: 'A consensus pick is a bet where 2 or more expert cappers agree on the same selection. The capper count shows how many chose the same pick; no outcome is guaranteed.',
         },
       },
       {
@@ -146,7 +146,7 @@ export function FAQJsonLd() {
         name: 'What is a fire pick?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'A fire pick (marked with a flame emoji) is a consensus pick where 3 or more expert cappers agree. These are considered high-confidence plays.',
+          text: 'A fire pick (marked with a flame emoji) is a consensus pick where 3 or more expert cappers agree. Like any pick, a fire pick can lose.',
         },
       },
       {
@@ -154,7 +154,7 @@ export function FAQJsonLd() {
         name: 'How often are picks updated?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Picks are updated every 5 minutes from multiple expert sources including BetFirm, Dimers, Covers, and SportsLine.',
+          text: 'Picks update throughout the day from multiple expert sources including BetFirm, Dimers, Covers, and SportsLine.',
         },
       },
       {
@@ -162,7 +162,7 @@ export function FAQJsonLd() {
         name: 'Are these picks free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes, all consensus picks and daily best bets are completely free. We aggregate picks from top expert cappers and display them for free.',
+          text: 'A free preview of each day\'s consensus picks is available without a credit card. Premium unlocks all consensus picks. We aggregate picks from expert cappers.',
         },
       },
     ],

@@ -8,7 +8,7 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 
 export const metadata = {
   title: 'Pricing – DailyAI Betting Premium',
-  description: 'Get real-time consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards for $20/mo.',
+  description: 'Get all consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards for $20/mo.',
 };
 
 export default async function PricingPage() {
@@ -22,7 +22,7 @@ export default async function PricingPage() {
         <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Pricing</Badge>
         <h1 className="text-4xl font-bold mb-4">Simple, transparent pricing</h1>
         <p className="text-lg text-muted-foreground">
-          Start free. Upgrade when you&apos;re ready for an edge.
+          Start free. Upgrade to see every consensus pick.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export default async function PricingPage() {
               </div>
             ))}
             {[
-              'Real-time updates',
+              'All consensus picks',
               'MEGA/NUCLEAR alerts',
               'Full capper leaderboard',
               'AI trend analysis',
@@ -79,7 +79,7 @@ export default async function PricingPage() {
         {/* Premium Tier */}
         <Card className="border-primary/50 bg-primary/5 relative">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge className="bg-primary text-primary-foreground px-4">Most Popular</Badge>
+            <Badge className="bg-primary text-primary-foreground px-4">Full Access</Badge>
           </div>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -94,9 +94,9 @@ export default async function PricingPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { icon: Zap, text: 'Real-time consensus (updated every 5 min)' },
+              { icon: Zap, text: 'All consensus picks, updated throughout the day' },
               { icon: Bell, text: 'MEGA alerts (7+ cappers) & NUCLEAR alerts (10+)' },
-              { icon: Trophy, text: 'Full capper leaderboard with ROI stats' },
+              { icon: Trophy, text: 'Full capper leaderboard' },
               { icon: Brain, text: 'AI-powered trend analysis & insights' },
               { icon: BarChart, text: 'Full historical data (all past picks)' },
               { icon: TrendingUp, text: 'Fade-the-public alerts' },

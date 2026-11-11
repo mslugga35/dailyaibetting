@@ -34,12 +34,12 @@ export const metadata: Metadata = {
     template: "%s | DailyAI Betting",
   },
   description:
-    "Free daily AI-powered sports betting picks with consensus from 10+ expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Updated every 5 minutes.",
+    "Free daily AI-powered sports betting picks with consensus from multiple expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Picks update throughout the day.",
   keywords: [
     "free sports betting picks",
     "AI betting predictions",
     "consensus picks today",
-    "best bets today",
+    "consensus bets today",
     "free NFL picks",
     "free NBA picks",
     "free MLB picks",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     "fire picks",
     "parlay picks",
     "sports betting tips",
-    "daily best bets",
+    "daily consensus picks",
     "AI sports predictions",
   ],
   authors: [{ name: "DailyAI Betting" }],
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
     url: "https://dailyaibetting.com",
     siteName: "DailyAI Betting",
     title: "DailyAI Betting - Free AI Sports Betting Picks Today",
-    description: "Free daily AI-analyzed consensus picks from 10+ expert cappers. NFL, NBA, MLB, NHL picks updated every 5 minutes.",
+    description: "Free daily AI-analyzed consensus picks from multiple expert cappers. NFL, NBA, MLB, NHL picks updated throughout the day.",
     images: [
       {
         url: "https://dailyaibetting.com/opengraph-image",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
     site: "@dailyaibetting",
     creator: "@dailyaibetting",
     title: "DailyAI Betting - Free AI Sports Picks Today",
-    description: "Free daily AI-analyzed consensus picks from expert cappers. Updated every 5 minutes.",
+    description: "Free daily AI-analyzed consensus picks from expert cappers. Updated throughout the day.",
     images: ["https://dailyaibetting.com/opengraph-image"],
   },
   robots: {
