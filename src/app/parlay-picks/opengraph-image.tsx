@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Best Parlay Picks Today - High Confidence Legs | DailyAI Betting';
+export const alt = 'Best Parlay Picks Today - Parlay Legs from Consensus Picks | DailyAI Betting';
 export const size = {
   width: 1200,
   height: 630,
@@ -46,7 +46,7 @@ export default async function Image() {
             marginBottom: 40,
           }}
         >
-          High-Confidence Legs for Bigger Payouts
+          Parlay Legs from Consensus Picks
         </div>
 
         {/* Fire Badge */}

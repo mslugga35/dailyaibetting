@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Best Bets Today - Top Ranked Picks | DailyAI Betting';
+export const alt = 'Best Bets Today - Picks with the Most Expert Agreement | DailyAI Betting';
 export const size = {
   width: 1200,
   height: 630,
@@ -46,7 +46,7 @@ export default async function Image() {
             marginBottom: 40,
           }}
         >
-          Top Ranked Picks by Expert Consensus
+          Picks with the Most Expert Agreement
         </div>
 
         {/* Badge */}
@@ -62,7 +62,7 @@ export default async function Image() {
         >
           <span style={{ fontSize: 32, marginRight: 12 }}>🔥</span>
           <span style={{ fontSize: 28, color: '#ef4444', fontWeight: 700 }}>
-            Highest Confidence Plays
+            Picks with the Most Expert Agreement
           </span>
         </div>
 

@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Expert Sports Picks Today - Pro Handicapper Consensus | DailyAI Betting';
+export const alt = 'Expert Sports Picks Today - Expert Capper Consensus | DailyAI Betting';
 export const size = {
   width: 1200,
   height: 630,
@@ -46,7 +46,7 @@ export default async function Image() {
             marginBottom: 40,
           }}
         >
-          Professional Handicapper Consensus
+          Expert Capper Consensus
         </div>
 
         {/* Badge */}

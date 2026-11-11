@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Best Sports Betting Apps & Bonuses 2025 | DailyAI Betting';
+export const alt = 'Compare Sportsbook Signup Offers | DailyAI Betting';
 export const size = {
   width: 1200,
   height: 630,
@@ -46,7 +46,7 @@ export default async function Image() {
             marginBottom: 40,
           }}
         >
-          Up to $1,500 in Signup Bonuses - December 2025
+          Compare Sportsbook Signup Offers
         </div>
 
         {/* Sportsbook Icons */}

@@ -28,7 +28,7 @@ export default async function Image() {
           Pick History
         </div>
         <div style={{ fontSize: 28, color: '#9ca3af', marginBottom: 40 }}>
-          Browse Our Complete Results Archive
+          Browse Past Consensus Results
         </div>
         <div
           style={{
