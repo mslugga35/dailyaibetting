@@ -12,6 +12,7 @@ import {
   formatConsensusOutput,
 } from '@/lib/consensus/consensus-builder';
 import { buildDailyBets } from '@/lib/daily-bets/daily-bets-builder';
+import type { BotPick, BotRecord } from '@/lib/daily-bets/daily-bets-builder';
 import { filterToTodaysGamesAsync } from '@/lib/consensus/game-schedule';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayAIPicks } from '@/lib/ai-picks/engine';
@@ -36,13 +37,44 @@ async function fetchAiReport(): Promise<{ aiReport: string | null; aiReportGener
   return { aiReport: null, aiReportGeneratedAt: null };
 }
 
-async function fetchBotData() {
+// The ai_picks rows carry a `result` column that the AIPick type does not declare.
+function readResult(pick: object): string {
+  const result = (pick as { result?: unknown }).result;
+  return typeof result === 'string' ? result : 'PENDING';
+}
+
+async function fetchBotData(): Promise<{ botPicks: BotPick[]; botRecord: BotRecord | null }> {
   try {
-    const [botPicks, supabase] = await Promise.all([
+    const [aiPicks, supabase] = await Promise.all([
       getTodayAIPicks(),
       createServerSupabaseClient(),
     ]);
-    const { data: botRecord } = await supabase.from('ai_picks_overall').select('*').single();
+    const { data: overall } = await supabase
+      .from('ai_picks_overall')
+      .select('wins, losses, pushes, pending, win_pct')
+      .single();
+
+    // Explicit projections: only the fields declared in DailyBetsOutput (no model confidence)
+    const botPicks: BotPick[] = aiPicks.map(p => ({
+      sport: p.sport,
+      team: p.team,
+      opponent: p.opponent,
+      bet_type: p.bet_type,
+      line: p.line ?? null,
+      reasoning: p.reasoning,
+      result: readResult(p),
+    }));
+
+    const botRecord: BotRecord | null = overall
+      ? {
+          wins: overall.wins ?? 0,
+          losses: overall.losses ?? 0,
+          pushes: overall.pushes ?? 0,
+          pending: overall.pending ?? 0,
+          winPct: overall.win_pct ?? null,
+        }
+      : null;
+
     return { botPicks, botRecord };
   } catch {
     return { botPicks: [], botRecord: null };
@@ -88,8 +120,8 @@ export async function GET() {
       ...dailyBets,
       aiReport,
       aiReportGeneratedAt,
-      botPicks: botData?.botPicks,
-      botRecord: botData?.botRecord,
+      botPicks: botData.botPicks,
+      botRecord: botData.botRecord,
     });
   } catch (error) {
     logger.error('Daily Bets API', 'Request failed:', error);

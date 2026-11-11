@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Zap,
@@ -63,22 +62,16 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
     return '';
   };
 
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.65) return 'text-green-500';
-    if (confidence >= 0.55) return 'text-yellow-500';
-    return 'text-orange-500';
-  };
-
   const formatForDiscord = () => {
     if (!data) return '';
     const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     let text = `🎯 **DAILY BEST BETS — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (${time})**\n\n`;
 
-    if (data.top5Confidence.length > 0) {
-      text += `🏆 **TOP 5 HIGHEST CONFIDENCE**\n`;
-      data.top5Confidence.forEach((pick, i) => {
+    if (data.topPicks.length > 0) {
+      text += `🏆 **TOP 5 BY CAPPER AGREEMENT**\n`;
+      data.topPicks.forEach((pick, i) => {
         const fire = getFireEmoji(pick.capperCount);
-        text += `${i + 1}. **${pick.sport}** | ${pick.matchup} | ${pick.bet} (${pick.capperCount} cappers, ${Math.round(pick.confidence.overall * 100)}% conf) ${fire}\n`;
+        text += `${i + 1}. **${pick.sport}** | ${pick.matchup} | ${pick.bet} (${pick.capperCount} cappers agree) ${fire}\n`;
       });
       text += `\n`;
     }
@@ -99,12 +92,6 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
       text += `\n`;
     }
 
-    if (data.best20Bet) {
-      text += `💰 **BEST $20 BET**\n`;
-      text += `${data.best20Bet.pick.sport} | ${data.best20Bet.pick.bet}\n`;
-      text += `Expected: ${data.best20Bet.expectedReturn}\n\n`;
-    }
-
     text += `_${data.consensusCount} consensus picks from ${data.totalPicks} analyzed_\n`;
     text += `📱 https://dailyaibetting.com/daily-bets`;
     return text;
@@ -117,10 +104,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
   };
 
   const shareToTwitter = () => {
-    if (!data || data.top5Confidence.length === 0) return;
-    const topPick = data.top5Confidence[0];
+    if (!data || data.topPicks.length === 0) return;
+    const topPick = data.topPicks[0];
     const fire = getFireEmoji(topPick.capperCount);
-    const text = `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.bet}\n${topPick.capperCount} cappers agree (${Math.round(topPick.confidence.overall * 100)}% confidence)\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
+    const text = `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.bet}\n${topPick.capperCount} cappers agree\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -207,7 +194,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
             <Card>
               <CardContent className="p-4">
                 <div className="text-3xl font-bold text-orange-500">
-                  {data.top5Confidence.filter(p => p.capperCount >= 3).length}
+                  {data.firePickCount}
                 </div>
                 <div className="text-sm text-muted-foreground">Fire Picks</div>
               </CardContent>
@@ -221,9 +208,9 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
             <Card>
               <CardContent className="p-4">
                 <div className="text-3xl font-bold text-green-500">
-                  {data.top5Confidence[0] ? Math.round(data.top5Confidence[0].confidence.overall * 100) : 0}%
+                  {data.topPicks[0]?.capperCount ?? 0}
                 </div>
-                <div className="text-sm text-muted-foreground">Top Confidence</div>
+                <div className="text-sm text-muted-foreground">Most Cappers on One Pick</div>
               </CardContent>
             </Card>
           </div>
@@ -245,22 +232,22 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
 
             {/* Overview Tab */}
             <Section value="overview" viewAll={viewAll} className="space-y-6 mt-6">
-              {/* Top 5 Highest Confidence */}
+              {/* Top 5 by Capper Agreement */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-yellow-500" />
-                    Top 5 Highest Confidence Picks
+                    Top 5 Picks by Capper Agreement
                   </CardTitle>
                   <CardDescription>
-                    Scored by: 40% implied probability + 40% expert win rate + 20% statistical support
+                    Ranked by how many cappers made the same pick today
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {data.top5Confidence.length > 0 ? (
+                  {data.topPicks.length > 0 ? (
                     <div className="space-y-4">
-                      {data.top5Confidence.map((pick, index) => (
-                        <div key={`${pick.sport}-${pick.bet}-${index}`} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border">
+                      {data.topPicks.map((pick, index) => (
+                        <div key={pick.id} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border">
                           <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg ${
                             index === 0 ? 'bg-yellow-500 text-yellow-950' :
                             index === 1 ? 'bg-gray-400 text-gray-900' :
@@ -272,22 +259,16 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline">{pick.sport}</Badge>
-                              <Badge variant="secondary" className={getConfidenceColor(pick.confidence.overall)}>
-                                {Math.round(pick.confidence.overall * 100)}%
-                              </Badge>
                               {pick.capperCount >= 3 && (
                                 <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                               )}
                             </div>
                             <div className="font-semibold">{pick.matchup}</div>
                             <div className="text-primary font-medium text-lg">{pick.bet}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {pick.confidence.reasoning}
-                            </div>
                           </div>
                           <div className="text-right">
                             <div className="text-3xl font-bold">{pick.capperCount}</div>
-                            <div className="text-xs text-muted-foreground">cappers</div>
+                            <div className="text-xs text-muted-foreground">cappers agree</div>
                           </div>
                         </div>
                       ))}
@@ -356,19 +337,17 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                         {data.twoLegParlays.map((parlay, parlayIndex) => (
                           <div key={parlayIndex} className="p-4 rounded-lg border bg-card">
                             <div className="text-xs text-muted-foreground mb-2">Parlay Option {parlayIndex + 1}</div>
-                            {parlay.map((pick, index) => (
-                              <div key={index} className="p-2 rounded bg-muted/50 mb-2">
+                            {parlay.map((pick) => (
+                              <div key={pick.id} className="p-2 rounded bg-muted/50 mb-2">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
                                   <span>{getFireEmoji(pick.capperCount)}</span>
                                 </div>
                                 <div className="text-sm text-muted-foreground">{pick.matchup}</div>
                                 <div className="font-semibold text-primary">{pick.bet}</div>
+                                <div className="text-xs text-muted-foreground">{pick.capperCount} cappers agree</div>
                               </div>
                             ))}
-                            <div className="text-xs text-muted-foreground mt-2">
-                              Low correlation for reduced risk
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -393,19 +372,17 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                       <div className="space-y-4">
                         {data.threeLegParlays.map((parlay, parlayIndex) => (
                           <div key={parlayIndex} className="p-4 rounded-lg border bg-card">
-                            {parlay.map((pick, index) => (
-                              <div key={index} className="p-2 rounded bg-muted/50 mb-2">
+                            {parlay.map((pick) => (
+                              <div key={pick.id} className="p-2 rounded bg-muted/50 mb-2">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
                                   <span>{getFireEmoji(pick.capperCount)}</span>
                                 </div>
                                 <div className="text-sm text-muted-foreground">{pick.matchup}</div>
                                 <div className="font-semibold text-primary">{pick.bet}</div>
+                                <div className="text-xs text-muted-foreground">{pick.capperCount} cappers agree</div>
                               </div>
                             ))}
-                            <div className="text-xs text-muted-foreground mt-2">
-                              Higher payout potential
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -424,40 +401,30 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <DollarSign className="h-5 w-5 text-green-500" />
-                      Big Money Parlays ($2 Builds)
+                      Long-Shot Parlays
                     </CardTitle>
                     <CardDescription>
-                      Long-shot parlays for big potential payouts
+                      4- and 5-leg builds from the picks with the most capper agreement, one leg per game
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
                       {data.bigMoneyParlays.map((parlay, index) => (
                         <div key={index} className="p-4 rounded-lg border bg-gradient-to-br from-green-500/10 to-emerald-500/5">
-                          <div className="flex items-center justify-between mb-3">
-                            <Badge variant={parlay.riskLevel === 'extreme' ? 'destructive' : 'secondary'}>
-                              {parlay.riskLevel.toUpperCase()} RISK
-                            </Badge>
-                            <div className="text-right">
-                              <div className="text-xs text-muted-foreground">Estimated Odds</div>
-                              <div className="font-bold text-green-500">{parlay.estimatedOdds}</div>
-                            </div>
+                          <div className="mb-3">
+                            <Badge variant="secondary">{parlay.legs.length}-Leg Parlay</Badge>
                           </div>
                           <div className="space-y-2">
                             {parlay.legs.map((leg, legIndex) => (
-                              <div key={legIndex} className="flex items-center gap-2 text-sm">
+                              <div key={leg.id} className="flex items-center gap-2 text-sm">
                                 <span className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs">
                                   {legIndex + 1}
                                 </span>
                                 <span className="text-muted-foreground">{leg.sport}</span>
                                 <span className="font-medium">{leg.bet}</span>
+                                <span className="text-xs text-muted-foreground">({leg.capperCount} cappers)</span>
                               </div>
                             ))}
-                          </div>
-                          <Separator className="my-3" />
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-muted-foreground">$2 bet could return:</span>
-                            <span className="font-bold text-green-500">{parlay.potentialPayout}</span>
                           </div>
                         </div>
                       ))}
@@ -503,43 +470,6 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
             {/* Featured Tab */}
             <Section value="featured" viewAll={viewAll} className="space-y-6 mt-6">
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Best $20 Bet */}
-                <Card className="border-green-500/50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="h-5 w-5 text-green-500" />
-                      Best $20 Bet
-                    </CardTitle>
-                    <CardDescription>Today&apos;s recommended single bet</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {data.best20Bet ? (
-                      <div className="space-y-4">
-                        <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">{data.best20Bet.pick.sport}</Badge>
-                            <span className="text-lg">{getFireEmoji(data.best20Bet.pick.capperCount)}</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground">{data.best20Bet.pick.matchup}</div>
-                          <div className="font-bold text-xl text-primary mt-1">{data.best20Bet.pick.bet}</div>
-                          <div className="text-sm text-muted-foreground mt-2">
-                            {data.best20Bet.pick.capperCount} cappers agree
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Recommended: ${data.best20Bet.recommendedUnit}</span>
-                          <span className="font-bold text-green-500">Expected: {data.best20Bet.expectedReturn}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{data.best20Bet.reasoning}</p>
-                      </div>
-                    ) : (
-                      <p className="text-center py-4 text-muted-foreground">
-                        Need a strong consensus pick to recommend.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-
                 {/* Ladder Pick */}
                 <Card className="border-purple-500/50">
                   <CardHeader>
@@ -547,7 +477,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                       <Repeat className="h-5 w-5 text-purple-500" />
                       Ladder Pick
                     </CardTitle>
-                    <CardDescription>Daily rollover starting point</CardDescription>
+                    <CardDescription>Today&apos;s moneyline pick with the most capper agreement</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {data.ladderPick ? (
@@ -559,16 +489,14 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                           </div>
                           <div className="text-sm text-muted-foreground">{data.ladderPick.pick.matchup}</div>
                           <div className="font-bold text-xl text-primary mt-1">{data.ladderPick.pick.bet}</div>
+                          <div className="text-sm text-muted-foreground mt-2">
+                            {data.ladderPick.pick.capperCount} cappers agree
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm">Starting: ${data.ladderPick.startingBankroll}</span>
-                          <span className="font-bold text-purple-500">Target: {data.ladderPick.targetMultiplier}x</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{data.ladderPick.strategy}</p>
                       </div>
                     ) : (
                       <p className="text-center py-4 text-muted-foreground">
-                        Need a safe ML consensus pick for ladder.
+                        Need a moneyline pick with 3+ cappers for the ladder.
                       </p>
                     )}
                   </CardContent>
@@ -722,13 +650,6 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                     <div className="space-y-3">
                       {data.botPicks.map((pick, index) => (
                         <div key={index} className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border">
-                          <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
-                            pick.confidence >= 8 ? 'bg-green-500 text-green-950' :
-                            pick.confidence >= 6 ? 'bg-yellow-500 text-yellow-950' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {pick.confidence}
-                          </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline">{pick.sport}</Badge>
@@ -816,7 +737,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                       <div className="text-4xl font-bold text-primary">2</div>
                       <h3 className="font-semibold">Score</h3>
                       <p className="text-sm text-muted-foreground">
-                        Calculate confidence: 40% implied probability, 40% expert rate, 20% stats.
+                        Count how many cappers made the same pick and rank picks by that agreement.
                       </p>
                     </div>
                     <div className="space-y-2">
@@ -830,7 +751,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                       <div className="text-4xl font-bold text-primary">4</div>
                       <h3 className="font-semibold">Present</h3>
                       <p className="text-sm text-muted-foreground">
-                        Generate parlays, feature picks, and actionable recommendations.
+                        List parlay builds and featured picks with their capper counts.
                       </p>
                     </div>
                   </div>

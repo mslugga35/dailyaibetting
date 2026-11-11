@@ -1,28 +1,30 @@
 // Daily Bets Builder - Based on user's Daily Bets AI Analysis Instructions
-// Different from consensus rules - focuses on analysis and presentation
+// Different from consensus rules - focuses on analysis and presentation.
+// Every value returned here is derived from the picks themselves (capper agreement
+// and counts). No invented win rates, probabilities, odds or payouts.
 
-import { ConsensusPick, NormalizedPick, BetType } from '../consensus/consensus-builder';
+import { ConsensusPick, NormalizedPick } from '../consensus/consensus-builder';
 
-// Confidence score weights (per user's template)
-// 40% implied probability, 40% expert win rate, 20% statistical support
-const CONFIDENCE_WEIGHTS = {
-  impliedProbability: 0.40,
-  expertWinRate: 0.40,
-  statisticalSupport: 0.20,
-};
-
-export interface ConfidenceScore {
-  overall: number;
-  impliedProbability: number;
-  expertWinRate: number;
-  statisticalSupport: number;
-  reasoning: string;
+/**
+ * The fields of a consensus pick that the Daily Bets page actually displays.
+ * Deliberately excludes the numeric ConsensusPick.confidence field.
+ */
+export interface DailyBetPick {
+  id: string;
+  sport: string;
+  matchup: string;
+  bet: string;
+  capperCount: number;
 }
 
-export interface DailyBet extends Omit<ConsensusPick, 'confidence'> {
-  confidence: ConfidenceScore;
-  expectedValue: number;
-  frequency: number; // How many times this bet appears
+export function toDailyBetPick(pick: ConsensusPick): DailyBetPick {
+  return {
+    id: pick.id,
+    sport: pick.sport,
+    matchup: pick.matchup,
+    bet: pick.bet,
+    capperCount: pick.capperCount,
+  };
 }
 
 export interface MostCommonBet {
@@ -45,30 +47,17 @@ export interface PlayerProp {
 
 export interface MLBAnalysis {
   strikeoutProps: PlayerProp[];
-  yrfiPicks: ConsensusPick[];
-  nrfiPicks: ConsensusPick[];
+  yrfiPicks: DailyBetPick[];
+  nrfiPicks: DailyBetPick[];
   pitcherProps: PlayerProp[];
 }
 
 export interface BigMoneyParlay {
-  legs: ConsensusPick[];
-  estimatedOdds: string;
-  potentialPayout: string; // On $2 bet
-  riskLevel: 'high' | 'very-high' | 'extreme';
-}
-
-export interface BestBet {
-  pick: ConsensusPick;
-  recommendedUnit: number; // In dollars
-  expectedReturn: string;
-  reasoning: string;
+  legs: DailyBetPick[];
 }
 
 export interface LadderPick {
-  pick: ConsensusPick;
-  startingBankroll: number;
-  targetMultiplier: number;
-  strategy: string;
+  pick: DailyBetPick;
 }
 
 export interface Trend {
@@ -78,21 +67,39 @@ export interface Trend {
   relevantPicks: string[];
 }
 
+export interface BotPick {
+  sport: string;
+  team: string;
+  opponent: string;
+  bet_type: string;
+  line: string | null;
+  reasoning: string;
+  result: string;
+}
+
+export interface BotRecord {
+  wins: number;
+  losses: number;
+  pushes: number;
+  pending: number;
+  winPct: number | null;
+}
+
 export interface DailyBetsOutput {
   date: string;
   timestamp: string;
 
-  // Main sections
-  top5Confidence: DailyBet[];
+  // Main sections (ranked by capper agreement)
+  topPicks: DailyBetPick[];
   top5MostCommon: MostCommonBet[];
 
   // Parlays
-  twoLegParlays: ConsensusPick[][];
-  threeLegParlays: ConsensusPick[][];
+  twoLegParlays: DailyBetPick[][];
+  threeLegParlays: DailyBetPick[][];
   playerPropParlays: PlayerProp[][];
 
   // Best by sport
-  bestBySport: Record<string, ConsensusPick>;
+  bestBySport: Record<string, DailyBetPick>;
 
   // MLB-specific (when in season)
   mlbAnalysis: MLBAnalysis | null;
@@ -101,7 +108,6 @@ export interface DailyBetsOutput {
   bigMoneyParlays: BigMoneyParlay[];
 
   // Featured picks
-  best20Bet: BestBet | null;
   ladderPick: LadderPick | null;
 
   // Trends
@@ -110,6 +116,7 @@ export interface DailyBetsOutput {
   // Stats
   totalPicks: number;
   consensusCount: number;
+  firePickCount: number; // all of today's consensus picks with 3+ cappers
   activeSports: string[];
 
   // AI Analysis
@@ -117,111 +124,15 @@ export interface DailyBetsOutput {
   aiReportGeneratedAt: string | null;
 
   // Bot Picks
-  botPicks: Array<{ sport: string; team: string; opponent: string; bet_type: string; line: string | null; confidence: number; reasoning: string; result: string }>;
-  botRecord: { wins: number; losses: number; pushes: number; pending: number; winPct: number | null } | null;
+  botPicks: BotPick[];
+  botRecord: BotRecord | null;
 }
 
 /**
- * Calculate confidence score for a pick
- * Formula: 40% implied probability + 40% expert win rate + 20% statistical support
+ * Sort consensus picks by capper agreement, highest first.
  */
-export function calculateConfidence(
-  pick: ConsensusPick,
-  totalCappers: number
-): ConfidenceScore {
-  // Implied probability from capper agreement
-  // More cappers = higher implied probability
-  const capperRatio = Math.min(pick.capperCount / 10, 1); // Cap at 10 cappers
-  const impliedProbability = 0.3 + (capperRatio * 0.5); // Range: 30% to 80%
-
-  // Expert win rate estimation based on consensus strength
-  // Fire picks (3+) suggest higher expert conviction
-  let expertWinRate: number;
-  if (pick.capperCount >= 10) {
-    expertWinRate = 0.75; // Very strong consensus
-  } else if (pick.capperCount >= 7) {
-    expertWinRate = 0.68; // Strong consensus
-  } else if (pick.capperCount >= 5) {
-    expertWinRate = 0.62; // Good consensus
-  } else if (pick.capperCount >= 3) {
-    expertWinRate = 0.55; // Fire level
-  } else {
-    expertWinRate = 0.48; // Weak consensus
-  }
-
-  // Statistical support based on bet type
-  // ML bets tend to have higher historical hit rates than spreads
-  let statisticalSupport: number;
-  switch (pick.betType) {
-    case 'ML':
-      statisticalSupport = 0.55;
-      break;
-    case 'SPREAD':
-      statisticalSupport = 0.52;
-      break;
-    case 'OVER':
-    case 'UNDER':
-      statisticalSupport = 0.50;
-      break;
-    case 'F5_ML':
-      statisticalSupport = 0.53;
-      break;
-    case 'PROP':
-      statisticalSupport = 0.48;
-      break;
-    default:
-      statisticalSupport = 0.50;
-  }
-
-  // Calculate overall score
-  const overall = (
-    impliedProbability * CONFIDENCE_WEIGHTS.impliedProbability +
-    expertWinRate * CONFIDENCE_WEIGHTS.expertWinRate +
-    statisticalSupport * CONFIDENCE_WEIGHTS.statisticalSupport
-  );
-
-  // Generate reasoning
-  let reasoning = '';
-  if (pick.capperCount >= 7) {
-    reasoning = `Very strong consensus with ${pick.capperCount} cappers agreeing. `;
-  } else if (pick.capperCount >= 3) {
-    reasoning = `Fire pick with ${pick.capperCount} cappers agreeing. `;
-  } else {
-    reasoning = `Moderate consensus with ${pick.capperCount} cappers. `;
-  }
-
-  if (pick.betType === 'ML') {
-    reasoning += 'Moneyline bets historically hit more often.';
-  } else if (pick.betType === 'SPREAD') {
-    reasoning += 'Spread bets require close margin analysis.';
-  }
-
-  return {
-    overall: Math.round(overall * 100) / 100,
-    impliedProbability: Math.round(impliedProbability * 100) / 100,
-    expertWinRate: Math.round(expertWinRate * 100) / 100,
-    statisticalSupport: Math.round(statisticalSupport * 100) / 100,
-    reasoning,
-  };
-}
-
-/**
- * Calculate expected value for a pick
- * Simplified: (Win probability * potential win) - (Loss probability * stake)
- */
-export function calculateExpectedValue(
-  confidence: number,
-  impliedOdds: number = -110
-): number {
-  // Convert American odds to decimal
-  const decimalOdds = impliedOdds > 0
-    ? (impliedOdds / 100) + 1
-    : (100 / Math.abs(impliedOdds)) + 1;
-
-  const potentialWin = decimalOdds - 1;
-  const ev = (confidence * potentialWin) - ((1 - confidence) * 1);
-
-  return Math.round(ev * 100) / 100;
+function byCapperCountDesc(a: ConsensusPick, b: ConsensusPick): number {
+  return b.capperCount - a.capperCount;
 }
 
 /**
@@ -256,7 +167,7 @@ export function countMostCommon(normalizedPicks: NormalizedPick[]): MostCommonBe
 
   // Convert to array and sort by frequency
   return Array.from(betCounts.entries())
-    .map(([key, value]) => ({
+    .map(([, value]) => ({
       bet: value.bet,
       sport: value.sport,
       matchup: value.matchup,
@@ -345,8 +256,8 @@ export function generateMLBAnalysis(
 
   return {
     strikeoutProps,
-    yrfiPicks,
-    nrfiPicks,
+    yrfiPicks: yrfiPicks.map(toDailyBetPick),
+    nrfiPicks: nrfiPicks.map(toDailyBetPick),
     pitcherProps,
   };
 }
@@ -375,9 +286,9 @@ export function generateBigMoneyParlays(
   }
 
   // Sort by capper count for best quality legs
-  const sorted = [...firePicks].sort((a, b) => b.capperCount - a.capperCount);
+  const sorted = [...firePicks].sort(byCapperCountDesc);
 
-  // Generate 4-leg parlay (very high risk) - only from fire picks
+  // Generate 4-leg parlay - only from fire picks
   if (sorted.length >= 4) {
     const legs4: ConsensusPick[] = [];
     for (const pick of sorted) {
@@ -388,16 +299,11 @@ export function generateBigMoneyParlays(
     }
 
     if (legs4.length >= 4) {
-      parlays.push({
-        legs: legs4,
-        estimatedOdds: '+800 to +1500',
-        potentialPayout: '$16 to $30',
-        riskLevel: 'very-high',
-      });
+      parlays.push({ legs: legs4.map(toDailyBetPick) });
     }
   }
 
-  // Generate 5-leg parlay (extreme risk) - requires even more fire picks
+  // Generate 5-leg parlay - requires even more fire picks
   if (sorted.length >= 7) { // Need 7+ fire picks for the 5-leg
     const legs5: ConsensusPick[] = [];
     for (const pick of sorted) {
@@ -408,12 +314,7 @@ export function generateBigMoneyParlays(
     }
 
     if (legs5.length >= 5) {
-      parlays.push({
-        legs: legs5,
-        estimatedOdds: '+1500 to +3000',
-        potentialPayout: '$30 to $60',
-        riskLevel: 'extreme',
-      });
+      parlays.push({ legs: legs5.map(toDailyBetPick) });
     }
   }
 
@@ -421,53 +322,20 @@ export function generateBigMoneyParlays(
 }
 
 /**
- * Generate best $20 bet recommendation
- */
-export function generateBest20Bet(consensus: ConsensusPick[]): BestBet | null {
-  if (consensus.length === 0) return null;
-
-  // Get the pick with highest capper count
-  const sortedPicks = [...consensus].sort((a, b) => b.capperCount - a.capperCount);
-  const topPick = sortedPicks[0];
-
-  if (topPick.capperCount < 3) return null;
-
-  const confidence = calculateConfidence(topPick, sortedPicks.length);
-  const expectedReturn = confidence.overall >= 0.6
-    ? `$${Math.round(20 * (1 + confidence.overall * 0.5))} - $${Math.round(20 * (1 + confidence.overall))}`
-    : `$${Math.round(20 * confidence.overall * 1.5)} - $${Math.round(20 * (1 + confidence.overall * 0.3))}`;
-
-  return {
-    pick: topPick,
-    recommendedUnit: 20,
-    expectedReturn,
-    reasoning: `${topPick.capperCount} cappers agree on this pick. ${confidence.reasoning}`,
-  };
-}
-
-/**
- * Generate ladder pick (daily rollover start)
+ * Generate ladder pick (daily rollover start): the ML pick with the most capper agreement
  */
 export function generateLadderPick(consensus: ConsensusPick[]): LadderPick | null {
-  // Find a safe starter - moderate odds, good consensus
-  const safePicks = consensus
+  const mlPicks = consensus
     .filter(p => p.betType === 'ML' && p.capperCount >= 3)
-    .sort((a, b) => b.capperCount - a.capperCount);
+    .sort(byCapperCountDesc);
 
-  if (safePicks.length === 0) return null;
+  if (mlPicks.length === 0) return null;
 
-  const pick = safePicks[0];
-
-  return {
-    pick,
-    startingBankroll: 10,
-    targetMultiplier: 2,
-    strategy: 'Start with $10, roll winnings to next consensus pick. Target: 2x bankroll.',
-  };
+  return { pick: toDailyBetPick(mlPicks[0]) };
 }
 
 /**
- * Generate trends and angles
+ * Generate trends - counts derived from today's consensus picks only
  */
 export function generateTrends(
   consensus: ConsensusPick[],
@@ -475,7 +343,7 @@ export function generateTrends(
 ): Trend[] {
   const trends: Trend[] = [];
 
-  // Check for hot sports (lots of consensus)
+  // Sport with the most consensus picks
   const sportCounts = Object.entries(bySport)
     .map(([sport, picks]) => ({ sport, count: picks.length }))
     .sort((a, b) => b.count - a.count);
@@ -483,24 +351,24 @@ export function generateTrends(
   if (sportCounts[0]?.count >= 5) {
     trends.push({
       type: 'hot',
-      title: `${sportCounts[0].sport} Dominates Today`,
-      description: `${sportCounts[0].count} consensus picks in ${sportCounts[0].sport} - cappers are locked in on this sport.`,
+      title: `${sportCounts[0].sport} Leads Today`,
+      description: `${sportCounts[0].count} consensus picks in ${sportCounts[0].sport}, the most of any sport today.`,
       relevantPicks: bySport[sportCounts[0].sport]?.slice(0, 3).map(p => p.bet) || [],
     });
   }
 
-  // Check for super consensus (7+ cappers)
+  // Picks with 7+ cappers agreeing
   const superConsensus = consensus.filter(p => p.capperCount >= 7);
   if (superConsensus.length > 0) {
     trends.push({
       type: 'hot',
       title: 'Super Consensus Picks',
-      description: `${superConsensus.length} pick(s) with 7+ cappers agreeing. Strong conviction from experts.`,
+      description: `${superConsensus.length} pick(s) with 7+ cappers agreeing.`,
       relevantPicks: superConsensus.map(p => `${p.bet} (${p.capperCount})`),
     });
   }
 
-  // Check for underdog trends (looking at spread picks)
+  // Spread picks on teams getting points
   const dogPicks = consensus.filter(p =>
     p.betType === 'SPREAD' &&
     p.line &&
@@ -509,28 +377,28 @@ export function generateTrends(
   if (dogPicks.length >= 2) {
     trends.push({
       type: 'interesting',
-      title: 'Underdog Angle',
-      description: `${dogPicks.length} picks on underdogs getting points. Cappers fading favorites today.`,
+      title: 'Underdog Spreads',
+      description: `${dogPicks.length} consensus spread picks are on teams getting points.`,
       relevantPicks: dogPicks.slice(0, 3).map(p => p.bet),
     });
   }
 
-  // Check for totals trends
+  // Totals split
   const overPicks = consensus.filter(p => p.betType === 'OVER').length;
   const underPicks = consensus.filter(p => p.betType === 'UNDER').length;
 
   if (overPicks >= 3 && overPicks > underPicks * 1.5) {
     trends.push({
       type: 'hot',
-      title: 'Over Trend',
-      description: `${overPicks} over picks vs ${underPicks} unders. Cappers expecting high-scoring games.`,
+      title: 'More Overs Than Unders',
+      description: `${overPicks} consensus picks are overs and ${underPicks} are unders.`,
       relevantPicks: consensus.filter(p => p.betType === 'OVER').slice(0, 3).map(p => p.bet),
     });
   } else if (underPicks >= 3 && underPicks > overPicks * 1.5) {
     trends.push({
       type: 'interesting',
-      title: 'Under Trend',
-      description: `${underPicks} under picks vs ${overPicks} overs. Cappers expecting low-scoring games.`,
+      title: 'More Unders Than Overs',
+      description: `${underPicks} consensus picks are unders and ${overPicks} are overs.`,
       relevantPicks: consensus.filter(p => p.betType === 'UNDER').slice(0, 3).map(p => p.bet),
     });
   }
@@ -549,46 +417,28 @@ export function buildDailyBets(
 ): DailyBetsOutput {
   const today = new Date();
 
-  // Calculate confidence for all picks
-  const totalCappers = new Set(normalizedPicks.map(p => p.capper)).size;
-
-  const dailyBets: DailyBet[] = consensus.map(pick => ({
-    ...pick,
-    confidence: calculateConfidence(pick, totalCappers),
-    expectedValue: calculateExpectedValue(
-      calculateConfidence(pick, totalCappers).overall
-    ),
-    frequency: normalizedPicks.filter(p =>
-      p.standardizedTeam === pick.bet.split(' ')[0]
-    ).length,
-  }));
-
-  // Sort by confidence
-  const sortedByConfidence = [...dailyBets].sort(
-    (a, b) => b.confidence.overall - a.confidence.overall
-  );
-
-  // Top 5 confidence
-  const top5Confidence = sortedByConfidence.slice(0, 5);
+  // Rank by capper agreement (highest first)
+  const sortedByAgreement = [...consensus].sort(byCapperCountDesc);
+  const topPicks = sortedByAgreement.slice(0, 5).map(toDailyBetPick);
 
   // Top 5 most common
   const top5MostCommon = countMostCommon(normalizedPicks).slice(0, 5);
 
-  // Generate parlays
+  // Fire picks: every consensus pick today with 3+ cappers (not just the top five)
   const firePicks = consensus.filter(p => p.capperCount >= 3);
 
   // 2-leg parlays (multiple combinations)
-  const twoLegParlays: ConsensusPick[][] = [];
+  const twoLegParlays: DailyBetPick[][] = [];
   for (let i = 0; i < Math.min(firePicks.length, 3); i++) {
     for (let j = i + 1; j < Math.min(firePicks.length, 4); j++) {
       if (firePicks[i].matchup !== firePicks[j].matchup) {
-        twoLegParlays.push([firePicks[i], firePicks[j]]);
+        twoLegParlays.push([toDailyBetPick(firePicks[i]), toDailyBetPick(firePicks[j])]);
       }
     }
   }
 
   // 3-leg parlays
-  const threeLegParlays: ConsensusPick[][] = [];
+  const threeLegParlays: DailyBetPick[][] = [];
   if (firePicks.length >= 3) {
     const usedMatchups = new Set<string>();
     const legs: ConsensusPick[] = [];
@@ -601,7 +451,7 @@ export function buildDailyBets(
     }
 
     if (legs.length >= 3) {
-      threeLegParlays.push(legs);
+      threeLegParlays.push(legs.map(toDailyBetPick));
     }
   }
 
@@ -613,10 +463,10 @@ export function buildDailyBets(
   }
 
   // Best by sport
-  const bestBySport: Record<string, ConsensusPick> = {};
+  const bestBySport: Record<string, DailyBetPick> = {};
   for (const [sport, picks] of Object.entries(bySport)) {
     if (picks.length > 0) {
-      bestBySport[sport] = picks[0]; // Already sorted by capper count
+      bestBySport[sport] = toDailyBetPick(picks[0]); // Already sorted by capper count
     }
   }
 
@@ -625,9 +475,6 @@ export function buildDailyBets(
 
   // Big money parlays
   const bigMoneyParlays = generateBigMoneyParlays(consensus);
-
-  // Best $20 bet
-  const best20Bet = generateBest20Bet(consensus);
 
   // Ladder pick
   const ladderPick = generateLadderPick(consensus);
@@ -639,7 +486,7 @@ export function buildDailyBets(
     date: today.toISOString().split('T')[0],
     timestamp: today.toISOString(),
 
-    top5Confidence,
+    topPicks,
     top5MostCommon,
 
     twoLegParlays: twoLegParlays.slice(0, 3),
@@ -650,13 +497,13 @@ export function buildDailyBets(
     mlbAnalysis,
     bigMoneyParlays,
 
-    best20Bet,
     ladderPick,
 
     trends,
 
     totalPicks,
     consensusCount: consensus.length,
+    firePickCount: firePicks.length,
     activeSports: Object.keys(bySport),
 
     aiReport: null,
