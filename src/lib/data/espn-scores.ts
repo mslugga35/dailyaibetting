@@ -20,6 +20,26 @@ export interface GameResult {
   totalScore: number;
   winner: string; // standardized team name of winner
   completed: boolean;
+  /** Runs after innings 1-5 (MLB linescores). Undefined unless both teams have 5+ innings of linescore. */
+  homeScoreF5?: number;
+  awayScoreF5?: number;
+}
+
+/**
+ * Sum of a competitor's innings 1-5 from ESPN `linescores`, or undefined when
+ * fewer than five innings are present or any of them lacks a numeric value.
+ * Never substitutes the full-game score.
+ */
+function firstFiveInnings(competitor: any): number | undefined {
+  const lines = competitor?.linescores;
+  if (!Array.isArray(lines) || lines.length < 5) return undefined;
+  let sum = 0;
+  for (const inning of lines.slice(0, 5)) {
+    const runs = typeof inning?.value === 'number' ? inning.value : Number.NaN;
+    if (!Number.isFinite(runs)) return undefined;
+    sum += runs;
+  }
+  return sum;
 }
 
 const ESPN_ENDPOINTS: Record<string, string> = {
@@ -91,6 +111,10 @@ async function fetchScoresForSport(sport: string, dateStr: string): Promise<Game
       else if (espnAwayWinner) winnerTeam = awayTeam;
       else winnerTeam = homeScore > awayScore ? homeTeam : awayTeam;
 
+      const homeF5 = firstFiveInnings(home);
+      const awayF5 = firstFiveInnings(away);
+      const hasF5 = homeF5 !== undefined && awayF5 !== undefined;
+
       results.push({
         sport,
         homeTeam: standardizeTeamName(homeTeam, sport),
@@ -100,6 +124,7 @@ async function fetchScoresForSport(sport: string, dateStr: string): Promise<Game
         totalScore: homeScore + awayScore,
         winner: winnerTeam ? standardizeTeamName(winnerTeam, sport) : '',
         completed: true,
+        ...(hasF5 ? { homeScoreF5: homeF5, awayScoreF5: awayF5 } : {}),
       });
     }
 
@@ -188,7 +213,17 @@ export function gradeConsensus(
   const teamScore = isHome ? game.homeScore : game.awayScore;
   const oppScore = isHome ? game.awayScore : game.homeScore;
 
-  if (pick.betType === 'ML' || pick.betType === 'F5_ML') {
+  if (pick.betType === 'F5_ML') {
+    // First five innings only; without both F5 scores the pick is ungradeable.
+    if (typeof game.homeScoreF5 !== 'number' || typeof game.awayScoreF5 !== 'number') return null;
+    const teamF5 = isHome ? game.homeScoreF5 : game.awayScoreF5;
+    const oppF5 = isHome ? game.awayScoreF5 : game.homeScoreF5;
+    if (teamF5 > oppF5) return 'W';
+    if (teamF5 < oppF5) return 'L';
+    return 'P';
+  }
+
+  if (pick.betType === 'ML') {
     if (teamScore > oppScore) return 'W';
     if (teamScore < oppScore) return 'L';
     return 'P';
