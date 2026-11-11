@@ -3,9 +3,9 @@ import { Trophy, TrendingUp, Calendar, Target, CheckCircle, XCircle, MinusCircle
 import { SocialProof } from '@/components/social-proof/SocialProof';
 
 export const metadata: Metadata = {
-  title: 'Consensus Pick Results - Track Record | DailyAI Betting',
-  description: 'See our verified track record. Fire picks (3+ capper consensus) performance tracked daily with win/loss results.',
-  keywords: 'sports betting results, consensus picks track record, betting performance, win rate',
+  title: 'Consensus Pick Results - Graded Win-Loss Record | DailyAI Betting',
+  description: 'The graded win-loss record of our fire picks, where 3+ cappers back the same pick.',
+  keywords: 'sports betting results, consensus picks results, win-loss record',
 };
 
 // Force dynamic rendering
@@ -55,7 +55,7 @@ export default async function ResultsPage() {
           Consensus Pick Results
         </h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Transparent tracking of our fire picks (3+ capper consensus). Every pick is graded after the game.
+          Graded win-loss record of our fire picks (3+ capper consensus). Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>
       </div>
 
@@ -194,19 +194,16 @@ export default async function ResultsPage() {
 
       {/* Methodology */}
       <section className="mt-12 bg-card border rounded-xl p-6">
-        <h2 className="text-lg font-semibold mb-3">How We Track Results</h2>
+        <h2 className="text-lg font-semibold mb-3">How consensus picks are built</h2>
         <div className="text-sm text-muted-foreground space-y-2">
           <p>
-            <strong className="text-foreground">Fire Picks Only:</strong> We track picks where 3+ professional cappers agree (🔥 fire picks).
+            Picks are collected from multiple expert cappers each day.
           </p>
           <p>
-            <strong className="text-foreground">Same-Day Grading:</strong> Results are graded within 24 hours of game completion.
+            Picks update throughout the day.
           </p>
           <p>
-            <strong className="text-foreground">Push Rules:</strong> Pushes (ties) are not counted as wins or losses in win percentage.
-          </p>
-          <p>
-            <strong className="text-foreground">Transparency:</strong> Every pick is logged before the game starts. No cherry-picking.
+            A pick becomes consensus when several cappers back the same side.
           </p>
         </div>
       </section>

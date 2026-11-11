@@ -91,7 +91,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${gameInfo.team1} vs ${gameInfo.team2} - Expert Betting Picks | DailyAI Betting`,
-    description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which handicappers agree on spreads, moneylines, and totals.`,
+    description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which cappers agree on spreads, moneylines, and totals.`,
     keywords: `${gameInfo.team1} vs ${gameInfo.team2} picks, ${gameInfo.team1} ${gameInfo.team2} predictions, betting picks, spread picks`,
     alternates: {
       canonical: `https://dailyaibetting.com/games/${slug}`,
@@ -219,7 +219,7 @@ export default async function GamePage({ params }: PageProps) {
         <CardContent className="p-6 text-center">
           <h3 className="text-lg font-semibold mb-2">Ready to Bet on This Game?</h3>
           <p className="text-muted-foreground mb-4">
-            Compare odds and claim signup bonuses at top sportsbooks.
+            Compare odds and claim signup bonuses at sportsbooks.
           </p>
           <Button asChild>
             <Link href="/sportsbooks">
@@ -246,7 +246,7 @@ export default async function GamePage({ params }: PageProps) {
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/results">Track Record</Link>
+              <Link href="/results">Results</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/history">Pick History</Link>
@@ -261,13 +261,13 @@ export default async function GamePage({ params }: PageProps) {
           {gameInfo.team1} vs {gameInfo.team2} Betting Preview
         </h2>
         <p className="text-muted-foreground">
-          Get the latest expert picks and predictions for the {gameInfo.team1} vs {gameInfo.team2} matchup.
-          Our AI-powered consensus system analyzes picks from 10+ professional handicappers to identify
-          where multiple experts agree. When 3 or more cappers pick the same bet, we flag it as a
-          &quot;fire pick&quot; 🔥 for stronger confidence.
+          Get expert capper picks and predictions for the {gameInfo.team1} vs {gameInfo.team2} matchup.
+          Our AI-powered consensus system collects picks from multiple expert cappers to identify
+          where several cappers agree. When 3 or more cappers pick the same bet, we flag it as a
+          &quot;fire pick&quot; 🔥. Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>
         <p className="text-muted-foreground mt-4">
-          All picks are updated in real-time as new expert predictions come in. Check back often
+          Picks update throughout the day as new capper picks come in. Check back
           for the latest consensus on this {sport} matchup.
         </p>
       </section>

@@ -99,7 +99,7 @@ export default function GamesPage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold mb-2">Today&apos;s Games</h1>
         <p className="text-muted-foreground">
-          Browse consensus picks by matchup. Click any game for detailed expert analysis.
+          Browse consensus picks by matchup. Click any game to see its picks.
         </p>
       </div>
 
@@ -172,14 +172,14 @@ export default function GamesPage() {
       <section className="mt-12 prose prose-invert max-w-none">
         <h2 className="text-xl font-semibold mb-3">About Game-Specific Picks</h2>
         <p className="text-muted-foreground">
-          Browse today&apos;s sports matchups and see which games have the strongest expert consensus.
-          Our AI system aggregates picks from 10+ professional handicappers and identifies where
-          multiple experts agree on the same bet.
+          Browse today&apos;s sports matchups and see where cappers agree.
+          Our AI system collects picks from multiple expert cappers and identifies where
+          several cappers back the same bet.
         </p>
         <p className="text-muted-foreground mt-4">
-          Games with &quot;fire picks&quot; 🔥 have 3 or more cappers agreeing on the same selection,
-          indicating stronger confidence. Click any matchup to see all available picks,
-          betting lines, and expert analysis.
+          Games with &quot;fire picks&quot; 🔥 have 3 or more cappers agreeing on the same selection.
+          Consensus means several cappers chose the same pick; no outcome is guaranteed. Click any matchup to see all available picks
+          and betting lines.
         </p>
       </section>
 
@@ -197,7 +197,7 @@ export default function GamesPage() {
               <Link href="/best-bets">Best Bets</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/results">Track Record</Link>
+              <Link href="/results">Results</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/sportsbooks">Sportsbooks</Link>

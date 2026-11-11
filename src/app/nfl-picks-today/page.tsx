@@ -2,8 +2,8 @@ import { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Free NFL Picks Today - Expert Consensus Picks | DailyAI Betting',
-  description: 'Get free NFL picks today from top cappers. Our AI analyzes expert consensus to find the best NFL bets. Updated daily with spread, moneyline, and total picks.',
-  keywords: 'free NFL picks today, NFL betting picks, NFL consensus picks, NFL best bets, NFL expert picks',
+  description: 'Get free NFL picks today from multiple expert cappers. See where several cappers back the same side. Picks update throughout the day, with spread, moneyline, and total picks.',
+  keywords: 'free NFL picks today, NFL betting picks, NFL consensus picks, NFL expert picks',
 }
 
 export default function NFLPicksToday() {
@@ -11,14 +11,14 @@ export default function NFLPicksToday() {
     <main className="container mx-auto px-4 py-8">
       <h1 className="text-4xl font-bold mb-4">Free NFL Picks Today</h1>
       <p className="text-xl text-muted-foreground mb-8">
-        Expert consensus picks updated daily. We track 10+ professional cappers and highlight plays where multiple experts agree.
+        Consensus picks from multiple expert cappers. Picks update throughout the day, and we highlight plays where several cappers agree.
       </p>
       
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">🔥 Today&apos;s NFL Consensus Picks</h2>
         <p className="mb-4">
-          Our AI scans picks from top sports betting experts and identifies where 3 or more cappers agree on the same play. 
-          These consensus picks historically hit at a higher rate than individual picks.
+          Our AI collects picks from expert cappers and flags plays where 3 or more cappers agree on the same play.
+          Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>
         <a 
           href="/consensus?sport=NFL" 
@@ -29,19 +29,19 @@ export default function NFLPicksToday() {
       </section>
 
       <section className="mb-12">
-        <h2 className="text-2xl font-semibold mb-4">How Our NFL Picks Work</h2>
+        <h2 className="text-2xl font-semibold mb-4">How NFL consensus picks are built</h2>
         <div className="grid md:grid-cols-3 gap-6">
           <div className="p-4 border rounded-lg">
-            <h3 className="font-semibold mb-2">1. We Track Experts</h3>
-            <p className="text-sm text-muted-foreground">10+ professional cappers including BetFirm, Covers, Dimers, and more.</p>
+            <h3 className="font-semibold mb-2">1. Collect Picks</h3>
+            <p className="text-sm text-muted-foreground">Picks are collected from multiple expert cappers each day.</p>
           </div>
           <div className="p-4 border rounded-lg">
-            <h3 className="font-semibold mb-2">2. Find Consensus</h3>
-            <p className="text-sm text-muted-foreground">Our AI identifies plays where multiple experts agree on the same bet.</p>
+            <h3 className="font-semibold mb-2">2. Updates</h3>
+            <p className="text-sm text-muted-foreground">Picks update throughout the day.</p>
           </div>
           <div className="p-4 border rounded-lg">
-            <h3 className="font-semibold mb-2">3. 🔥 Fire Picks</h3>
-            <p className="text-sm text-muted-foreground">3+ cappers agreeing = Fire pick. These are our strongest plays.</p>
+            <h3 className="font-semibold mb-2">3. 🔥 Consensus</h3>
+            <p className="text-sm text-muted-foreground">A pick becomes consensus when several cappers back the same side.</p>
           </div>
         </div>
       </section>

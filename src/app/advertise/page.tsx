@@ -2,34 +2,18 @@ import { Metadata } from 'next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Users,
-  TrendingUp,
-  Mail,
-  Target,
-  Zap,
-  BarChart3,
-  MessageSquare,
-  ExternalLink,
-} from 'lucide-react';
+import { Mail, Zap, MessageSquare } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Advertise With Us - DailyAI Betting',
-  description: 'Reach thousands of engaged sports bettors. Advertising and sponsorship opportunities on DailyAI Betting.',
+  description: 'Advertising and sponsorship opportunities on DailyAI Betting, a sports betting consensus picks site.',
 };
-
-const stats = [
-  { label: 'Monthly Visitors', value: '10,000+', icon: Users },
-  { label: 'Email Subscribers', value: '1,000+', icon: Mail },
-  { label: 'Daily Pick Views', value: '5,000+', icon: Target },
-  { label: 'Avg Session Duration', value: '3+ mins', icon: TrendingUp },
-];
 
 const opportunities = [
   {
     title: 'Banner Ads',
     price: '$200-500/month',
-    description: 'Premium placement on all pages. 300x250, 728x90, or custom sizes.',
+    description: 'Placement on site pages. 300x250, 728x90, or custom sizes.',
     features: ['Homepage placement', 'All pick pages', 'Sidebar visibility'],
   },
   {
@@ -41,8 +25,8 @@ const opportunities = [
   {
     title: 'Newsletter Sponsorship',
     price: '$150-400/email',
-    description: 'Reach our engaged email subscribers with dedicated or blended sponsorships.',
-    features: ['1,000+ subscribers', 'High open rates', 'Betting-focused audience'],
+    description: 'Dedicated or blended sponsorships in our email newsletter.',
+    features: ['Dedicated sponsorships', 'Blended sponsorships'],
   },
   {
     title: 'Exclusive Partnership',
@@ -62,79 +46,10 @@ export default function AdvertisePage() {
           Advertise With DailyAI Betting
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Reach thousands of engaged sports bettors actively looking for picks,
-          sportsbooks, and betting tools.
+          Advertising and sponsorship opportunities on DailyAI Betting, a site that
+          publishes daily consensus picks from expert cappers.
         </p>
       </div>
-
-      {/* Audience Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="p-4 text-center">
-              <stat.icon className="h-6 w-6 mx-auto mb-2 text-primary" />
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-sm text-muted-foreground">{stat.label}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Audience Profile */}
-      <Card className="mb-12">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Our Audience
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold mb-3">Demographics</h3>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Ages 25-54 (78%)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Male (82%)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  United States (95%)
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Mobile users (68%)
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-3">Interests</h3>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Active sports bettors
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  NFL, NBA, MLB, NHL
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  Seeking expert picks & analysis
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
-                  High purchase intent
-                </li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Opportunities */}
       <div className="mb-12">
@@ -183,38 +98,6 @@ export default function AdvertisePage() {
           <p className="text-sm text-muted-foreground mt-4">
             advertise@dailyaibetting.com
           </p>
-        </CardContent>
-      </Card>
-
-      {/* Why Us */}
-      <Card className="mt-12">
-        <CardHeader>
-          <CardTitle>Why Advertise With Us?</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <Target className="h-8 w-8 text-primary mb-2" />
-              <h3 className="font-semibold mb-1">Targeted Audience</h3>
-              <p className="text-sm text-muted-foreground">
-                Our visitors are active sports bettors with high purchase intent.
-              </p>
-            </div>
-            <div>
-              <TrendingUp className="h-8 w-8 text-primary mb-2" />
-              <h3 className="font-semibold mb-1">Growing Traffic</h3>
-              <p className="text-sm text-muted-foreground">
-                Rapidly growing audience with strong SEO positioning.
-              </p>
-            </div>
-            <div>
-              <Zap className="h-8 w-8 text-primary mb-2" />
-              <h3 className="font-semibold mb-1">High Engagement</h3>
-              <p className="text-sm text-muted-foreground">
-                Users visit daily for picks, spending 3+ minutes per session.
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -46,7 +46,7 @@ export default async function Image() {
             marginBottom: 40,
           }}
         >
-          Expert Consensus from 10 Top Cappers
+          Consensus from Multiple Expert Cappers
         </div>
 
         {/* Fire Badge */}

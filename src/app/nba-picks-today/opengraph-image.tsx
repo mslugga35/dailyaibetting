@@ -28,7 +28,7 @@ export default async function Image() {
           NBA Picks Today
         </div>
         <div style={{ fontSize: 32, color: '#9ca3af', marginBottom: 40 }}>
-          Expert Consensus from 10 Top Cappers
+          Consensus from Multiple Expert Cappers
         </div>
         <div
           style={{

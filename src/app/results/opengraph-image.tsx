@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'Consensus Pick Results - Track Record | DailyAI Betting';
+export const alt = 'Consensus Pick Results - Graded Win-Loss Record | DailyAI Betting';
 export const size = {
   width: 1200,
   height: 630,
@@ -35,7 +35,7 @@ export default async function Image() {
             marginBottom: 16,
           }}
         >
-          Our Track Record
+          Our Graded Results
         </div>
 
         {/* Subtitle */}
@@ -48,7 +48,7 @@ export default async function Image() {
             maxWidth: 800,
           }}
         >
-          Transparent results from our fire pick consensus
+          Graded win-loss results for fire pick consensus
         </div>
 
         {/* Stats Row */}
@@ -108,7 +108,7 @@ export default async function Image() {
               📊
             </span>
             <span style={{ fontSize: 20, color: '#9ca3af', marginTop: 8 }}>
-              Verified Results
+              Graded Results
             </span>
           </div>
         </div>

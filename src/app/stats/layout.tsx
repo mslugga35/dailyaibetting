@@ -5,7 +5,7 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Consensus Performance Stats - Win Rate by Confidence Tier',
   description:
-    'Track how consensus picks perform by confidence tier. See win rates, ROI, and performance breakdowns for lock, strong, and lean consensus plays.',
+    'Graded win-loss records, win rates and ROI estimated at -110 for top-consensus, strong and lean plays.',
   keywords: [
     'consensus pick stats',
     'betting win rate',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Consensus Performance Stats | DailyAI Betting',
     description:
-      'Track how consensus picks perform by confidence tier. Win rates, ROI, and sport breakdowns.',
+      'Graded win-loss records, win rates and ROI estimated at -110, by confidence tier and sport.',
     type: 'website',
   },
   alternates: {

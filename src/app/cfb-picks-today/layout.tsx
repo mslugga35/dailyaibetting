@@ -8,7 +8,7 @@ const currentDate = new Date().toLocaleDateString('en-US', {
 
 export const metadata: Metadata = {
   title: `Free College Football Picks Today (${currentDate}) - Expert Consensus | DailyAI`,
-  description: `Get today's best free NCAAF picks from our AI-powered consensus of 10 professional cappers. Fire picks where 3+ experts agree. Spread, moneyline, and totals.`,
+  description: `Get today's free NCAAF picks from a consensus of multiple expert cappers. Fire picks where 3+ cappers agree. Spread, moneyline, and totals.`,
   keywords: [
     'college football picks today',
     'free NCAAF picks',
@@ -16,13 +16,12 @@ export const metadata: Metadata = {
     'college football consensus picks',
     'NCAAF betting picks',
     'CFB spread picks',
-    'college football best bets',
     'CFB picks today',
     'Saturday football picks',
   ],
   openGraph: {
     title: 'Free College Football Picks Today - Expert Consensus',
-    description: 'AI-powered consensus picks from 10 professional cappers. Fire picks where 3+ experts agree.',
+    description: 'Consensus picks from multiple expert cappers. Fire picks where 3+ cappers agree.',
     type: 'website',
   },
   alternates: {
@@ -34,7 +33,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
   name: 'Free College Football Picks Today',
-  description: 'Expert NCAAF betting picks and predictions from professional handicappers',
+  description: 'NCAAF betting picks and predictions from expert cappers',
   url: 'https://dailyaibetting.com/cfb-picks-today',
   publisher: {
     '@type': 'Organization',
@@ -56,29 +55,27 @@ export default function CFBPicksLayout({ children }: { children: React.ReactNode
         <div className="max-w-4xl mx-auto prose prose-invert">
           <h2 className="text-2xl font-bold mb-4">About Our College Football Picks</h2>
           <p className="text-muted-foreground mb-4">
-            Our free college football picks are generated using an AI-powered consensus system that analyzes predictions
-            from 10 of the top professional sports handicappers. When 3 or more cappers agree on a pick,
-            we flag it as a &quot;fire pick&quot; 🔥 - critical for navigating the massive CFB slate.
+            Our free college football picks are built by an AI-powered consensus system that collects picks
+            from multiple expert cappers each day. When 3 or more cappers agree on a pick,
+            we flag it as a &quot;fire pick&quot; 🔥. Consensus means several cappers chose the same pick; no outcome is guaranteed.
           </p>
 
-          <h3 className="text-xl font-semibold mb-3">Why CFB Consensus Picks Work</h3>
+          <h3 className="text-xl font-semibold mb-3">How CFB consensus picks are built</h3>
           <ul className="text-muted-foreground space-y-2 mb-4">
-            <li>• 130+ FBS teams create market inefficiencies</li>
-            <li>• Large point spreads (20+) are common and beatable</li>
-            <li>• Motivation differences (bowl games, rivalry weeks)</li>
-            <li>• Weather impacts outdoor games significantly</li>
-            <li>• Home field advantage is huge in college</li>
+            <li>• Picks are collected from multiple expert cappers each day</li>
+            <li>• Picks update throughout the day</li>
+            <li>• A pick becomes consensus when several cappers back the same side</li>
           </ul>
 
           <h3 className="text-xl font-semibold mb-3">College Football Betting Types</h3>
           <div className="grid md:grid-cols-3 gap-4 text-muted-foreground mb-4">
             <div className="p-4 rounded-lg bg-card border">
               <strong className="text-foreground">Point Spreads</strong>
-              <p className="text-sm mt-1">CFB spreads can be 30+ points. Look for garbage time covers.</p>
+              <p className="text-sm mt-1">Bet on the margin of victory. CFB spreads can be large.</p>
             </div>
             <div className="p-4 rounded-lg bg-card border">
               <strong className="text-foreground">Moneylines</strong>
-              <p className="text-sm mt-1">Big underdogs offer value. Upsets happen more in college.</p>
+              <p className="text-sm mt-1">Pick the outright winner.</p>
             </div>
             <div className="p-4 rounded-lg bg-card border">
               <strong className="text-foreground">Totals (O/U)</strong>

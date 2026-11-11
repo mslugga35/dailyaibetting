@@ -321,10 +321,10 @@ export default function StatsPage() {
                 About Confidence Tiers
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <strong>💎 Locks (4+ cappers)</strong> - Highest conviction plays with strongest consensus</li>
-                <li>• <strong>🔥 Strong (3 cappers)</strong> - Solid agreement among multiple cappers</li>
-                <li>• <strong>📍 Lean (2 cappers)</strong> - Slight edge when two cappers align</li>
-                <li>• ROI calculated at -110 odds (standard juice)</li>
+                <li>• <strong>💎 Top consensus (4+ cappers)</strong> - Four or more cappers back the same pick</li>
+                <li>• <strong>🔥 Strong (3 cappers)</strong> - Three cappers back the same pick</li>
+                <li>• <strong>📍 Lean (2 cappers)</strong> - Two cappers back the same pick</li>
+                <li>• ROI estimated at -110 odds (standard juice); no outcome is guaranteed</li>
                 <li>• Stats update automatically after games complete</li>
               </ul>
             </CardContent>
