@@ -101,7 +101,9 @@ describe('reconcileMixedSportGroups', () => {
 });
 
 describe('isInSeason', () => {
-  test('MLB is in season in July', () => {
+  test('MLB is in season in July', (t) => {
+    // Pin the clock: isInSeason() reads new Date(), so this failed every Nov–Jan.
+    t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-07-15T12:00:00Z') });
     assert.equal(isInSeason('MLB'), true);
   });
 

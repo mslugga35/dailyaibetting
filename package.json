@@ -9,6 +9,7 @@
     "sync:harbor": "node scripts/sync-harbor-blogs.mjs",
     "start": "next start",
     "lint": "eslint",
+    "test": "node tests/harness/run.mjs",
     "test:consensus": "node --test --experimental-strip-types src/lib/consensus/*.test.ts"
   },
   "dependencies": {
