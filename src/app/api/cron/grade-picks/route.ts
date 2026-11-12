@@ -302,7 +302,7 @@ export async function GET(request: Request) {
     let legacyConsensus = 'graded';
     if (fetchError) {
       // Only "the table itself is missing". A missing column (42703) is schema drift and must fail.
-      const missing = fetchError.code === 'PGRST205' || fetchError.code === '42P01' || /could not find the table|relation .* does not exist/i.test(fetchError.message);
+      const missing = fetchError.code !== '42703' && (fetchError.code === 'PGRST205' || fetchError.code === '42P01' || /could not find the table|relation .* does not exist/i.test(fetchError.message));
       if (!missing) throw new Error(`Failed to fetch picks: ${fetchError.message}`);
       legacyConsensus = 'skipped: legacy consensus table not present (consensus_results is graded by dailyai-track-record)';
     }

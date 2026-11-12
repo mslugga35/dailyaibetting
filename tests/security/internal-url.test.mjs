@@ -40,6 +40,28 @@ test('no source file falls back to a hard-coded localhost:3000 for internal fetc
   assert.deepEqual(offenders.filter((p) => !p.replace(/\\/g, '/').endsWith('src/lib/data/server-fetch.ts')), []);
 });
 
+test('every server-side fetch of this app\'s own /api goes through internalBaseUrl() (no public-URL hairpin)', () => {
+  const offenders = [];
+  const walk = (dir) => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) { walk(p); continue; }
+      if (!/\.(ts|tsx)$/.test(name)) continue;
+      const src = readFileSync(p, 'utf8');
+      if (/^['"]use client['"]/m.test(src)) continue; // browser fetches are relative, not server self-fetches
+      for (const m of src.matchAll(/fetch\(\s*`\$\{([^}]+)\}\/api\//g)) {
+        const v = m[1].trim();
+        if (v === 'internalBaseUrl()') continue;
+        // a local variable is fine only if it was assigned from internalBaseUrl()
+        if (new RegExp(`\\b${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=\\s*internalBaseUrl\\(\\)`).test(src)) continue;
+        offenders.push(`${p.replace(/\\/g, '/').split('/src/')[1]}: \${${v}}`);
+      }
+    }
+  };
+  walk(new URL('../../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+  assert.deepEqual(offenders, []);
+});
+
 // ---- internal SSR marker: skips ONLY the per-IP rate limit
 
 const { rateLimitGuard, internalSsrToken, INTERNAL_SSR_HEADER } = await import('../../src/lib/api-helpers.ts');

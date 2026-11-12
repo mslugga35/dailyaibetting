@@ -128,3 +128,9 @@ test('grade-picks: a missing COLUMN on the legacy table is schema drift and stil
   const res = await call('grade-picks', { Authorization: `Bearer ${process.env.CRON_SECRET}` });
   assert.equal(res.status, 500);
 });
+
+test('grade-picks: Postgres wording for a missing column (42703, "of relation … does not exist") still fails', async () => {
+  harness().db.fail({ table: 'consensus', op: 'select', error: { message: 'column "result" of relation "consensus" does not exist', code: '42703' } });
+  const res = await call('grade-picks', { Authorization: `Bearer ${process.env.CRON_SECRET}` });
+  assert.equal(res.status, 500);
+});

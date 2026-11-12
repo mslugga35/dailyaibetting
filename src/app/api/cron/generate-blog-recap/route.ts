@@ -9,7 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthGuard } from '@/lib/api-helpers';
+import { cronAuthGuard, INTERNAL_SSR_HEADER, internalSsrToken } from '@/lib/api-helpers';
+import { internalBaseUrl } from '@/lib/data/server-fetch';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
@@ -34,9 +35,12 @@ interface ConsensusPick {
 
 async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://dailyaibetting.com';
-    const res = await fetch(`${baseUrl}/api/consensus?minCappers=3`, {
+    // Loopback + rate-limit marker only. Deliberately NO cron bearer: this becomes a
+    // public blog post, so it must only ever see the free tier.
+    const ssr = internalSsrToken();
+    const res = await fetch(`${internalBaseUrl()}/api/consensus?minCappers=3`, {
       cache: 'no-store',
+      headers: ssr ? { [INTERNAL_SSR_HEADER]: ssr } : {},
     });
     if (!res.ok) return [];
     const data = await res.json();

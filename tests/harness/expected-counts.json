@@ -12,10 +12,10 @@
   "tests/harness-selftest.test.mjs": 27,
   "tests/security/admin.test.mjs": 8,
   "tests/security/api-access.test.mjs": 19,
-  "tests/security/cron-auth.test.mjs": 31,
+  "tests/security/cron-auth.test.mjs": 32,
   "tests/security/daily-bets.test.mjs": 7,
   "tests/security/free-tier-enum.test.mjs": 2,
   "tests/security/hardening.test.mjs": 6,
-  "tests/security/internal-url.test.mjs": 7,
+  "tests/security/internal-url.test.mjs": 8,
   "tests/security/middleware.test.mjs": 13
 }

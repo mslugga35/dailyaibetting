@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { authHeaders } from '@/lib/data/server-fetch';
+import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { PicksContent } from '../PicksContent';
 
 export const dynamic = 'force-dynamic';
@@ -104,7 +104,7 @@ export default async function SportPicksPage({ params }: PageProps) {
   const meta = SPORT_META[slug];
 
   // Fetch consensus data filtered to this sport
-  const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+  const BASE_URL = internalBaseUrl();
   let data = null;
   try {
     const res = await fetch(`${BASE_URL}/api/consensus?sport=${meta.upper}`, { cache: 'no-store', headers: await authHeaders() });

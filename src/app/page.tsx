@@ -10,21 +10,18 @@ import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
-import { cookies } from 'next/headers';
+import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
 import { getVerifiedPerformance, MIN_SAMPLE } from '@/lib/data/performance';
 
 // Server-side data fetching
 async function getConsensusData() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
-    // Forward the caller's auth cookie so /api/consensus can see the logged-in
-    // user — otherwise this server-to-server fetch is anonymous and everyone
-    // (including paying/trialing members) is served the free tier.
-    const cookieHeader = (await cookies()).getAll().map((c) => `${c.name}=${c.value}`).join('; ');
-    const response = await fetch(`${baseUrl}/api/consensus`, {
+    // Loopback to this process, forwarding the visitor's cookie (tier) and IP, plus the
+    // internal marker so homepage renders do not share/spend one per-IP rate-limit bucket.
+    const response = await fetch(`${internalBaseUrl()}/api/consensus`, {
       cache: 'no-store',
-      headers: cookieHeader ? { cookie: cookieHeader } : {},
+      headers: await authHeaders(),
     });
 
     if (!response.ok) {
