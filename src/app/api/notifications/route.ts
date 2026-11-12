@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { rateLimitGuard, parseIntParam, cronAuthGuard } from '@/lib/api-helpers';
+import { internalBaseUrl } from '@/lib/data/server-fetch';
+import { rateLimitGuard, parseIntParam, cronAuthGuard, INTERNAL_SSR_HEADER, internalSsrToken } from '@/lib/api-helpers';
+
+/** Our own server-to-server call: skip the per-IP limit (only that; no data unlocked). */
+const internalHeaders = (): Record<string, string> => { const t = internalSsrToken(); return t ? { [INTERNAL_SSR_HEADER]: t } : {}; };
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +18,8 @@ export async function GET(request: Request) {
     const minCappers = parseIntParam(searchParams.get('minCappers'), 3, 1, 100);
 
     // Fetch consensus data
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/consensus`, { cache: 'no-store' });
+    const baseUrl = internalBaseUrl();
+    const res = await fetch(`${baseUrl}/api/consensus`, { cache: 'no-store', headers: internalHeaders() });
     const data = await res.json();
 
     if (!data.success) {
@@ -175,9 +179,9 @@ export async function POST(request: Request) {
     }
 
     // Get formatted picks
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = internalBaseUrl();
     const format = platform === 'discord' ? 'discord' : 'telegram';
-    const res = await fetch(`${baseUrl}/api/notifications?format=${format}`, { cache: 'no-store' });
+    const res = await fetch(`${baseUrl}/api/notifications?format=${format}`, { cache: 'no-store', headers: internalHeaders() });
     const data = await res.json();
 
     if (!data.success || !data.formatted) {

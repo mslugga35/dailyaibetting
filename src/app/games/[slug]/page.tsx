@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Target, TrendingUp, Users, ExternalLink } from 'lucide-react';
 import { SportQuickNav } from '@/components/ui/breadcrumbs';
-import { authHeaders } from '@/lib/data/server-fetch';
+import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { SportsEventJsonLd } from '@/components/seo/JsonLd';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +41,7 @@ function getSportPageUrl(sport: string): string {
 }
 
 async function getConsensusData(): Promise<ConsensusPick[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = internalBaseUrl();
   
   try {
     const response = await fetch(`${baseUrl}/api/consensus`, {

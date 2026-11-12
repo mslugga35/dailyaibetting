@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
+import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import {
   Trophy, TrendingUp, Calendar, Target, CheckCircle, XCircle,
   MinusCircle, ArrowLeft, Flame, Snowflake, BarChart3
@@ -53,20 +55,24 @@ interface CapperProfile {
   }>;
 }
 
-async function getCapperProfile(slug: string): Promise<CapperProfile | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  
-  try {
-    const response = await fetch(`${baseUrl}/api/cappers?view=profile&slug=${slug}`, {
-      cache: 'no-store',
-    });
-    const result = await response.json();
-    return result.success ? result.data : null;
-  } catch (error) {
-    console.error('Failed to fetch capper profile:', error);
-    return null;
+/**
+ * null = this capper does not exist (API 404) → the page 404s.
+ * Any other failure (rate limit, 5xx, network) throws, so the visitor/crawler gets
+ * a retryable error page instead of a "not found" that would get the URL deindexed.
+ * Memoised per render: generateMetadata and the page share one API call.
+ */
+const getCapperProfile = cache(async (slug: string): Promise<CapperProfile | null> => {
+  const response = await fetch(`${internalBaseUrl()}/api/cappers?view=profile&slug=${encodeURIComponent(slug)}`, {
+    headers: await authHeaders(),
+    cache: 'no-store',
+  });
+  if (response.status === 404) return null;
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result?.success) {
+    throw new Error(`Capper profile unavailable (HTTP ${response.status})`);
   }
-}
+  return result.data;
+});
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

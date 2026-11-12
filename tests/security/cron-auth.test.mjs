@@ -98,3 +98,33 @@ test('S12: POST /api/daily-ai-picks (force refresh, paid generation) refuses a b
   assert.equal((await post({ Authorization: 'Bearer    ' })).status, 500, 'blank secret is misconfiguration, never a match');
   assert.deepEqual(harness().moduleCalls, []);
 });
+
+test('grade-picks: a missing legacy `consensus` table (as in production) is skipped, and AI-pick grading still runs', async () => {
+  harness().db.fail({ table: 'consensus', op: 'select', error: { message: "Could not find the table 'public.consensus' in the schema cache", code: 'PGRST205' } });
+  harness().fetchRoutes.set('https://site.api.espn.com/', async () => new Response(JSON.stringify({ events: [] }), { status: 200, headers: { 'content-type': 'application/json' } }));
+  const res = await call('grade-picks', { Authorization: `Bearer ${process.env.CRON_SECRET}` });
+  const b = await res.json();
+  assert.equal(res.status, 200, JSON.stringify(b));
+  assert.match(b.consensus.status, /skipped/);
+  assert.ok(harness().db.log.some((e) => e.table === 'ai_picks'), 'AI-pick grading was reached');
+});
+
+test('grade-picks: any other consensus read failure still fails the run (no silent success)', async () => {
+  harness().db.fail({ table: 'consensus', op: 'select', error: { message: 'fetch failed: connect ETIMEDOUT', code: '' } });
+  const res = await call('grade-picks', { Authorization: `Bearer ${process.env.CRON_SECRET}` });
+  assert.equal(res.status, 500);
+});
+
+test('POST /api/blog authenticates before validating: a keyless empty body is 401, not 400', async () => {
+  setup({ env: { BLOG_API_KEY: 'blog-key-for-tests-0123456789' } });
+  const { POST } = await import('../../src/app/api/blog/route.ts');
+  const res = await quietly(() => POST(req('/api/blog', { method: 'POST', body: {} })));
+  assert.equal(res.status, 401);
+  assert.equal(harness().db.log.length, 0, 'nothing touched the DB');
+});
+
+test('grade-picks: a missing COLUMN on the legacy table is schema drift and still fails', async () => {
+  harness().db.fail({ table: 'consensus', op: 'select', error: { message: 'column consensus.result does not exist', code: '42703' } });
+  const res = await call('grade-picks', { Authorization: `Bearer ${process.env.CRON_SECRET}` });
+  assert.equal(res.status, 500);
+});

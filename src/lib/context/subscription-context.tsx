@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, useSyncExternalStore, type ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
   applyEntitlementResponse,
@@ -139,6 +139,20 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useSubscription() {
-  return useContext(SubscriptionContext);
+const SERVER_STATE: SubscriptionState = { status: 'loading', isPro: false, user: null, loading: true };
+const noopSubscribe = () => () => {};
+
+/**
+ * While a component is hydrating it must render exactly what the server rendered
+ * (the signed-out "loading" state). The provider's auth check can resolve before
+ * every child has hydrated (slow devices, busy pages), and a child hydrating with
+ * the resolved state mismatches the server HTML (React #418: the whole page is
+ * thrown away and re-rendered). useSyncExternalStore uses the server snapshot
+ * during hydration and the client snapshot after it, so consumers see the real
+ * state only once they are hydrated.
+ */
+export function useSubscription(): SubscriptionState {
+  const state = useContext(SubscriptionContext);
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  return hydrated ? state : SERVER_STATE;
 }

@@ -121,18 +121,9 @@ export async function GET(request: Request) {
 // POST - Create new blog post (for n8n automation)
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { title, content, excerpt, category, sport, tags, meta_title, meta_description, ai_model } = body;
-
-    // Validate required fields
-    if (!title || !content) {
-      return NextResponse.json(
-        { success: false, error: 'Title and content are required' },
-        { status: 400 }
-      );
-    }
-
-    // Verify API key for automation
+    const limited = rateLimitGuard(request, 10, 60_000, 'blog-post');
+    if (limited) return limited;
+    // Authenticate before reading or validating anything from the caller.
     const apiKey = request.headers.get('x-api-key');
     const expectedKey = process.env.BLOG_API_KEY;
     if (!expectedKey) {
@@ -143,6 +134,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { title, content, excerpt, category, sport, tags, meta_title, meta_description, ai_model } = body;
+
+    // Validate required fields
+    if (!title || !content) {
+      return NextResponse.json(
+        { success: false, error: 'Title and content are required' },
+        { status: 400 }
       );
     }
 

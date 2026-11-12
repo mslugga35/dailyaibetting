@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/database.types';
@@ -68,6 +69,13 @@ export function getClientIp(request: Request): string {
  * `windowMs`, otherwise null (caller proceeds normally).
  */
 export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, scope = ''): NextResponse | null {
+  // Server-rendered pages call these APIs on the visitor's behalf; that render is
+  // not the visitor's own API traffic, so it must not spend the per-IP budget
+  // (a crawler or an active reader would otherwise get blank pages / 404s).
+  // This skips ONLY the rate limit: entitlement still comes from the forwarded cookie.
+  // Never for checkout scopes: no page renders a checkout, so the marker has no
+  // business there, and a leaked marker must not lift the checkout abuse limits.
+  if (!scope.includes('checkout') && isInternalSsrRequest(request)) return null;
   // `scope` gives a route its own counter, so a strict limit (e.g. guest checkout)
   // is not consumed by, and does not consume, another route's budget.
   const key = scope ? `${scope}:${getClientIp(request)}` : getClientIp(request);
@@ -75,6 +83,27 @@ export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, sc
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
   }
   return null;
+}
+
+// --- Internal SSR marker (rate limit only) ---
+
+export const INTERNAL_SSR_HEADER = 'x-dailyai-ssr';
+
+/**
+ * Token our own server-side renders attach to self-fetches. Derived from
+ * CRON_SECRET (never sent raw) with a fixed label, so it can only ever mean
+ * "skip the per-IP rate limit"; it unlocks no data. No secret => no token.
+ */
+export function internalSsrToken(): string | null {
+  const secret = (process.env.CRON_SECRET ?? '').trim();
+  if (!secret) return null;
+  return createHmac('sha256', secret).update('dailyai-ssr-rate-limit-v1').digest('hex');
+}
+
+export function isInternalSsrRequest(request: Request): boolean {
+  const token = internalSsrToken();
+  const got = request.headers.get(INTERNAL_SSR_HEADER);
+  return !!token && !!got && safeEqual(got, token);
 }
 
 // --- Cron / internal auth ---

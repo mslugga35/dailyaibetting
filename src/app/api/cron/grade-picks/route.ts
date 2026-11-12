@@ -295,8 +295,16 @@ export async function GET(request: Request) {
       .gte('date', cutoffDate.toISOString().split('T')[0])
       .order('date', { ascending: false });
     
+    // The legacy `consensus` table does not exist in production (the verified track
+    // record lives in consensus_results and is graded daily by the Hetzner
+    // `dailyai-track-record` job). A missing table must not abort the run, or the
+    // AI-pick grading below never happens.
+    let legacyConsensus = 'graded';
     if (fetchError) {
-      throw new Error(`Failed to fetch picks: ${fetchError.message}`);
+      // Only "the table itself is missing". A missing column (42703) is schema drift and must fail.
+      const missing = fetchError.code === 'PGRST205' || fetchError.code === '42P01' || /could not find the table|relation .* does not exist/i.test(fetchError.message);
+      if (!missing) throw new Error(`Failed to fetch picks: ${fetchError.message}`);
+      legacyConsensus = 'skipped: legacy consensus table not present (consensus_results is graded by dailyai-track-record)';
     }
     
     // 2. Group by sport/date and fetch games
@@ -455,6 +463,7 @@ export async function GET(request: Request) {
       success: true,
       message: `Graded ${graded} consensus + ${aiGraded} AI picks`,
       consensus: {
+        status: legacyConsensus,
         pending: pendingPicks?.length || 0,
         graded,
         wins,

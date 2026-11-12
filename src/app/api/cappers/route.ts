@@ -132,11 +132,13 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     .from('hb_capper_stats')   // not `cappers` - see getLeaderboard note
     .select('*')
     .eq('slug', slug)
-    .single();
+    .maybeSingle();
 
-  if (capperError || !capper) {
-    return null;
-  }
+  // null (→ 404) only when the capper genuinely does not exist. A database error must
+  // surface as a 500 so the profile page shows a retryable error, never "not found"
+  // (a 404 on a transient failure gets the URL dropped from search).
+  if (capperError) throw new Error(`Failed to fetch capper: ${capperError.message}`);
+  if (!capper) return null;
 
   // Get capper's recent picks
   const { data: picks, error: picksError } = await db

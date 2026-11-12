@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { Trophy, TrendingUp, Flame, Snowflake, ArrowUpRight, Users } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -29,10 +30,11 @@ interface Capper {
 }
 
 async function getLeaderboard(): Promise<Capper[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || '3000'}`;
+  const baseUrl = internalBaseUrl();
   
   try {
     const response = await fetch(`${baseUrl}/api/cappers?view=leaderboard&limit=50`, {
+      headers: await authHeaders(),
       cache: 'no-store',
     });
     const result = await response.json();
@@ -44,10 +46,11 @@ async function getLeaderboard(): Promise<Capper[]> {
 }
 
 async function getHotStreaks() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `http://localhost:${process.env.PORT || '3000'}`;
+  const baseUrl = internalBaseUrl();
   
   try {
     const response = await fetch(`${baseUrl}/api/cappers?view=hot-streaks&limit=5`, {
+      headers: await authHeaders(),
       cache: 'no-store',
     });
     const result = await response.json();
