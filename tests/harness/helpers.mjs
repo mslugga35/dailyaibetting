@@ -40,15 +40,15 @@ export async function body(res) {
 }
 
 /** A signed-in user, via Bearer token (the implicit-flow path resolveUser supports). */
-export function bearerUser(id = 'user_paid_1', email = `${id}@example.test`) {
+export function bearerUser(id = 'user_paid_1', email = `${id}@example.test`, extra = {}) {
   const token = `jwt_${id}`;
-  harness().bearerUsers.set(token, { id, email });
+  harness().bearerUsers.set(token, { id, email, ...extra });
   return { id, email, headers: { Authorization: `Bearer ${token}` } };
 }
 
 /** A signed-in user via the session cookie (createServerSupabaseClient path). */
-export function cookieUser(id = 'user_cookie_1', email = `${id}@example.test`) {
-  harness().cookieUser = { id, email };
+export function cookieUser(id = 'user_cookie_1', email = `${id}@example.test`, extra = {}) {
+  harness().cookieUser = { id, email, ...extra };
   return { id, email };
 }
 
@@ -93,7 +93,18 @@ export function checkoutCompletedEvent({ sub, customerId, userId, guestEmail, mo
   });
 }
 
+/**
+ * A customer.subscription.* event. Stripe emits it BECAUSE its subscription changed,
+ * so building the event also moves the fake Stripe's stored subscription to that
+ * state (as of this moment). A test that wants a STALE event builds it first and
+ * changes Stripe's state afterwards.
+ */
 export function subscriptionEvent(type, sub) {
+  const stored = harness().stripe.subscriptions.find((s) => s.id === sub.id);
+  if (stored) {
+    if (sub.status !== undefined) stored.status = sub.status;
+    if (sub.cancel_at_period_end !== undefined) stored.cancel_at_period_end = sub.cancel_at_period_end;
+  }
   return stripeEvent(type, JSON.parse(JSON.stringify(sub)));
 }
 

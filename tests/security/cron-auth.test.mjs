@@ -51,7 +51,7 @@ for (const name of Object.keys(ROUTES)) {
   });
 
   test(`${name}: CRON_SECRET set to "" + "Bearer " header → refused, nothing runs`,
-    name === 'ai-picks' ? { todo: 'OPEN S5 — P0-SEC-2 empty secret is treated as unset → fails open' } : {},
+    {},
     async () => {
       setup({ env: { CRON_SECRET: '' } });
       const res = await call(name, { Authorization: 'Bearer ' });
@@ -60,7 +60,7 @@ for (const name of Object.keys(ROUTES)) {
     });
 
   test(`${name}: CRON_SECRET unset + "Bearer undefined" header → refused, nothing runs`,
-    name === 'ai-picks' ? { todo: 'OPEN S5 — P0-SEC-2' } : {},
+    {},
     async () => {
       setup({ env: { CRON_SECRET: undefined } });
       const res = await call(name, { Authorization: 'Bearer undefined' });
@@ -68,9 +68,8 @@ for (const name of Object.keys(ROUTES)) {
       assert.deepEqual(sideEffects(), NONE);
     });
 
-  const failOpen = name === 'ai-picks';
   test(`${name}: CRON_SECRET unset → refuses (fails closed), nothing runs`,
-    failOpen ? { todo: 'OPEN S5 — P0-SEC-2 ai-picks fails OPEN when CRON_SECRET is unset (paid model call + Discord post)' } : {},
+    {},
     async () => {
       setup({ env: { CRON_SECRET: undefined } });
       const res = await call(name, {}, '?force=true');
@@ -85,7 +84,17 @@ test('ai-picks: authorized ?force=true reaches the engine with force=true (fake 
 });
 
 test('S12: generate-blog-recap must require the "Bearer " scheme (a bare secret is not a bearer token)',
-  { todo: 'OPEN S12 — P0-SEC-2 strict Authorization parsing' }, async () => {
+  async () => {
     const res = await call('generate-blog-recap', { Authorization: process.env.CRON_SECRET });
     assert.equal(res.status, 401);
   });
+
+test('S12: POST /api/daily-ai-picks (force refresh, paid generation) refuses a bare secret and a blank-secret config', async () => {
+  const mod = await import('../../src/app/api/daily-ai-picks/route.ts');
+  const post = (headers) => quietly(() => mod.POST(req('/api/daily-ai-picks', { method: 'POST', headers })));
+  assert.equal((await post({ Authorization: process.env.CRON_SECRET })).status, 401, 'bare secret');
+  assert.equal((await post({ Authorization: `bearer ${process.env.CRON_SECRET}` })).status, 401, 'wrong scheme case');
+  setup({ env: { CRON_SECRET: '   ' } });
+  assert.equal((await post({ Authorization: 'Bearer    ' })).status, 500, 'blank secret is misconfiguration, never a match');
+  assert.deepEqual(harness().moduleCalls, []);
+});

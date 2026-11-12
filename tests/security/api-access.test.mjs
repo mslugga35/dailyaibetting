@@ -52,6 +52,7 @@ test('/api/consensus: anonymous visitor gets at most the free-tier slice (5)', a
   const b = await body(res);
   assert.equal(b.consensusCount, 10, 'fixture must produce 10 consensus picks (guards against a vacuous pass)');
   assert.equal(b.consensus.length, 5, `anonymous got ${b.consensus.length}`);
+  assert.equal(b.firePickCount, 10, 'the true fire-pick count (aggregate only) is reported even on the free tier');
 });
 
 test('/api/consensus: an active Pro subscriber gets the full list (server-side gate)', async () => {
@@ -85,7 +86,7 @@ test('/api/consensus: the correct internal CRON_SECRET bearer does unlock the fu
 });
 
 test('B1: a paying subscriber must not be served the free tier because Supabase timed out on the entitlement read',
-  { todo: 'OPEN B1 — P0-BILL-1 (explicit "cannot verify" response, not a silent downgrade)' }, async () => {
+  async () => {
     seedTodaysPicks();
     cookieUser('u_pay_out');
     seedSubscription({ userId: 'u_pay_out', status: 'active' });
@@ -108,7 +109,7 @@ test('outage must never fail OPEN: anonymous and non-paying users get at most th
 });
 
 test('S6: the tier-dependent ?date=yesterday response must not be publicly cacheable',
-  { todo: 'OPEN S6 — P0-SEC-1 Cache-Control: private on tiered responses (route.ts:250)' }, async () => {
+  async () => {
     seedTodaysPicks(getYesterdayET());
     cookieUser('u_cache');
     seedSubscription({ userId: 'u_cache', status: 'active' });
@@ -125,7 +126,7 @@ test("today's /api/consensus response is not cacheable (no-store)", async () => 
 });
 
 test('S3b: ?date=yesterday must truncate bySport for the free tier like consensus/topOverall',
-  { todo: 'OPEN S3b (new, found by this harness) — P0-SEC-1 free tier gets the full yesterday bySport list' }, async () => {
+  async () => {
     seedTodaysPicks(getYesterdayET());
     const b = await body(await get(consensusRoute, '/api/consensus?date=yesterday'));
     assert.equal(b.consensusCount, 10, 'fixture must produce 10 consensus picks');
@@ -138,49 +139,17 @@ test('S3b: ?date=yesterday must truncate bySport for the free tier like consensu
 // ---------------------------------------------------------------- individual picks
 
 test('S1: /api/picks (every capper\'s individual picks — a Pro feature) must reject anonymous callers',
-  { todo: 'OPEN S1 — P0-SEC-1 auth + Pro check on /api/picks' }, async () => {
+  async () => {
     seedTodaysPicks();
     const res = await get(picksRoute, '/api/picks');
     assert.ok([401, 403].includes(res.status), `anonymous got HTTP ${res.status}`);
   });
 
-test('PINNED current behaviour (delete when S1 is fixed): today /api/picks returns individual capper picks to an anonymous caller', async () => {
-  seedTodaysPicks();
-  const res = await get(picksRoute, '/api/picks');
-  assert.equal(res.status, 200);
-  const text = JSON.stringify(await body(res));
-  assert.match(text, /Alpha|Bravo|Charlie/, 'capper names present in the anonymous response');
-});
-
 // ---------------------------------------------------------------- consensus-sql
 
-test('S2: /api/consensus-sql must not run with the service-role key on an anonymous request',
-  { todo: 'OPEN S2 — P0-SEC-1 remove the route or use the anon key + auth' }, async () => {
-    harness().db.rpcHandlers.set('get_betting_consensus', () => []);
-    const mod = await consensusSqlRoute();
-    if (!mod) return; // route removed: S2 fixed
-    await get(mod, '/api/consensus-sql');
-    const rpc = harness().db.log.find((l) => l.op === 'rpc');
-    assert.ok(!rpc || rpc.key !== 'service', 'RPC executed with the service-role key');
-  });
-
-test('S2: /api/consensus-sql must not echo raw database error text to the caller',
-  { todo: 'OPEN S2 — P0-SEC-1 generic error body' }, async () => {
-    harness().db.fail({ op: 'rpc', error: { message: 'permission denied for function get_betting_consensus; schema internal_x', code: '42501' } });
-    const mod = await consensusSqlRoute();
-    if (!mod) return;
-    const res = await get(mod, '/api/consensus-sql');
-    assert.doesNotMatch(JSON.stringify(await body(res)), /permission denied|internal_x/);
-  });
-
-test('S2: /api/consensus-sql must validate the date parameter',
-  { todo: 'OPEN S2 — P0-SEC-1 YYYY-MM-DD validation' }, async () => {
-    harness().db.rpcHandlers.set('get_betting_consensus', () => []);
-    const mod = await consensusSqlRoute();
-    if (!mod) return;
-    const res = await get(mod, `/api/consensus-sql?date=${encodeURIComponent("2026-01-01'; select 1;--")}`);
-    assert.equal(res.status, 400);
-  });
+test('S2: /api/consensus-sql (service-role RPC, raw DB errors, unvalidated date) is removed and stays removed', async () => {
+  assert.equal(await consensusSqlRoute(), null);
+});
 
 // ---------------------------------------------------------------- admin secret in the bundle
 
@@ -205,9 +174,79 @@ const PUBLIC_BY_DESIGN = new Set([
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
 
 test('S4: only reviewed, public-by-design NEXT_PUBLIC_* names are used (no admin password in the bundle)',
-  { todo: 'OPEN S4 — P0-SEC-2 server-side admin auth; ROTATE the exposed value first' }, () => {
+  () => {
     const names = new Set();
     for (const f of walk(SRC_DIR)) for (const m of readFileSync(f, 'utf8').matchAll(/NEXT_PUBLIC_[A-Z0-9_]+/g)) names.add(m[0]);
     assert.ok(names.has('NEXT_PUBLIC_SUPABASE_URL'), 'scan found the source tree');
     assert.deepEqual([...names].filter((n) => !PUBLIC_BY_DESIGN.has(n)), []);
   });
+
+test('/api/consensus: the internal CRON_SECRET bearer also gets the FULL graded list for ?date=yesterday', async () => {
+  seedTodaysPicks(getYesterdayET());
+  const b = await body(await get(consensusRoute, '/api/consensus?date=yesterday', { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } }));
+  assert.equal(b.isYesterday, true);
+  assert.equal(b.consensusCount, 10, 'fixture must produce 10 yesterday consensus picks');
+  assert.equal(b.consensus.length, 10, `internal got ${b.consensus.length}`);
+  for (const p of b.consensus) assert.ok('result' in p, 'every pick carries its result field');
+});
+
+test('B1: unknown entitlement is served at most the free slice, labelled unknown (never the full list)', async () => {
+  seedTodaysPicks();
+  cookieUser('u_unk_slice');
+  seedSubscription({ userId: 'u_unk_slice', status: 'active' });
+  harness().db.fail({ table: 'user_subscriptions', op: 'select' });
+  const res = await get(consensusRoute, '/api/consensus');
+  const b = await body(res);
+  assert.equal(res.status, 200, 'unknown entitlement is answered with the free slice, not an error');
+  assert.equal(b.consensusCount, 10, 'fixture must produce 10 consensus picks (guards against a vacuous pass)');
+  assert.equal(b.entitlement, 'unknown');
+  assert.equal(b.tier, 'free');
+  assert.equal(b.consensus.length, 5, `unknown got ${b.consensus.length}`);
+  assert.equal(b.allPicks.length, 0);
+});
+
+test('B1: an AUTH outage (cannot tell who the caller is) is unknown entitlement: free slice, labelled unknown, never the full list', async () => {
+  seedTodaysPicks();
+  cookieUser('u_auth_out');
+  seedSubscription({ userId: 'u_auth_out', status: 'active' });
+  harness().authOutage = true;
+  const res = await get(consensusRoute, '/api/consensus');
+  const b = await body(res);
+  assert.equal(res.status, 200);
+  assert.equal(b.consensusCount, 10, 'fixture must produce 10 consensus picks');
+  assert.equal(b.entitlement, 'unknown');
+  assert.equal(b.consensus.length, 5);
+});
+
+test('B1: a signed-out (no session) caller is a confident anonymous free, not unknown', async () => {
+  seedTodaysPicks();
+  const b = await body(await get(consensusRoute, '/api/consensus'));
+  assert.equal(b.entitlement, 'free');
+  assert.equal(b.consensus.length, 5);
+});
+
+test('S1: /api/picks rejects a signed-in NON-Pro user (403) and serves a Pro user (200, not publicly cacheable)', async () => {
+  seedTodaysPicks();
+  cookieUser('u_picks_free');
+  seedSubscription({ userId: 'u_picks_free', status: 'canceled' });
+  assert.equal((await get(picksRoute, '/api/picks')).status, 403);
+  setup();
+  seedTodaysPicks();
+  cookieUser('u_picks_pro');
+  seedSubscription({ userId: 'u_picks_pro', status: 'active' });
+  const res = await get(picksRoute, '/api/picks');
+  assert.equal(res.status, 200);
+  assert.match(JSON.stringify(await body(res)), /Alpha|Bravo|Charlie/);
+  assert.doesNotMatch(res.headers.get('cache-control') || '', /public/);
+});
+
+test('S1: /api/picks with unverifiable entitlement is 503 (never the picks)', async () => {
+  seedTodaysPicks();
+  cookieUser('u_picks_unk');
+  seedSubscription({ userId: 'u_picks_unk', status: 'active' });
+  harness().db.fail({ table: 'user_subscriptions', op: 'select' });
+  const res = await get(picksRoute, '/api/picks');
+  assert.equal(res.status, 503);
+  assert.doesNotMatch(JSON.stringify(await body(res)), /Alpha|Bravo|Charlie/);
+});
+

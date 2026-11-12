@@ -10,13 +10,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthGuard, rateLimitGuard } from '@/lib/api-helpers';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
   // Read-only: return cached report from Supabase (no generation, no credit burn)
+  const limited = rateLimitGuard(request);
+  if (limited) return limited;
   try {
     const supabase = await createServerSupabaseClient();
     const today = getTodayET();
@@ -43,21 +46,15 @@ export async function GET() {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('daily-ai-picks:', error instanceof Error ? error.message : String(error));
+    return NextResponse.json({ success: false, error: 'Request failed' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   // Auth required — prevents public credit burn
-  if (!process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-  }
-
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = cronAuthGuard(req);
+  if (denied) return denied;
 
   // Dynamic import to avoid loading generation code on every GET
   const { generateFreshReport } = await import('@/lib/daily-ai-picks/generate');
@@ -71,7 +68,7 @@ export async function POST(req: NextRequest) {
       stats: result.dataStats,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('daily-ai-picks:', error instanceof Error ? error.message : String(error));
+    return NextResponse.json({ success: false, error: 'Request failed' }, { status: 500 });
   }
 }

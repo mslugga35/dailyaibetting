@@ -159,7 +159,7 @@ export function Header() {
                   <Button size="sm" className="hidden sm:flex gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
                     <Link href="/pro">
                       <Crown className="h-4 w-4" />
-                      <span className="hidden md:inline text-white">Try Pro Free</span>
+                      <span className="hidden md:inline text-white">Go Pro</span>
                       <span className="md:hidden text-white">Pro</span>
                     </Link>
                   </Button>
@@ -251,7 +251,7 @@ export function Header() {
                       <Button className="w-full gap-2 bg-emerald-700 hover:bg-emerald-800 text-white" asChild onClick={() => setIsOpen(false)}>
                         <Link href="/pro">
                           <Crown className="h-4 w-4" />
-                          Try Pro Free
+                          Go Pro
                         </Link>
                       </Button>
                     </>

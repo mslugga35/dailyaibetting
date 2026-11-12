@@ -513,3 +513,37 @@ export function buildDailyBets(
     botRecord: null,
   };
 }
+
+/** Picks a non-Pro visitor may see on /daily-bets: the same 5 the free tier gets on /api/consensus. */
+export const DAILY_BETS_FREE_LIMIT = 5;
+
+/**
+ * Free-tier view of the daily bets. Only the top free picks are revealed; every
+ * section that is built from other picks is filtered down to those picks (a parlay
+ * or trend is kept only if it reveals nothing beyond them), capper-level player
+ * props and MLB analysis are Pro only. The AI write-up is public (/daily-ai-picks). Aggregate counts stay.
+ */
+export function limitDailyBetsToFreeTier(out: DailyBetsOutput): DailyBetsOutput {
+  const free = out.topPicks.slice(0, DAILY_BETS_FREE_LIMIT);
+  const ids = new Set(free.map(p => p.id));
+  const bets = new Set(free.map(p => p.bet));
+  const allFree = (legs: DailyBetPick[]) => legs.length > 0 && legs.every(l => ids.has(l.id));
+  const bareBet = (s: string) => s.replace(/\s*\(\d+\)$/, '');
+  return {
+    ...out,
+    topPicks: free,
+    top5MostCommon: out.top5MostCommon.filter(b => bets.has(b.bet)),
+    twoLegParlays: out.twoLegParlays.filter(allFree),
+    threeLegParlays: out.threeLegParlays.filter(allFree),
+    playerPropParlays: [],
+    bestBySport: Object.fromEntries(Object.entries(out.bestBySport).filter(([, p]) => ids.has(p.id))),
+    mlbAnalysis: null,
+    bigMoneyParlays: out.bigMoneyParlays.filter(p => allFree(p.legs)),
+    ladderPick: out.ladderPick && ids.has(out.ladderPick.pick.id) ? out.ladderPick : null,
+    // A trend is kept only if it is about at least one free pick.
+    trends: out.trends
+      .map(t => ({ ...t, relevantPicks: t.relevantPicks.filter(r => bets.has(bareBet(r))) }))
+      .filter(t => t.relevantPicks.length > 0),
+    // aiReport stays: the same write-up is published free on /daily-ai-picks.
+  };
+}

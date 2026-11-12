@@ -8,7 +8,7 @@
  * @module lib/data/server-fetch
  */
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
 
@@ -19,7 +19,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com
  */
 export async function authHeaders(): Promise<HeadersInit> {
   const cookieHeader = (await cookies()).getAll().map((c) => `${c.name}=${c.value}`).join('; ');
-  return cookieHeader ? { cookie: cookieHeader } : {};
+  const out: Record<string, string> = {};
+  if (cookieHeader) out.cookie = cookieHeader;
+  // Forward the visitor's IP so the API's per-IP rate limit counts this visitor, not
+  // the server itself (otherwise every SSR render shares one bucket and the page
+  // goes blank for everyone once it fills).
+  const xff = (await headers()).get('x-forwarded-for');
+  if (xff) out['x-forwarded-for'] = xff;
+  return out;
 }
 
 /** Fetch today's consensus data (used by homepage, consensus, free-sports-picks, best-bets, picks) */

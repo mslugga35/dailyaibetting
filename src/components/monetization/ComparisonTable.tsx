@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Check, X, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/lib/context/subscription-context';
+import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
 
 export function ComparisonTable() {
-  const { isPro } = useSubscription();
-  if (isPro) return null; // Members don't need the free-vs-pro pitch.
+  const { isPro, loading } = useSubscription();
+  // Members don't need the free-vs-pro pitch; hidden while the plan is loading/unverified.
+  if (isPro || loading) return null;
 
   const features = [
     { feature: 'Consensus picks', free: 'Top 5 only', pro: 'Unlimited', freeIcon: 'limited' },
@@ -75,7 +77,7 @@ export function ComparisonTable() {
           <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
             <Link href="/pro">
               <Crown className="h-4 w-4 mr-2" />
-              Start Free 7-Day Trial
+              {TRIAL_CTA}
             </Link>
           </Button>
         </div>

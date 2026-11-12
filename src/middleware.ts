@@ -10,8 +10,9 @@ export async function middleware(request: NextRequest) {
     pathname === '/auth/callback' ||
     pathname === '/api/subscribe' ||
     pathname.startsWith('/api/cron/') ||
-    pathname.startsWith('/api/picks') ||
-    pathname.startsWith('/api/consensus') ||
+    // /api/picks and /api/consensus are tier-gated by the signed-in session, so they
+    // are NOT exempt: the session must be refreshed here or an expired access token
+    // turns a paying member into "anonymous/free" (401 on /api/picks).
     pathname.startsWith('/api/blog')
   ) {
     return NextResponse.next();

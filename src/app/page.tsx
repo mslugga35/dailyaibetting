@@ -9,7 +9,10 @@ import { Brain, Target, Lock, Trophy, Zap, Clock, CalendarClock, Crown } from 'l
 import Link from 'next/link';
 import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
+import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { cookies } from 'next/headers';
+import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { getVerifiedPerformance, MIN_SAMPLE } from '@/lib/data/performance';
 
 // Server-side data fetching
 async function getConsensusData() {
@@ -37,13 +40,11 @@ async function getConsensusData() {
 }
 
 // Graded results record — only shows once real graded data exists (never 0-0).
+/** Verified, graded record straight from the database (no self-fetch over HTTP). */
 async function getTrackRecord() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
-    const res = await fetch(`${baseUrl}/api/results?view=stats`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data?.allTime || null;
+    const perf = await getVerifiedPerformance();
+    return perf.allTime;
   } catch {
     return null;
   }
@@ -54,13 +55,20 @@ export const revalidate = 0;
 
 export default async function HomePage() {
   const [data, trackRecord] = await Promise.all([getConsensusData(), getTrackRecord()]);
-  const hasTrackRecord = trackRecord && trackRecord.total > 0;
+  // Only advertise a win rate once the sample is meaningful; the full record is always on /results.
+  const hasTrackRecord = !!trackRecord && trackRecord.decided >= MIN_SAMPLE;
 
   const topOverall = data?.topOverall || [];
   const bySport = data?.bySport || {};
   const totalPicks = data?.totalPicks || 0;
-  const firePicksCount = topOverall.filter((p: { capperCount: number }) => p.capperCount >= 3).length;
+  // The free tier receives only a slice of the picks, so count fire picks from the
+  // server's aggregate, not from the (possibly truncated) list.
+  const firePicksCount: number = typeof data?.firePickCount === 'number'
+    ? data.firePickCount
+    : topOverall.filter((p: { capperCount: number }) => p.capperCount >= 3).length;
   const isPremium = data?.tier === 'premium';
+  // The plan could not be verified (outage): show neither Premium nor an upgrade pitch.
+  const entitlementUnknown = data?.entitlement === 'unknown';
   const totalConsensusCount = data?.totalConsensusCount || topOverall.length;
   const hiddenPicksCount = totalConsensusCount - topOverall.length;
   const capperCount = data?.capperCount || 0;
@@ -90,13 +98,17 @@ export default async function HomePage() {
           and show how many cappers agree on each one. No outcome is guaranteed.
         </p>
         {hasTrackRecord && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-6">
-            <Trophy className="h-4 w-4 text-emerald-400" />
+          <Link
+            href="/results"
+            className="inline-flex flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 mb-6 hover:bg-emerald-500/15 transition-colors"
+          >
+            <Trophy className="h-4 w-4 text-emerald-400" aria-hidden="true" />
             <span className="text-sm">
-              <span className="font-mono font-bold tabular-nums text-emerald-400">{trackRecord.winPct}% win rate</span>
-              <span className="text-muted-foreground"> on fire picks (3+ cappers) · {trackRecord.wins}-{trackRecord.losses} graded</span>
+              <span className="font-mono font-bold tabular-nums text-emerald-400">{trackRecord.winPct?.toFixed(1)}% win rate</span>
+              <span className="text-muted-foreground"> on {trackRecord.decided.toLocaleString()} graded fire picks (3+ cappers)</span>
             </span>
-          </div>
+            <span className="text-sm font-medium text-emerald-400">See every result →</span>
+          </Link>
         )}
         {(totalConsensusCount > 0 || capperCount > 0) && (
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8 text-sm">
@@ -128,7 +140,7 @@ export default async function HomePage() {
           <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
-              Start Free 7-Day Trial
+              {TRIAL_CTA}
             </Link>
           </Button>
         </div>
@@ -192,7 +204,11 @@ export default async function HomePage() {
                   <Target className="h-5 w-5 text-primary" />
                   Today&apos;s Consensus
                 </span>
-                {isPremium ? (
+                {entitlementUnknown ? (
+                  <Badge variant="outline" className="gap-1.5 border-amber-500/40 text-amber-500">
+                    Verifying plan…
+                  </Badge>
+                ) : isPremium ? (
                   <Badge className="gap-1.5 bg-primary/20 text-primary border-primary/30">
                     <Zap className="h-3 w-3" />
                     Premium
@@ -212,7 +228,10 @@ export default async function HomePage() {
                     topOverall={topOverall}
                     bySport={bySport}
                   />
-                  {!isPremium && hiddenPicksCount > 0 && (
+                  {entitlementUnknown && (
+                    <div className="mt-6"><EntitlementUnknownNotice /></div>
+                  )}
+                  {!isPremium && !entitlementUnknown && hiddenPicksCount > 0 && (
                     <div className="mt-6 p-5 rounded-xl border border-primary/30 bg-primary/5 text-center">
                       <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
                       <p className="font-semibold mb-1">
@@ -221,7 +240,7 @@ export default async function HomePage() {
                       <p className="text-sm text-muted-foreground mb-4">
                         Upgrade to Premium for access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
                       </p>
-                      <UpgradeButton label="Unlock All Picks – $20/mo" />
+                      <UpgradeButton label={`Unlock All Picks – ${PRO_PRICE_DISPLAY}`} />
                     </div>
                   )}
                 </>
@@ -260,10 +279,10 @@ export default async function HomePage() {
           </Card>
 
           {/* Show upgrade CTA only for free users */}
-          {!isPremium && <HiddenBagCTA />}
+          {!isPremium && !entitlementUnknown && <HiddenBagCTA />}
 
           {/* Free vs Pro */}
-          {!isPremium && <ComparisonTable />}
+          {!isPremium && !entitlementUnknown && <ComparisonTable />}
         </div>
       )}
     </div>

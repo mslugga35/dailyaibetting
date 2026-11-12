@@ -30,10 +30,22 @@ import { filterToTodaysGamesAsync, getTodaysScheduleSummary } from '@/lib/consen
 import { getYesterdaysScores, gradeConsensus } from '@/lib/data/espn-scores';
 import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
-import { getCurrentUser, isPremium } from '@/lib/auth/subscription';
-import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
+import { getCurrentUser, isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
+import { rateLimitGuard, parseIntParam, isCronAuthorized } from '@/lib/api-helpers';
 
 const FREE_TIER_LIMIT = 5;
+
+type Entitlement = 'premium' | 'free' | 'unknown';
+
+/**
+ * The ONE set of picks the free tier may see: today's (or yesterday's) overall top
+ * FREE_TIER_LIMIT, chosen before any ?sport= / ?minCappers= filter. Every list in a
+ * free response is intersected with it, so no combination of query params or
+ * per-sport lists reveals more than FREE_TIER_LIMIT distinct picks.
+ */
+function freePickIds(all: Array<{ id: string }>): Set<string> {
+  return new Set(all.slice(0, FREE_TIER_LIMIT).map(p => p.id));
+}
 
 /** Remove malformed picks (matchup-style text, parentheticals, etc.) */
 function filterMalformedPicks(picks: NormalizedPick[]): NormalizedPick[] {
@@ -73,14 +85,25 @@ export async function GET(request: Request) {
     // Determine subscription tier.
     // Internal bypass: the grade-and-persist cron passes Bearer CRON_SECRET to get
     // the FULL (unsliced) consensus so it can snapshot every fire pick.
-    const cronSecret = process.env.CRON_SECRET;
-    const isInternal = !!cronSecret && request.headers.get('authorization') === `Bearer ${cronSecret}`;
-    const user = isInternal ? null : await getCurrentUser();
-    const userIsPremium = isInternal || (user ? await isPremium(user.id) : false);
+    const isInternal = isCronAuthorized(request);
+    // 'unknown' = the user or their subscription could not be read. It is served the
+    // free slice (never the full list) and is labelled, so the client can say so
+    // instead of silently presenting a paying subscriber as free.
+    let entitlement: Entitlement = isInternal ? 'premium' : 'free';
+    if (!isInternal) {
+      try {
+        const user = await getCurrentUser();
+        if (user) entitlement = (await isPremium(user.id)) ? 'premium' : 'free';
+      } catch (err) {
+        if (!(err instanceof EntitlementUnavailableError)) throw err;
+        entitlement = 'unknown';
+      }
+    }
+    const userIsPremium = entitlement === 'premium';
 
     // --- Yesterday's consensus with results ---
     if (dateParam === 'yesterday') {
-      return handleYesterday(sport, minCappers, userIsPremium);
+      return handleYesterday(sport, minCappers, userIsPremium, entitlement);
     }
 
     // --- Today's consensus (default) ---
@@ -126,10 +149,12 @@ export async function GET(request: Request) {
     logger.info('Consensus API', `Raw: ${rawPicks.length}, Filtered: ${todaysPicks.length}, Cappers: ${capperCount}, Consensus: ${consensus.length}, Premium: ${userIsPremium}`);
 
     // Free tier: cap results and hide detailed capper data
-    const responseConsensus = userIsPremium ? consensus : consensus.slice(0, FREE_TIER_LIMIT);
-    const responseTopOverall = userIsPremium ? formatted.topOverall : formatted.topOverall.slice(0, FREE_TIER_LIMIT);
+    const freeIds = freePickIds(formatted.filteredConsensus);
+    const isFree = (p: { id: string }) => freeIds.has(p.id);
+    const responseConsensus = userIsPremium ? consensus : consensus.filter(isFree);
+    const responseTopOverall = userIsPremium ? formatted.topOverall : formatted.topOverall.filter(isFree);
     const responseBySport = userIsPremium ? formatted.bySport : Object.fromEntries(
-      Object.entries(formatted.bySport).map(([s, picks]) => [s, picks.slice(0, FREE_TIER_LIMIT)])
+      Object.entries(formatted.bySport).map(([s, picks]) => [s, picks.filter(isFree)])
     );
 
     return NextResponse.json({
@@ -140,6 +165,8 @@ export async function GET(request: Request) {
       normalizedCount: todaysPicks.length,
       capperCount,
       consensusCount: consensus.length,
+      // Aggregate count only (no pick details), so the free tier can show the true number.
+      firePickCount: consensus.filter(p => p.capperCount >= 3).length,
       consensus: responseConsensus,
       topOverall: responseTopOverall,
       bySport: responseBySport,
@@ -149,6 +176,7 @@ export async function GET(request: Request) {
       allPicks: userIsPremium ? todaysPicks : [],
       // Tier metadata for the frontend to show upgrade prompts
       tier: userIsPremium ? 'premium' : 'free',
+      entitlement,
       freeTierLimit: FREE_TIER_LIMIT,
       totalConsensusCount: consensus.length,
     }, {
@@ -170,7 +198,7 @@ export async function GET(request: Request) {
 /**
  * Handle yesterday's consensus with W/L results
  */
-async function handleYesterday(sport: string | null, minCappers: number, userIsPremium: boolean = false) {
+async function handleYesterday(sport: string | null, minCappers: number, userIsPremium: boolean = false, entitlement: Entitlement = 'free') {
   try {
     const [rawPicks, scores] = await Promise.all([
       getAllYesterdayPicksFromSources(),
@@ -214,23 +242,27 @@ async function handleYesterday(sport: string | null, minCappers: number, userIsP
     const fireWinRate = fireGraded.length > 0 ? Math.round((fireWins / (fireWins + fireLosses)) * 100) : 0;
 
     const yesterdayStr = getYesterdayET();
+    const freeIds = freePickIds(formatted.filteredConsensus);
+    const isFree = (p: { id: string }) => userIsPremium || freeIds.has(p.id);
 
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       date: yesterdayStr,
       isYesterday: true,
+      entitlement,
       totalPicks: cleanPicks.length,
       consensusCount: consensus.length,
-      consensus: userIsPremium ? gradedConsensus : gradedConsensus.slice(0, FREE_TIER_LIMIT),
-      topOverall: (userIsPremium ? formatted.topOverall : formatted.topOverall.slice(0, FREE_TIER_LIMIT)).map(pick => ({
+      consensus: gradedConsensus.filter(isFree),
+      topOverall: formatted.topOverall.filter(isFree).map(pick => ({
         ...pick,
         result: gradeConsensus(pick, scores),
       })),
+      // Free tier: every list is limited to the same overall top picks (S3b).
       bySport: Object.fromEntries(
         Object.entries(formatted.bySport).map(([s, picks]) => [
           s,
-          picks.map(pick => ({ ...pick, result: gradeConsensus(pick, scores) })),
+          picks.filter(isFree).map(pick => ({ ...pick, result: gradeConsensus(pick, scores) })),
         ])
       ),
       stats: {
@@ -247,7 +279,8 @@ async function handleYesterday(sport: string | null, minCappers: number, userIsP
       },
     }, {
       headers: {
-        'Cache-Control': 'public, max-age=3600',
+        // The body depends on the caller's tier: never let a shared cache store it (S6).
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (error) {

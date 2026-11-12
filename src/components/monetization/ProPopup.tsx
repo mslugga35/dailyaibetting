@@ -7,6 +7,7 @@ import { X, Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/lib/hooks/use-subscription';
 import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
+import { TRIAL_CTA } from '@/lib/constants/subscription';
 
 export function ProPopup() {
   const [isVisible, setIsVisible] = useState(false);
@@ -84,7 +85,7 @@ export function ProPopup() {
             </div>
             <h3 className="text-2xl font-bold mb-2">Wait! Don&apos;t Miss Out</h3>
             <p className="text-lg font-semibold text-emerald-400 mb-2">
-              Try DailyAI Pro free for {TRIAL_DAYS} days
+              New members try DailyAI Pro free for {TRIAL_DAYS} days
             </p>
             <p className="text-muted-foreground text-sm">
               Then just {PRO_PRICE_DISPLAY}. Cancel anytime.
@@ -115,7 +116,7 @@ export function ProPopup() {
             >
               <Link href="/pro">
                 <Crown className="h-5 w-5 mr-2" />
-                Start Free {TRIAL_DAYS}-Day Trial
+                {TRIAL_CTA}
               </Link>
             </Button>
 

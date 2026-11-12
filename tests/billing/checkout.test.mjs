@@ -54,7 +54,7 @@ test('guest checkout reuses the existing Stripe customer for that email and bloc
 });
 
 test('B10: guest checkout endpoint must rate-limit repeated attempts from one client',
-  { todo: 'OPEN B10 — P0-BILL-3 guest endpoint rate limit' }, async () => {
+  async () => {
     setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
     const statuses = [];
     for (let i = 0; i < 15; i++) {
@@ -112,7 +112,7 @@ test('invalid bearer token is treated as anonymous (401 with guest checkout off)
 });
 
 test('B3: the placeholder row must persist the Stripe customer id, so a retried checkout reuses it',
-  { todo: "OPEN B3 — P0-BILL-3 placeholder writes a valid status and checks the error" }, async () => {
+  async () => {
     const u = bearerUser('u_retry');
     await checkout({ headers: u.headers }); // user abandons the Stripe page
     await checkout({ headers: u.headers }); // and tries again
@@ -122,7 +122,7 @@ test('B3: the placeholder row must persist the Stripe customer id, so a retried 
   });
 
 test('B1/B3: a PAYING user hitting checkout during a Supabase outage must not get a second subscription session',
-  { todo: 'OPEN B1 — P0-BILL-1 checkout fails closed when entitlement cannot be read' }, async () => {
+  async () => {
     const u = bearerUser('u_paying');
     seedSubscription({ userId: 'u_paying', status: 'active' });
     harness().db.outage();
@@ -132,10 +132,68 @@ test('B1/B3: a PAYING user hitting checkout during a Supabase outage must not ge
   });
 
 test('B11: a past_due subscriber must be sent to billing, not into a second subscription',
-  { todo: 'OPEN B11 — P0-BILL-3 duplicate guard covers past_due/unpaid' }, async () => {
+  async () => {
     const u = bearerUser('u_pd');
     const { customer } = seedSubscription({ userId: 'u_pd', status: 'past_due' });
     assert.ok(customer);
     await checkout({ headers: u.headers });
     assert.equal(harness().stripe.sessions.length, 0);
   });
+
+test('B1: checkout returns 503 and makes NO Stripe call (no customer, no session) when entitlement cannot be read', async () => {
+  const u = bearerUser('u_unknown_co');
+  harness().db.fail({ table: 'user_subscriptions', op: 'select' });
+  const callsBefore = harness().stripe.calls.length;
+  const res = await checkout({ headers: u.headers });
+  assert.equal(res.status, 503);
+  assert.equal(harness().stripe.calls.length, callsBefore, `stripe calls: ${harness().stripe.calls.slice(callsBefore).map((c) => c.method ?? c).join(',')}`);
+  assert.equal(stripeCalls('customers.create'), 0);
+  assert.equal(harness().stripe.sessions.length, 0);
+});
+
+test('B1: duplicate subscription rows for the user → 503, no Stripe call (cannot tell whether they already pay)', async () => {
+  const u = bearerUser('u_dup_co');
+  harness().db.seed('user_subscriptions', [
+    { user_id: 'u_dup_co', status: 'active', stripe_customer_id: 'cus_dup_c' },
+    { user_id: 'u_dup_co', status: 'inactive', stripe_customer_id: 'cus_dup_d' },
+  ]);
+  const callsBefore = harness().stripe.calls.length;
+  const res = await checkout({ headers: u.headers });
+  assert.equal(res.status, 503);
+  assert.equal(harness().stripe.calls.length, callsBefore);
+});
+
+test('trial: a returning subscriber (canceled before) gets NO new free trial; a first-time subscriber does', async () => {
+  const back = bearerUser('u_back');
+  seedSubscription({ userId: 'u_back', status: 'canceled' });
+  assert.equal((await checkout({ headers: back.headers })).status, 200);
+  assert.equal(harness().stripe.sessions.at(-1).subscription_data.trial_period_days, undefined, 'returning subscriber got another trial');
+  const fresh = bearerUser('u_first');
+  assert.equal((await checkout({ headers: fresh.headers })).status, 200);
+  assert.equal(harness().stripe.sessions.at(-1).subscription_data.trial_period_days, 7);
+});
+
+test('shared Stripe account: another product\'s subscription neither uses up the DailyAI trial nor blocks a DailyAI checkout', async () => {
+  setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
+  const h = harness();
+  const c = h.stripe.addCustomer({ email: 'coach@example.test' });
+  h.stripe.addSubscription({ customer: c.id, status: 'past_due', priceId: 'price_other_product' });
+  h.stripe.addSubscription({ customer: c.id, status: 'canceled', priceId: 'price_other_product' });
+  const res = await checkout({ body: { guestEmail: 'coach@example.test' }, ip: '192.0.2.78' });
+  assert.equal(res.status, 200, 'another product\'s past_due sub must not block DailyAI');
+  assert.equal(h.stripe.sessions.at(-1).subscription_data.trial_period_days, 7, 'first DailyAI subscription still gets the trial');
+  // ...while a DailyAI subscription on the same customer still counts
+  h.stripe.addSubscription({ customer: c.id, status: 'active' });
+  const again = await checkout({ body: { guestEmail: 'coach@example.test' }, ip: '192.0.2.79' });
+  assert.equal(again.status, 400);
+});
+
+test('trial: a guest whose email already had a subscription gets no new trial', async () => {
+  setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
+  const h = harness();
+  const c = h.stripe.addCustomer({ email: 'again@example.test' });
+  h.stripe.addSubscription({ customer: c.id, status: 'canceled' });
+  const res = await checkout({ body: { guestEmail: 'again@example.test' }, ip: '192.0.2.77' });
+  assert.equal(res.status, 200);
+  assert.equal(h.stripe.sessions.at(-1).subscription_data.trial_period_days, undefined);
+});

@@ -6,10 +6,13 @@ import { Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
 import { useSubscription } from '@/lib/context/subscription-context';
+import { TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
 
 export function HiddenBagCTA() {
-  const { isPro } = useSubscription();
-  if (isPro) return null; // Already a member — don't show the upgrade pitch.
+  const { isPro, loading } = useSubscription();
+  // Members don't see the pitch; neither does anyone whose plan is still loading or
+  // could not be verified (they may be paying).
+  if (isPro || loading) return null;
 
   return (
     <Card className="mt-8 bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border-emerald-200/20">
@@ -60,11 +63,11 @@ export function HiddenBagCTA() {
           <Button size="lg" className="bg-emerald-700 hover:bg-emerald-800 text-white mb-3" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
-              Try Pro Free for {TRIAL_DAYS} Days
+              {TRIAL_CTA}
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground">
-            {PRO_PRICE_DISPLAY} after trial. Cancel anytime.
+            {TRIAL_TERMS}
           </p>
         </div>
       </CardContent>

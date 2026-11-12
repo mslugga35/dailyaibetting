@@ -68,3 +68,12 @@ export function toEasternDate(utcDateStr: string): string {
 export function getCurrentYearET(): string {
   return getTodayET().split('-')[0];
 }
+
+/**
+ * First ET date of a "last N days" window that includes today (ET), e.g. N=7 on
+ * 2026-11-11 -> 2026-11-05. pick_date columns hold ET dates, so windows are ET too.
+ */
+export function windowStartET(days: number): string {
+  const [y, m, d] = getTodayET().split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - (Math.max(1, days) - 1))).toISOString().slice(0, 10);
+}

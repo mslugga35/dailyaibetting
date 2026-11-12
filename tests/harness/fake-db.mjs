@@ -23,6 +23,8 @@ export class FakeDb {
     this.tables = new Map();
     this.schemas = new Map();
     this.failures = [];
+    this.hangs = [];
+    this.abortSignals = [];
     this.log = [];
     this.rpcHandlers = new Map();
     this.maxRows = MAX_ROWS;
@@ -75,8 +77,28 @@ export class FakeDb {
     this.fail({ error: error || { message: 'TypeError: fetch failed (simulated Supabase outage)', code: '' } });
   }
 
+  /**
+   * Make matching calls never answer (a hung connection / statement). They settle
+   * only when the caller aborts them via .abortSignal(); then they reject with an
+   * AbortError. `times` = how many calls (default ∞). Cleared by restore().
+   */
+  hang({ table, op, times = Infinity } = {}) {
+    this.hangs.push({ table, op, remaining: times });
+  }
+
+  takeHang(table, op) {
+    for (const h of this.hangs) {
+      if ((h.table === undefined || h.table === table) && (h.op === undefined || h.op === op) && h.remaining > 0) {
+        h.remaining -= 1;
+        return true;
+      }
+    }
+    return false;
+  }
+
   restore() {
     this.failures = [];
+    this.hangs = [];
   }
 
   takeFailure(table, op) {
@@ -285,7 +307,11 @@ class QueryBuilder {
     this.options = {};
     this.returning = false;
     this.selectOpts = {};
+    this.signal = null;
   }
+
+  /** supabase-js `.abortSignal(signal)`: an aborted signal rejects the call with an AbortError. */
+  abortSignal(signal) { this.signal = signal; this.db.abortSignals.push(signal); return this; }
 
   select(cols = '*', opts = {}) {
     if (this.op === 'select') { this.selectOpts = opts; this.cols = parseColumns(cols); }
@@ -348,7 +374,19 @@ class QueryBuilder {
   }
 
   then(resolve, reject) {
-    return Promise.resolve().then(() => this.execute()).then(resolve, reject);
+    const signal = this.signal;
+    const abortError = () => Object.assign(new Error('This operation was aborted'), { name: 'AbortError' });
+    if (signal?.aborted) return Promise.reject(abortError()).then(resolve, reject);
+    if (this.db.takeHang(this.table, this.op)) {
+      this.db.log.push({ table: this.table, op: this.op, filters: clone(this.filters), key: this.client?.kind, hung: true });
+      return new Promise((_, rej) => {
+        if (signal) signal.addEventListener('abort', () => rej(abortError()), { once: true });
+      }).then(resolve, reject);
+    }
+    return new Promise((res, rej) => {
+      if (signal) signal.addEventListener('abort', () => rej(abortError()), { once: true });
+      Promise.resolve().then(() => this.execute()).then(res, rej);
+    }).then(resolve, reject);
   }
 
   execute() {

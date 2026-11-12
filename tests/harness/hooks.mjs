@@ -29,6 +29,7 @@ const BARE_REDIRECTS = {
 /** Next ships CJS without an exports map; ESM needs the explicit file. */
 const BARE_REWRITES = {
   'next/server': 'next/server.js',
+  'next/navigation': 'next/navigation.js',
 };
 
 /** Source files replaced by fakes (paths relative to src/, without extension). */

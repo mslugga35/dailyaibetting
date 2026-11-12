@@ -67,11 +67,47 @@ export function getClientIp(request: Request): string {
  * Returns a 429 JSON response when the client IP exceeds `max` requests per
  * `windowMs`, otherwise null (caller proceeds normally).
  */
-export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000): NextResponse | null {
-  if (isRateLimited(getClientIp(request), max, windowMs)) {
+export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, scope = ''): NextResponse | null {
+  // `scope` gives a route its own counter, so a strict limit (e.g. guest checkout)
+  // is not consumed by, and does not consume, another route's budget.
+  const key = scope ? `${scope}:${getClientIp(request)}` : getClientIp(request);
+  if (isRateLimited(key, max, windowMs)) {
     return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
   }
   return null;
+}
+
+// --- Cron / internal auth ---
+
+/** Constant-time string comparison (no early exit on the first differing char). */
+export function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Fail-closed cron auth (S5/S12). Returns a response to send when the request is
+ * NOT authorized, or null when it is. An unset or blank CRON_SECRET refuses
+ * everything (500, misconfigured) instead of letting everything through; the
+ * header must be exactly `Bearer <secret>` (a bare secret is not accepted).
+ */
+export function cronAuthGuard(request: Request): NextResponse | null {
+  const secret = process.env.CRON_SECRET ?? '';
+  if (!secret.trim()) {
+    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+  }
+  const header = request.headers.get('authorization') ?? '';
+  if (!safeEqual(header, `Bearer ${secret}`)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  return null;
+}
+
+/** True only for a correctly authenticated cron/internal caller (see cronAuthGuard). */
+export function isCronAuthorized(request: Request): boolean {
+  return cronAuthGuard(request) === null;
 }
 
 // --- Auth ---

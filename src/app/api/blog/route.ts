@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import harborPosts from '@/lib/harbor-posts.json';
-import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
+import { rateLimitGuard, parseIntParam, safeEqual } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'BLOG_API_KEY not configured' }, { status: 500 });
     }
 
-    if (apiKey !== expectedKey) {
+    if (typeof apiKey !== 'string' || !safeEqual(apiKey, expectedKey)) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

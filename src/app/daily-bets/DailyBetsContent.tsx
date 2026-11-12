@@ -28,6 +28,9 @@ import {
 import { formatMarkdown } from '@/lib/utils/format-markdown';
 import { useDailyBets } from '@/lib/hooks/use-daily-bets';
 import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
+import { UPGRADE_CTA } from '@/lib/constants/subscription';
 
 function Section({ value, viewAll, className, children }: {
   value: string;
@@ -214,6 +217,21 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
               </CardContent>
             </Card>
           </div>
+
+          {/* Free view: the server sent only the free picks (see /api/daily-bets). */}
+          {(data as { entitlement?: string }).entitlement === 'unknown' ? (
+            <EntitlementUnknownNotice />
+          ) : (data as { isLimited?: boolean }).isLimited ? (
+            <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-sm">
+                <span className="font-semibold">Free view:</span> today&apos;s top {(data as { freeTierLimit?: number }).freeTierLimit ?? 5} consensus picks.
+                Pro unlocks every pick, parlays built from the full slate, player props and MLB analysis.
+              </p>
+              <Link href="/pricing" className="shrink-0 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                {UPGRADE_CTA}
+              </Link>
+            </div>
+          ) : null}
 
           {/* Tab Navigation */}
           <Tabs defaultValue="overview" className="w-full">

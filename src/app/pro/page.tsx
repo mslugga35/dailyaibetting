@@ -8,6 +8,7 @@ import { Crown, Loader2, Zap, Target, BarChart3, Clock, Users } from 'lucide-rea
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import Link from 'next/link';
 import { useState } from 'react';
+import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
 
 const GUEST_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_GUEST_CHECKOUT_ENABLED === 'true';
 
@@ -154,11 +155,11 @@ export default function ProPage() {
       <Card className="border-emerald-500/30 mb-10">
         <CardContent className="p-8 text-center">
           <div className="mb-4">
-            <span className="text-5xl font-bold">$20</span>
-            <span className="text-muted-foreground">/month</span>
+            <span className="text-5xl font-bold">{PRO_PRICE_DISPLAY.split('/')[0]}</span>
+            <span className="text-muted-foreground">/{PRO_PRICE_DISPLAY.split('/')[1] ?? 'mo'}</span>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
-            Try free for 7 days. Cancel anytime.
+            {TRIAL_TERMS}
           </p>
 
           {user ? (
@@ -173,7 +174,7 @@ export default function ProPage() {
               ) : (
                 <Crown className="h-5 w-5 mr-2" />
               )}
-              Start Free 7-Day Trial
+              {TRIAL_CTA}
             </Button>
           ) : GUEST_CHECKOUT_ENABLED ? (
             <div className="w-full max-w-sm mx-auto">
@@ -197,7 +198,7 @@ export default function ProPage() {
                 ) : (
                   <Crown className="h-5 w-5 mr-2" />
                 )}
-                Start Free 7-Day Trial
+                {TRIAL_CTA}
               </Button>
               {guestError && <p className="text-sm text-red-400 mt-2">{guestError}</p>}
               <p className="text-xs text-muted-foreground mt-3">
@@ -213,7 +214,7 @@ export default function ProPage() {
             >
               <Link href="/login">
                 <Crown className="h-5 w-5 mr-2" />
-                Sign in to Start Free Trial
+                Sign in to Get Pro
               </Link>
             </Button>
           )}

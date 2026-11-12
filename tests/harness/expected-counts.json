@@ -1,13 +1,20 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
   "src/lib/consensus/team-mappings.test.ts": 35,
-  "tests/billing/checkout.test.mjs": 13,
-  "tests/billing/entitlement.test.mjs": 12,
-  "tests/billing/stripe-webhook.test.mjs": 33,
+  "tests/billing/checkout.test.mjs": 18,
+  "tests/billing/entitlement-client.test.mjs": 6,
+  "tests/billing/entitlement.test.mjs": 15,
+  "tests/billing/stripe-webhook.test.mjs": 41,
   "tests/data/bot-record.test.mjs": 1,
   "tests/data/grading.test.mjs": 12,
   "tests/data/metrics.test.mjs": 11,
-  "tests/harness-selftest.test.mjs": 26,
-  "tests/security/api-access.test.mjs": 16,
-  "tests/security/cron-auth.test.mjs": 26
+  "tests/data/performance.test.mjs": 7,
+  "tests/harness-selftest.test.mjs": 27,
+  "tests/security/admin.test.mjs": 8,
+  "tests/security/api-access.test.mjs": 19,
+  "tests/security/cron-auth.test.mjs": 27,
+  "tests/security/daily-bets.test.mjs": 7,
+  "tests/security/free-tier-enum.test.mjs": 2,
+  "tests/security/hardening.test.mjs": 6,
+  "tests/security/middleware.test.mjs": 13
 }

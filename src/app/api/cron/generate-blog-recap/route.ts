@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthGuard } from '@/lib/api-helpers';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
@@ -105,10 +106,8 @@ Requirements:
 
 export async function GET(req: NextRequest) {
   // Auth check
-  const secret = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = cronAuthGuard(req);
+  if (denied) return denied;
 
   const today = new Date();
   const dateStr = today.toLocaleDateString('en-US', {

@@ -212,7 +212,11 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     recent_form: recentForm,
     recent_win_pct: recentTotal > 0 ? Math.round((recentWins / recentTotal) * 1000) / 10 : 0,
     by_sport: bySport,
-    recent_picks: (picks || []).slice(0, 20).map((p: any) => ({
+    // Graded picks only: an ungraded (pending) pick is a live pick for a game that has
+    // not finished, and live picks are Pro-only (/api/picks). This route is public.
+    recent_picks: (picks || [])
+      .filter((p: any) => p.result && String(p.result).toLowerCase() !== 'pending')
+      .slice(0, 20).map((p: any) => ({
       id: p.id,
       // hb_picks stores posted_at / team / line - there is no date|game|pick column
       date: p.posted_at,

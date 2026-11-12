@@ -58,7 +58,7 @@ test('recovery: once Supabase is back, a paying user is premium again (no sticky
 });
 
 test('B1: a Supabase error must NOT be reported as "free / inactive" for a paying user',
-  { todo: 'OPEN B1 — P0-BILL-1 entitlement fails safe (explicit unknown state or throw)' }, async () => {
+  async () => {
     seedSubscription({ userId: 'u_out', status: 'active' });
     harness().db.outage();
     let result;
@@ -80,8 +80,38 @@ test('outage must never fail OPEN: a NON-paying user is not premium while Supaba
 });
 
 test('B1: a timeout on the entitlement read must not resolve isPremium() to a confident false',
-  { todo: 'OPEN B1 — P0-BILL-1' }, async () => {
+  async () => {
     seedSubscription({ userId: 'u_to', status: 'trialing' });
     harness().db.fail({ table: 'user_subscriptions', op: 'select', error: { message: 'canceling statement due to statement timeout', code: '57014' } });
     await assert.rejects(isPremium('u_to'));
   });
+
+const { EntitlementUnavailableError } = await import('../../src/lib/auth/subscription.ts');
+
+test('B1: a HUNG entitlement read times out: it rejects with EntitlementUnavailableError and the request is aborted', async () => {
+  seedSubscription({ userId: 'u_hang', status: 'active' });
+  harness().db.hang({ table: 'user_subscriptions', op: 'select' });
+  const t0 = Date.now();
+  await assert.rejects(getUserSubscription('u_hang', { timeoutMs: 50 }), (e) => e instanceof EntitlementUnavailableError && e.code === 'TIMEOUT');
+  assert.ok(Date.now() - t0 < 2000, 'the timeout decided, not the (never-answering) query');
+  const signals = harness().db.abortSignals;
+  assert.ok(signals.length >= 1, 'the entitlement query was given an abort signal');
+  assert.equal(signals.at(-1).aborted, true, 'the timed-out query was cancelled');
+  await assert.rejects(isPremium('u_hang', { timeoutMs: 50 }), EntitlementUnavailableError);
+});
+
+test('B1: a fast answer is not affected by the timeout, and no-row stays a confident free (PGRST116 is not an outage)', async () => {
+  seedSubscription({ userId: 'u_fast', status: 'trialing' });
+  assert.equal(await isPremium('u_fast', { timeoutMs: 1000 }), true);
+  assert.equal((await getUserSubscription('no_row_user', { timeoutMs: 1000 })).plan, 'free');
+  assert.equal(harness().db.abortSignals.at(-1).aborted, false, 'a completed read is not aborted');
+});
+
+test('B1: two subscription rows for one user are ambiguous: entitlement is unavailable, never "free" (PGRST116 is not trusted as no-row)', async () => {
+  harness().db.seed('user_subscriptions', [
+    { user_id: 'u_dup', status: 'active', stripe_customer_id: 'cus_dup_a' },
+    { user_id: 'u_dup', status: 'canceled', stripe_customer_id: 'cus_dup_b' },
+  ]);
+  await assert.rejects(getUserSubscription('u_dup'), (e) => e instanceof EntitlementUnavailableError && e.code === 'DUPLICATE');
+  await assert.rejects(isPremium('u_dup'), EntitlementUnavailableError);
+});

@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { cronAuthGuard } from '@/lib/api-helpers';
 import { generateAIPicks } from '@/lib/ai-picks/engine';
 
 export const dynamic = 'force-dynamic';
@@ -16,12 +17,9 @@ export const maxDuration = 120;
 export async function GET(request: Request) {
   const start = Date.now();
 
-  // Auth check
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // Auth check: fails closed when CRON_SECRET is unset/blank (paid model call + Discord post).
+  const denied = cronAuthGuard(request);
+  if (denied) return denied;
 
   try {
     const url = new URL(request.url);

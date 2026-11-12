@@ -25,6 +25,10 @@ function fresh() {
     authUsers: [],
     /** when true, every auth.getUser() fails like a network error. */
     authOutage: false,
+    /** @supabase/ssr auth.getUser() calls (middleware session refresh). */
+    ssrGetUserCalls: 0,
+    /** cookies the next ssr getUser() rotates in via cookies.setAll: [{ name, value, options }]. */
+    refreshCookies: null,
     /** calls into redirected engine modules: { name, args }. */
     moduleCalls: [],
   };

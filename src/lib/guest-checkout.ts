@@ -6,6 +6,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
+import { allowedPriceIds, hasDailyAiPrice } from '@/lib/stripe-prices';
 
 /** Feature flag — guest checkout is OFF unless explicitly enabled. */
 export function isGuestCheckoutEnabled(): boolean {
@@ -28,18 +29,35 @@ export async function findOrCreateStripeCustomer(stripe: Stripe, email: string):
   return created.id;
 }
 
+/** True when this Stripe customer has EVER had a DailyAI subscription (any status): no second free trial. */
+export async function hasEverSubscribed(stripe: Stripe, customerId: string): Promise<boolean> {
+  return (await dailyAiSubscriptions(stripe, customerId)).length > 0;
+}
+
 /**
- * True if this Stripe customer already has a subscription that is billing them
- * (active or trialing). Stripe lets you stack multiple subs on one customer, so
+ * The customer's DailyAI subscriptions (any status). The Stripe account is shared
+ * with other products and customers are matched by email, so another product's
+ * subscription must neither use up the DailyAI trial nor block a DailyAI checkout.
+ * With no price configured, every subscription counts (conservative).
+ */
+async function dailyAiSubscriptions(stripe: Stripe, customerId: string): Promise<Stripe.Subscription[]> {
+  const allowed = allowedPriceIds();
+  // One customer never holds anywhere near 100 subscriptions on this account.
+  const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 });
+  return subs.data.filter((sub) => allowed.size === 0 || hasDailyAiPrice(sub, allowed));
+}
+
+/**
+ * True when the customer already holds a subscription that is still alive:
+ * active, trialing, or in payment trouble (past_due / unpaid). A customer in
+ * payment trouble must fix their card in the billing portal, not buy a second
+ * subscription (B11). Stripe lets you stack multiple subs on one customer, so
  * without this guard a repeat checkout silently double-charges the same card
  * (this happened on 2026-05-29 — two live $20/mo subs on one customer).
  */
 export async function hasActiveSubscription(stripe: Stripe, customerId: string): Promise<boolean> {
-  for (const status of ['active', 'trialing'] as const) {
-    const subs = await stripe.subscriptions.list({ customer: customerId, status, limit: 1 });
-    if (subs.data.length > 0) return true;
-  }
-  return false;
+  const alive = new Set(['active', 'trialing', 'past_due', 'unpaid']);
+  return (await dailyAiSubscriptions(stripe, customerId)).some((s) => alive.has(s.status));
 }
 
 /**

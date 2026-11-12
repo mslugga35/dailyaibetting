@@ -65,6 +65,32 @@ test('fake DB fidelity: .single() on zero rows errors (PGRST116), zero-row UPDAT
   assert.equal(db.dump('user_subscriptions').length, 0, 'failed write leaves no row');
 });
 
+test('fake DB fidelity: .abortSignal() records the signal; an aborted call rejects with AbortError; a hung call settles only on abort', async () => {
+  const db = harness().db;
+  db.seed('user_subscriptions', [{ user_id: 'u_sig', status: 'active' }]);
+  // Normal call with a live signal: answers, signal recorded, not aborted.
+  const live = new AbortController();
+  const ok = await db.from('user_subscriptions').select('*').eq('user_id', 'u_sig').abortSignal(live.signal).single();
+  assert.equal(ok.data.status, 'active');
+  assert.equal(db.abortSignals.at(-1), live.signal);
+  // Already-aborted signal: rejects with AbortError.
+  const pre = new AbortController(); pre.abort();
+  await assert.rejects(Promise.resolve(db.from('user_subscriptions').select('*').abortSignal(pre.signal)), (e) => e.name === 'AbortError');
+  // Hung call: no answer until aborted, then AbortError.
+  db.hang({ table: 'user_subscriptions', op: 'select', times: 1 });
+  const ctl = new AbortController();
+  let settled = false;
+  const p = db.from('user_subscriptions').select('*').abortSignal(ctl.signal).then(() => { settled = true; }, (e) => { settled = true; throw e; });
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(settled, false, 'a hung call must not answer on its own');
+  ctl.abort();
+  await assert.rejects(p, (e) => e.name === 'AbortError');
+  // times: 1 — the next call answers normally; restore() clears hangs.
+  assert.equal((await db.from('user_subscriptions').select('*').eq('user_id', 'u_sig')).data.length, 1);
+  db.hang({}); db.restore();
+  assert.equal((await db.from('user_subscriptions').select('*').eq('user_id', 'u_sig')).data.length, 1);
+});
+
 test('fake DB fidelity: unpaginated select is capped at 1000 rows; range() pages past it', async () => {
   const db = harness().db;
   db.seed('t', Array.from({ length: 1500 }, (_, i) => ({ n: i })));

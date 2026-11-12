@@ -4,6 +4,7 @@
 // Schedule: Daily at 6 AM UTC (see vercel.json)
 
 import { NextResponse } from 'next/server';
+import { cronAuthGuard } from '@/lib/api-helpers';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Force dynamic rendering
@@ -272,12 +273,8 @@ export async function GET(request: Request) {
   
   try {
     // Verify cron secret (optional security)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = cronAuthGuard(request);
+    if (denied) return denied;
     
     const db = getSupabase();
     if (!db) {

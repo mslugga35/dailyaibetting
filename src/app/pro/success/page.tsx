@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Crown, ArrowRight, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
 
 function SuccessContent() {
   const params = useSearchParams();
@@ -41,7 +42,7 @@ function SuccessContent() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Welcome to Pro!</h1>
         <p className="text-muted-foreground mb-6">
-          You now have full access to all premium features. Your 7-day free trial has started.
+          You now have full access to all premium features. If this is your first DailyAI subscription, your {TRIAL_DAYS}-day free trial has started and you won&apos;t be charged until it ends.
         </p>
         <div className="space-y-3">
           <Button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white" asChild>

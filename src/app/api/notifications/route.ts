@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
+import { rateLimitGuard, parseIntParam, cronAuthGuard } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -137,11 +137,8 @@ function getFireEmoji(count: number): string {
 export async function POST(request: Request) {
   try {
     // Auth check — require CRON_SECRET
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = cronAuthGuard(request);
+    if (denied) return denied;
 
     const body = await request.json();
     const { platform, webhookUrl } = body;
@@ -156,12 +153,18 @@ export async function POST(request: Request) {
     // Validate webhook URL — only allow Discord and Telegram domains.
     // Exact host or true subdomain match only — endsWith() alone would let
     // "evildiscord.com" or "api.telegram.org.attacker.com" through.
-    const allowedHosts = ['discord.com', 'discordapp.com', 'api.telegram.org'];
-    const hostAllowed = (host: string) =>
-      allowedHosts.some(h => host === h || host.endsWith(`.${h}`));
+    // Each platform is pinned to its own host AND webhook path: a CRON_SECRET holder
+    // cannot point this at an arbitrary endpoint on those domains or elsewhere.
+    const RULES: Record<string, { hosts: string[]; path: RegExp }> = {
+      discord: { hosts: ['discord.com', 'discordapp.com'], path: /^\/api\/webhooks\/\d+\/[\w-]+\/?$/ },
+      telegram: { hosts: ['api.telegram.org'], path: /^\/bot\d+:[\w-]+\/sendMessage$/ },
+    };
+    const rule = RULES[String(platform)];
     try {
       const url = new URL(webhookUrl);
-      if (url.protocol !== 'https:' || !hostAllowed(url.hostname)) {
+      const ok = !!rule && url.protocol === 'https:' && url.port === '' && !url.username && !url.password
+        && rule.hosts.includes(url.hostname) && rule.path.test(url.pathname);
+      if (!ok) {
         return NextResponse.json(
           { success: false, error: 'Invalid webhook URL — only Discord and Telegram allowed' },
           { status: 400 }
@@ -185,6 +188,7 @@ export async function POST(request: Request) {
     if (platform === 'discord') {
       const discordRes = await fetch(webhookUrl, {
         method: 'POST',
+        redirect: 'error', // never follow a redirect off the allow-listed endpoint
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data.formatted),
       });
@@ -197,6 +201,7 @@ export async function POST(request: Request) {
       // https://api.telegram.org/bot<TOKEN>/sendMessage?chat_id=<CHAT_ID>
       const telegramRes = await fetch(webhookUrl, {
         method: 'POST',
+        redirect: 'error',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: data.formatted,

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
+import { rateLimitGuard, parseIntParam, cronAuthGuard, isCronAuthorized, resolveUser } from '@/lib/api-helpers';
+import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
+import { isAdminUser } from '@/lib/auth/admin';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -20,7 +22,35 @@ function getSupabase(): SupabaseClient | null {
   return supabase;
 }
 
+import { windowStartET } from '@/lib/utils/date';
 export const dynamic = 'force-dynamic';
+
+/** PostgREST caps an unpaginated select at 1000 rows; page past it (bounded). */
+const PAGE = 1000;
+const MAX_WINDOW_ROWS = 10_000;
+
+/** "Last N days" = N ET calendar dates including today (pick_date is an ET date). */
+function daysAgoISO(days: number): string {
+  return windowStartET(days);
+}
+
+/** Exact WIN/LOSS counts in SQL (count, no rows transferred), so the record is never truncated (M4). */
+async function countRecord(db: SupabaseClient, sinceDate: string | null) {
+  const count = async (result: 'WIN' | 'LOSS') => {
+    let q = db
+      .from('consensus_results')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_fire', true)
+      .eq('result', result);
+    if (sinceDate) q = q.gte('pick_date', sinceDate);
+    const { count: n, error } = await q;
+    if (error) throw error;
+    return n ?? 0;
+  };
+  const [wins, losses] = await Promise.all([count('WIN'), count('LOSS')]);
+  const total = wins + losses;
+  return { wins, losses, total, winPct: total > 0 ? Math.round((wins / total) * 1000) / 10 : 0 };
+}
 
 // GET - Fetch results and performance stats
 export async function GET(request: Request) {
@@ -53,19 +83,40 @@ export async function GET(request: Request) {
     let error;
 
     switch (view) {
-      case 'recent':
-        // Recent graded picks
-        const query = db
-          .from('consensus_results')
-          .select('*')
-          .neq('result', 'PENDING')
-          .order('pick_date', { ascending: false })
-          .limit(50);
-
-        if (sport) query.eq('sport', sport);
-
-        ({ data, error } = await query);
+      case 'recent': {
+        // Recent graded picks, newest first. With ?days=N: EVERY graded pick in that
+        // window (paged past PostgREST's 1000-row cap, bounded), not the first 50 (M5).
+        const windowed = searchParams.has('days');
+        if (!windowed) {
+          let query = db
+            .from('consensus_results')
+            .select('*')
+            .neq('result', 'PENDING')
+            .order('pick_date', { ascending: false })
+            .limit(50);
+          if (sport) query = query.eq('sport', sport);
+          ({ data, error } = await query);
+          break;
+        }
+        const rows: unknown[] = [];
+        for (let from = 0; from < MAX_WINDOW_ROWS; from += PAGE) {
+          let page = db
+            .from('consensus_results')
+            .select('*')
+            .neq('result', 'PENDING')
+            .gte('pick_date', daysAgoISO(days))
+            .order('pick_date', { ascending: false })
+            .order('id', { ascending: false })
+            .range(from, from + PAGE - 1);
+          if (sport) page = page.eq('sport', sport);
+          const res = await page;
+          if (res.error) { error = res.error; break; }
+          rows.push(...(res.data || []));
+          if (!res.data || res.data.length < PAGE) break;
+        }
+        data = rows;
         break;
+      }
 
       case 'daily':
         // Daily summary
@@ -90,53 +141,50 @@ export async function GET(request: Request) {
           .select('*'));
         break;
 
-      case 'pending':
-        // Pending picks to grade
+      case 'pending': {
+        // Pending picks are TODAY's ungraded picks: premium data. Only the grading cron
+        // or a signed-in Pro user (admin grading page) may read them.
+        if (!isCronAuthorized(request)) {
+          const user = await resolveUser(request);
+          if (!user) return NextResponse.json({ success: false, error: 'Sign in required' }, { status: 401 });
+          if (!isAdminUser(user)) try {
+            if (!(await isPremium(user.id))) {
+              return NextResponse.json({ success: false, error: 'Premium subscription required' }, { status: 403 });
+            }
+          } catch (err) {
+            if (!(err instanceof EntitlementUnavailableError)) throw err;
+            return NextResponse.json({ success: false, error: 'Could not verify subscription' }, { status: 503 });
+          }
+        }
         ({ data, error } = await db
           .from('consensus_results')
           .select('*')
           .eq('result', 'PENDING')
           .order('pick_date', { ascending: false }));
         break;
+      }
 
-      case 'stats':
-        // Overall stats for social proof
-        const [totalRes, recentRes] = await Promise.all([
+      case 'stats': {
+        // Overall stats for social proof. Counted in SQL so the record covers every
+        // graded pick (M4); the streak reads the most recent picks first (M7).
+        const since30 = daysAgoISO(30);
+        const [allTime, last30Days, streakRes] = await Promise.all([
+          countRecord(db, null),
+          countRecord(db, since30),
           db
             .from('consensus_results')
-            .select('result')
-            .eq('is_fire', true)
-            .neq('result', 'PENDING'),
-          db
-            .from('consensus_results')
-            .select('result')
+            .select('result, pick_date')
             .eq('is_fire', true)
             .neq('result', 'PENDING')
-            .gte('pick_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+            .gte('pick_date', since30)
+            .order('pick_date', { ascending: false })
+            .order('id', { ascending: false })
+            .limit(500),
         ]);
-
-        const allTime = totalRes.data || [];
-        const recent = recentRes.data || [];
-
-        const calcStats = (picks: { result: string }[]) => {
-          const wins = picks.filter(p => p.result === 'WIN').length;
-          const losses = picks.filter(p => p.result === 'LOSS').length;
-          const total = wins + losses;
-          return {
-            wins,
-            losses,
-            total,
-            winPct: total > 0 ? Math.round((wins / total) * 1000) / 10 : 0
-          };
-        };
-
-        data = {
-          allTime: calcStats(allTime),
-          last30Days: calcStats(recent),
-          streak: calculateStreak(recent)
-        };
-        error = totalRes.error || recentRes.error;
+        if (streakRes.error) throw streakRes.error;
+        data = { allTime, last30Days, streak: calculateStreak(streakRes.data || []) };
         break;
+      }
 
       default:
         return NextResponse.json({ success: false, error: 'Invalid view' }, { status: 400 });
@@ -150,7 +198,8 @@ export async function GET(request: Request) {
       data
     });
   } catch (error) {
-    console.error('Results API error:', error);
+    const e = error as { code?: string; message?: string } | null;
+    console.error('Results API error:', e?.code || '(no code)', e?.message || String(error));
     return NextResponse.json(
       { success: false, error: 'Failed to fetch results' },
       { status: 500 }
@@ -163,13 +212,8 @@ export async function GET(request: Request) {
 // track record can't be forged.
 export async function POST(request: Request) {
   try {
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      return NextResponse.json({ success: false, error: 'Service misconfigured' }, { status: 500 });
-    }
-    if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = cronAuthGuard(request);
+    if (denied) return denied;
 
     const db = getSupabase();
     if (!db) {
@@ -268,9 +312,10 @@ export async function POST(request: Request) {
 function calculateStreak(picks: { result: string }[]): { type: string; count: number } {
   if (picks.length === 0) return { type: 'none', count: 0 };
 
-  const sorted = [...picks].sort((a, b) => 0); // Already sorted by date
+  // Callers pass picks newest first (ORDER BY pick_date DESC in SQL).
+  const sorted = picks;
   let streak = 0;
-  const firstResult = sorted[0]?.result;
+  const firstResult = sorted.find((p) => p.result === 'WIN' || p.result === 'LOSS')?.result;
 
   if (firstResult !== 'WIN' && firstResult !== 'LOSS') {
     return { type: 'none', count: 0 };

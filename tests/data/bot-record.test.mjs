@@ -5,7 +5,7 @@
  */
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, harness, body, quietly } from '../harness/helpers.mjs';
+import { setup, harness, body, quietly, req } from '../harness/helpers.mjs';
 
 const { GET } = await import('../../src/app/api/daily-bets/route.ts');
 
@@ -20,7 +20,7 @@ beforeEach(() => {
 test('botRecord.winPct is the numeric win_pct column of ai_picks_overall', async () => {
   // 10-5 would derive 66.7; the view says 58.25, and that is what must be shown.
   harness().db.seed('ai_picks_overall', [{ wins: 10, losses: 5, pushes: 2, pending: 3, win_pct: 58.25 }]);
-  const b = await quietly(async () => body(await GET()));
+  const b = await quietly(async () => body(await GET(req('/api/daily-bets'))));
   assert.equal(b.success, true);
   assert.equal(typeof b.botRecord.winPct, 'number');
   assert.equal(b.botRecord.winPct, 58.25);

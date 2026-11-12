@@ -30,7 +30,7 @@ function getFireEmoji(count: number): string {
 const SPORT_ORDER = ['NCAAF', 'NCAAB', 'NFL', 'NBA', 'NHL', 'MLB', 'WNBA'];
 
 export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayResultsProps) {
-  const { isPro } = useSubscription();
+  const { isPro, loading: planLoading } = useSubscription();
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -142,8 +142,8 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
         </CardContent>
       </Card>
 
-      {/* Pro CTA — hidden for members */}
-      {!isPro && (
+      {/* Pro CTA — hidden for members and while the plan is loading/unverified */}
+      {!isPro && !planLoading && (
         <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-900/20 to-blue-900/20">
           <CardContent className="p-6 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">

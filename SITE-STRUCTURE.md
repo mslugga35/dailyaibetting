@@ -36,7 +36,6 @@ dailyaibetting/
 │   │   │   ├── cappers/route.ts      # GET /api/cappers (capper list)
 │   │   │   ├── blog/route.ts         # GET /api/blog (blog posts)
 │   │   │   ├── daily-bets/route.ts   # GET /api/daily-bets
-│   │   │   ├── consensus-sql/route.ts# SQL consensus builder
 │   │   │   ├── results/route.ts      # GET /api/results (grading)
 │   │   │   ├── cron/grade-picks/     # Scheduled job: grade yesterday's picks
 │   │   │   ├── notifications/route.ts# Notification system
@@ -346,7 +345,6 @@ const sports = [
 | `/api/daily-bets` | AI curated picks | GET |
 | `/api/results` | Grading results | POST |
 | `/api/cron/grade-picks` | Scheduled grading job | POST |
-| `/api/consensus-sql` | SQL-based consensus | GET |
 | `/api/notifications` | Notification system | POST |
 | `/api/debug-schedule` | ESPN schedule debug | GET |
 

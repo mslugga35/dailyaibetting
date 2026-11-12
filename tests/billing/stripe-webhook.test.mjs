@@ -191,7 +191,7 @@ test('guest email failure does not fail the webhook (access already granted)', a
 });
 
 test('B2: a subscription checkout for ANOTHER product on the shared Stripe account must not create a DailyAI user or grant Pro',
-  { todo: 'OPEN B2 — P0-BILL-2 webhook price allowlist' }, async () => {
+  async () => {
     setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
     captureEmails();
     const sub = newStripeSub({ status: 'active', priceId: FOREIGN_PRICE_ID, email: 'other-product-buyer@example.test' });
@@ -202,7 +202,7 @@ test('B2: a subscription checkout for ANOTHER product on the shared Stripe accou
   });
 
 test('B2: with GUEST_CHECKOUT_ENABLED off, the webhook must not provision guest accounts',
-  { todo: 'OPEN B2 — P0-BILL-2 webhook honours the guest flag' }, async () => {
+  async () => {
     captureEmails();
     const sub = newStripeSub({ status: 'active', email: 'noflag@example.test' });
     await deliver(checkoutCompletedEvent({ sub, customerEmail: 'noflag@example.test' }));
@@ -211,7 +211,7 @@ test('B2: with GUEST_CHECKOUT_ENABLED off, the webhook must not provision guest 
   });
 
 test('B4: checkout.session.completed for an "incomplete" subscription must not be recorded as active',
-  { todo: 'OPEN B4 — P0-BILL-2 status mapping on checkout' }, async () => {
+  async () => {
     const sub = newStripeSub({ status: 'incomplete' });
     await deliver(checkoutCompletedEvent({ sub, userId: 'u10' }));
     const row = rowFor('u10');
@@ -222,7 +222,7 @@ test('B4: checkout.session.completed for an "incomplete" subscription must not b
 // ---------------------------------------------------------------- duplicates / ordering
 
 test('B5: a redelivered guest checkout event must send the magic-link email only once',
-  { todo: 'OPEN B5 — P0-BILL-2 event-id idempotency ledger' }, async () => {
+  async () => {
     setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
     const emails = captureEmails();
     const sub = newStripeSub({ status: 'trialing', email: 'dup@example.test' });
@@ -233,7 +233,7 @@ test('B5: a redelivered guest checkout event must send the magic-link email only
   });
 
 test('B5: a stale subscription.updated(active) arriving AFTER subscription.deleted must not re-grant Pro',
-  { todo: 'OPEN B5 — P0-BILL-2 ordering guard (re-read Stripe or compare event.created)' }, async () => {
+  async () => {
     const { sub } = seedSubscription({ userId: 'u11', status: 'active' });
     const staleUpdate = subscriptionEvent('customer.subscription.updated', { ...sub, status: 'active' });
     harness().stripe.subscriptions.find((s) => s.id === sub.id).status = 'canceled'; // Stripe's truth
@@ -258,7 +258,7 @@ test('B5: a stale subscription.updated(active) arriving AFTER subscription.delet
   });
 
 test('B6: subscription.updated for a subscription with no DB row must not be acknowledged as success',
-  { todo: 'OPEN B6 — P0-BILL-2 zero-row update is an error' }, async () => {
+  async () => {
     const sub = newStripeSub({ status: 'past_due' });
     const early = subscriptionEvent('customer.subscription.updated', sub);
     const res = await deliver(early);
@@ -296,7 +296,7 @@ test('duplicate subscription.updated and subscription.deleted deliveries are ide
 });
 
 test('B5: checkout.session.completed redelivered AFTER a later subscription.updated(past_due) must not overwrite it with active',
-  { todo: "OPEN B5 — P0-BILL-2 ordering guard: write Stripe's current status, not the event payload" }, async () => {
+  async () => {
     const sub = newStripeSub({ status: 'active' });
     await deliver(checkoutCompletedEvent({ sub, userId: 'u15' }));
     harness().stripe.subscriptions.find((s) => s.id === sub.id).status = 'past_due';
@@ -319,3 +319,78 @@ test('guest partial failure: DB write fails once → 500; redelivery completes w
   assert.equal(harness().db.dump('user_subscriptions').length, 1);
 });
 
+test('B2: subscription.updated / deleted for ANOTHER product are acknowledged and change nothing (no retry storm, no write)', async () => {
+  const foreign = newStripeSub({ status: 'past_due', priceId: FOREIGN_PRICE_ID });
+  const before = writes().length;
+  assert.equal((await deliver(subscriptionEvent('customer.subscription.updated', foreign))).status, 200);
+  assert.equal((await deliver(subscriptionEvent('customer.subscription.deleted', { ...foreign, status: 'canceled' }))).status, 200);
+  assert.equal(writes().length, before);
+});
+
+test('B2: with no DailyAI price configured the webhook refuses (non-2xx, Stripe retries) instead of granting blindly', async () => {
+  setup({ env: { STRIPE_PRICE_ID: '' } });
+  const sub = newStripeSub({ status: 'active' });
+  const res = await deliver(checkoutCompletedEvent({ sub, userId: 'u_noprice' }));
+  assert.equal(res.status, 500);
+  assert.equal(rowFor('u_noprice'), undefined);
+});
+
+test('B2: an older DailyAI price listed in STRIPE_ALLOWED_PRICE_IDS is still honoured (existing subscribers keep Pro)', async () => {
+  setup({ env: { STRIPE_ALLOWED_PRICE_IDS: ` ${FOREIGN_PRICE_ID} ,price_unused` } });
+  const legacy = newStripeSub({ status: 'active', priceId: FOREIGN_PRICE_ID });
+  assert.equal((await deliver(checkoutCompletedEvent({ sub: legacy, userId: 'u_legacy' }))).status, 200);
+  assert.equal(await isPremium('u_legacy'), true);
+});
+
+test('H1: a late/redelivered checkout for an OLD subscription must not replace the newer live subscription of the user', async () => {
+  const oldSub = newStripeSub({ status: 'active', email: 'h1@example.test' });
+  await deliver(checkoutCompletedEvent({ sub: oldSub, userId: 'u_h1' }));
+  harness().stripe.subscriptions.find((x) => x.id === oldSub.id).status = 'canceled';
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...oldSub, status: 'canceled' }));
+  const newSub = newStripeSub({ status: 'active', email: 'h1@example.test' });
+  await deliver(checkoutCompletedEvent({ sub: newSub, userId: 'u_h1' }));
+  assert.equal(rowFor('u_h1').stripe_subscription_id, newSub.id);
+  // The OLD checkout arrives again (Stripe retry / late delivery): Stripe says canceled.
+  const res = await deliver(checkoutCompletedEvent({ sub: oldSub, userId: 'u_h1' }));
+  assert.equal(res.status, 200);
+  assert.equal(rowFor('u_h1').stripe_subscription_id, newSub.id, 'old subscription replaced the new one');
+  assert.equal(rowFor('u_h1').status, 'active');
+  assert.equal(await isPremium('u_h1'), true);
+});
+
+test('H1: a second LIVE subscription for a user who already has one is not recorded over it (flagged for reconcile)', async () => {
+  const first = newStripeSub({ status: 'active' });
+  await deliver(checkoutCompletedEvent({ sub: first, userId: 'u_h1b' }));
+  const second = newStripeSub({ status: 'trialing' });
+  assert.equal((await deliver(checkoutCompletedEvent({ sub: second, userId: 'u_h1b' }))).status, 200);
+  assert.equal(rowFor('u_h1b').stripe_subscription_id, first.id);
+});
+
+test('H1: when the deletion of the old subscription was missed, a new live subscription replaces the row Stripe already ended', async () => {
+  const s1 = newStripeSub({ status: 'active' });
+  await deliver(checkoutCompletedEvent({ sub: s1, userId: 'u_h1c' }));
+  // Stripe canceled S1 but the customer.subscription.deleted event never arrived: the row still says active.
+  harness().stripe.subscriptions.find((x) => x.id === s1.id).status = 'canceled';
+  const s2 = newStripeSub({ status: 'active' });
+  assert.equal((await deliver(checkoutCompletedEvent({ sub: s2, userId: 'u_h1c' }))).status, 200);
+  assert.equal(rowFor('u_h1c').stripe_subscription_id, s2.id, 'stale S1 kept; the paying user would lose access when S1 is reconciled');
+  assert.equal(await isPremium('u_h1c'), true);
+});
+
+test('M1: a tracked subscription is still updated after STRIPE_PRICE_ID is rotated (cancellation is never ignored)', async () => {
+  const { sub } = seedSubscription({ userId: 'u_rot', status: 'active' }); // on the original DailyAI price
+  setup({ env: { STRIPE_PRICE_ID: 'price_rotated_new' } });
+  harness().db.seed('user_subscriptions', [{ user_id: 'u_rot', status: 'active', stripe_subscription_id: sub.id, stripe_customer_id: sub.customer }]);
+  harness().stripe.subscriptions.push(JSON.parse(JSON.stringify(sub)));
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...sub, status: 'canceled' }));
+  assert.equal(rowFor('u_rot').status, 'canceled');
+  assert.equal(await isPremium('u_rot'), false);
+});
+
+test('B6: a live DailyAI subscription with no row is retried only while checkout may still arrive, then acknowledged', async () => {
+  const sub = newStripeSub({ status: 'active' });
+  harness().stripe.subscriptions.find((x) => x.id === sub.id).created = Math.floor(Date.now() / 1000) - 2 * 3600;
+  const res = await deliver(subscriptionEvent('customer.subscription.updated', sub));
+  assert.equal(res.status, 200, 'an old orphan is acknowledged (no multi-day retry storm)');
+  assert.equal(harness().db.dump('user_subscriptions').length, 0);
+});

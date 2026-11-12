@@ -4,7 +4,7 @@
  */
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, harness, req, body, quietly } from '../harness/helpers.mjs';
+import { setup, harness, req, body, quietly, cookieUser, seedSubscription } from '../harness/helpers.mjs';
 import { MAX_ROWS } from '../harness/fake-db.mjs';
 
 const { GET } = await import('../../src/app/api/results/route.ts');
@@ -56,21 +56,15 @@ test('stats: Supabase outage → 500 with a generic error (not zeros dressed up 
 });
 
 test('M4: the all-time record must count EVERY graded pick, not the first 1000 rows',
-  { todo: 'OPEN M4 — P0-DATA-1 aggregate in SQL (count/RPC) instead of selecting rows' }, async () => {
+  async () => {
     seed([['WIN', 60, 1000], ['LOSS', 50, 500]]); // 1500 graded: true record 1000-500 (66.7%)
     const b = await results('?view=stats');
     assert.equal(b.data.allTime.total, 1500, `displayed ${b.data.allTime.wins}-${b.data.allTime.losses} (${b.data.allTime.winPct}%)`);
     assert.equal(b.data.allTime.winPct, 66.7);
   });
 
-test('PINNED current behaviour (delete when M4 is fixed): today the capped query shows a perfect 1000-0 record for a 1000-500 history', async () => {
-  seed([['WIN', 60, 1000], ['LOSS', 50, 500]]);
-  const b = await results('?view=stats');
-  assert.deepEqual(b.data.allTime, { wins: 1000, losses: 0, total: 1000, winPct: 100 });
-});
-
 test('M7: the streak must be computed from the MOST RECENT picks',
-  { todo: 'OPEN M7 — P0-DATA-1 order by pick_date desc before computing the streak' }, async () => {
+  async () => {
     // Non-monotonic insertion order: only a real pick_date DESC sort gives "winning 2"
     // (insertion order gives winning 1; a reversed array gives losing 1).
     seed([['WIN', 5, 1], ['LOSS', 9, 1], ['WIN', 1, 1], ['LOSS', 8, 1]]);
@@ -79,7 +73,7 @@ test('M7: the streak must be computed from the MOST RECENT picks',
   });
 
 test('M5: the recent view used for /stats windows must not silently stop at 50 rows',
-  { todo: 'OPEN M5 — P0-DATA-1 server-side windowed aggregates for /stats' }, async () => {
+  async () => {
     seed([['WIN', 2, 80], ['LOSS', 3, 40]]);
     const b = await results('?view=recent&days=30');
     assert.equal(b.data.length, 120, `returned ${b.data.length} of 120 graded picks in the window`);
@@ -94,4 +88,23 @@ test('recent view is ordered newest first and excludes PENDING', async () => {
 test('invalid view → 400', async () => {
   const res = await quietly(() => GET(req('/api/results?view=../../etc')));
   assert.equal(res.status, 400);
+});
+
+test('pending picks (today, ungraded = premium data) are not public: anonymous 401, non-Pro 403, Pro and the grading cron 200', async () => {
+  harness().db.seed('consensus_results', [{ pick_date: day(0), sport: 'NBA', bet: 'Lakers ML', result: 'PENDING', is_fire: true }]);
+  const get = (headers) => quietly(() => GET(req('/api/results?view=pending', { headers })));
+  const anon = await get();
+  assert.equal(anon.status, 401);
+  assert.doesNotMatch(JSON.stringify(await body(anon)), /Lakers/);
+  cookieUser('u_pend_free');
+  seedSubscription({ userId: 'u_pend_free', status: 'canceled' });
+  assert.equal((await get()).status, 403);
+  setup();
+  harness().db.seed('consensus_results', [{ pick_date: day(0), sport: 'NBA', bet: 'Lakers ML', result: 'PENDING', is_fire: true }]);
+  assert.equal((await get({ Authorization: `Bearer ${process.env.CRON_SECRET}` })).status, 200);
+  cookieUser('u_pend_pro');
+  seedSubscription({ userId: 'u_pend_pro', status: 'active' });
+  const pro = await get();
+  assert.equal(pro.status, 200);
+  assert.match(JSON.stringify(await body(pro)), /Lakers/);
 });
