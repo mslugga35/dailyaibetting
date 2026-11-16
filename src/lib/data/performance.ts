@@ -92,6 +92,19 @@ function withOther(rows: Array<{ sport: string } & Record3>, total: Record3) {
   return other.wins + other.losses + other.pushes > 0 ? [...rows, { sport: 'Other', ...other }] : rows;
 }
 
+let allTimeCache: { at: number; value: Record3 } | null = null;
+const ALL_TIME_TTL_MS = 60_000;
+
+/** All-time fire record only (3 count queries), cached briefly: the homepage badge needs nothing else. */
+export async function getAllTimeRecord(): Promise<Record3 | null> {
+  if (allTimeCache && Date.now() - allTimeCache.at < ALL_TIME_TTL_MS) return allTimeCache.value;
+  const db = serviceClient();
+  if (!db) return null;
+  const value = Object.freeze(await countRecord(db, {}));
+  allTimeCache = { at: Date.now(), value };
+  return value;
+}
+
 export async function getVerifiedPerformance(db: SupabaseClient | null = serviceClient()): Promise<Performance> {
   if (!db) {
     return { configured: false, allTime: EMPTY, last30: EMPTY, last7: EMPTY, bySport: [], byCapperCount: [], firstGradedDate: null, lastGradedDate: null, recent: [] };

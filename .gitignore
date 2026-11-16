@@ -50,3 +50,6 @@ supabase/.temp/
 
 # Generated commit info (deploy verification)
 public/.well-known/commit-info.json
+
+# local Stripe/Supabase test harness + TEST credentials (see local-test/STRIPE-TEST-SETUP.md)
+/local-test/

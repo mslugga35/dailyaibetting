@@ -34,8 +34,12 @@ export async function authHeaders(): Promise<HeadersInit> {
   // Forward the visitor's IP so the API's per-IP rate limit counts this visitor, not
   // the server itself (otherwise every SSR render shares one bucket and the page
   // goes blank for everyone once it fills).
-  const xff = (await headers()).get('x-forwarded-for');
+  const h = await headers();
+  const xff = h.get('x-forwarded-for');
   if (xff) out['x-forwarded-for'] = xff;
+  // Real visitor behind Cloudflare (trusted by getClientIp only when the peer is Cloudflare).
+  const cf = h.get('cf-connecting-ip');
+  if (cf) out['cf-connecting-ip'] = cf;
   // Our own render, not the visitor's API traffic: skip the per-IP limit (only that).
   const ssr = internalSsrToken();
   if (ssr) out[INTERNAL_SSR_HEADER] = ssr;

@@ -126,7 +126,9 @@ function periodFields(subscription: Stripe.Subscription) {
     price_id: subscription.items.data[0]?.price.id,
     current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-    cancel_at_period_end: subscription.cancel_at_period_end,
+    // The Billing Portal now schedules cancellation with `cancel_at` (a date) and leaves
+    // `cancel_at_period_end` false; either one means "access ends, no renewal".
+    cancel_at_period_end: Boolean(subscription.cancel_at_period_end || subscription.cancel_at),
   };
 }
 

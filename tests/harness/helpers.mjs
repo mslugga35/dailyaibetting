@@ -104,6 +104,7 @@ export function subscriptionEvent(type, sub) {
   if (stored) {
     if (sub.status !== undefined) stored.status = sub.status;
     if (sub.cancel_at_period_end !== undefined) stored.cancel_at_period_end = sub.cancel_at_period_end;
+    if (sub.cancel_at !== undefined) stored.cancel_at = sub.cancel_at;
   }
   return stripeEvent(type, JSON.parse(JSON.stringify(sub)));
 }

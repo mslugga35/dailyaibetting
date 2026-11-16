@@ -112,3 +112,37 @@ test('capper profile API: unknown slug is 404, a database failure is 500 (never 
   const down = await quietly(() => GET(req('/api/cappers?view=profile&slug=dave-price')));
   assert.equal(down.status, 500);
 });
+
+// ---- client IP behind Cloudflare -> Caddy (Caddy writes X-Forwarded-For = its direct peer)
+
+test('client IP: CF-Connecting-IP is used only when the proxy peer is a Cloudflare edge', async () => {
+  const { getClientIp, isCloudflareIp } = await import('../../src/lib/api-helpers.ts');
+  const r = (h) => new Request('https://dailyai.test/api/x', { headers: h });
+  assert.equal(isCloudflareIp('172.67.194.110'), true);
+  assert.equal(isCloudflareIp('2606:4700:3032::ac43:c26e'), true);
+  assert.equal(isCloudflareIp('203.0.113.9'), false);
+  assert.equal(isCloudflareIp('not-an-ip'), false);
+  assert.equal(getClientIp(r({ 'x-forwarded-for': '172.70.1.2', 'cf-connecting-ip': '198.51.100.20' })), '198.51.100.20', 'real visitor behind Cloudflare');
+  assert.equal(getClientIp(r({ 'x-forwarded-for': '2a06:98c1::5', 'cf-connecting-ip': '198.51.100.21' })), '198.51.100.21', 'IPv6 Cloudflare edge');
+  assert.equal(getClientIp(r({ 'x-forwarded-for': '203.0.113.9', 'cf-connecting-ip': '1.2.3.4' })), '203.0.113.9', 'direct-to-origin caller cannot pick its own IP');
+  assert.equal(getClientIp(r({ 'x-forwarded-for': '9.9.9.9, 203.0.113.10' })), '203.0.113.10', 'right-most (proxy-written) entry wins');
+  assert.equal(getClientIp(r({})), 'unknown');
+});
+
+test('two visitors behind the same Cloudflare edge get separate rate-limit buckets', () => {
+  const mk = (who) => new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '162.158.9.9', 'cf-connecting-ip': who } });
+  for (let i = 0; i < 30; i++) assert.equal(rateLimitGuard(mk('198.51.100.30')), null);
+  assert.equal(rateLimitGuard(mk('198.51.100.30'))?.status, 429, 'first visitor limited');
+  assert.equal(rateLimitGuard(mk('198.51.100.31')), null, 'second visitor on the same edge is not');
+});
+
+test('SSR marker: renders get a large per-visitor bucket, not unlimited', () => {
+  const mk = () => new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '198.51.100.40', [INTERNAL_SSR_HEADER]: internalSsrToken() } });
+  for (let i = 0; i < 240; i++) assert.equal(rateLimitGuard(mk()), null);
+  assert.equal(rateLimitGuard(mk())?.status, 429, 'a client looping page loads is eventually limited');
+});
+
+test('game pages read topOverall from the top level of /api/consensus (no `data` wrapper)', () => {
+  const src = readFileSync(new URL('../../src/app/games/[slug]/page.tsx', import.meta.url), 'utf8');
+  assert.ok(!/result\.data\?\.topOverall/.test(src) && /result\.topOverall/.test(src));
+});

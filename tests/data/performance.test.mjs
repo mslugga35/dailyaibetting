@@ -90,3 +90,9 @@ test('"last 7 days" is exactly 7 ET calendar dates including today', async () =>
   const p = await getVerifiedPerformance(db());
   assert.deepEqual(p.last7, toRecord(1, 0, 0));
 });
+
+test('getAllTimeRecord (homepage badge) equals the full report all-time record', async () => {
+  seed([['WIN', 1, 7], ['LOSS', 2, 3], ['PUSH', 3, 1]]);
+  const { getAllTimeRecord } = await import('../../src/lib/data/performance.ts');
+  assert.deepEqual(await getAllTimeRecord(), (await getVerifiedPerformance(db())).allTime);
+});

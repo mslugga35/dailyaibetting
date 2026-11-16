@@ -59,8 +59,49 @@ export function parseIntParam(
   return Math.min(Math.max(n, min), max);
 }
 
+// Production path: Cloudflare -> Caddy (no trusted_proxies) -> Next. Caddy replaces any
+// client-sent X-Forwarded-For with the address of its direct peer, which is a Cloudflare
+// edge, shared by many visitors. Cloudflare puts the real visitor in CF-Connecting-IP.
+// Trust that header ONLY when the peer really is Cloudflare; anyone reaching the origin
+// directly could otherwise set it to dodge the per-IP limits.
+// Source: https://www.cloudflare.com/ips/ (unknown peers fall back to the peer address).
+const CLOUDFLARE_V4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22'];
+const CLOUDFLARE_V6 = ['2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32'];
+
+function v4ToInt(ip: string): number | null {
+  const p = ip.split('.');
+  if (p.length !== 4) return null;
+  let n = 0;
+  for (const s of p) { const x = Number(s); if (!/^\d{1,3}$/.test(s) || x > 255) return null; n = n * 256 + x; }
+  return n;
+}
+function v6ToBigInt(ip: string): bigint | null {
+  if (!/^[0-9a-f:]+$/i.test(ip) || ip.split('::').length > 2) return null;
+  const [head, tail] = ip.includes('::') ? ip.split('::') : [ip, undefined];
+  const h = head ? head.split(':') : [];
+  const t = tail ? tail.split(':') : [];
+  const fill = tail === undefined ? 0 : 8 - h.length - t.length;
+  if (fill < 0) return null;
+  const groups = [...h, ...Array(fill).fill('0'), ...t];
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/i.test(g))) return null;
+  return groups.reduce((acc, g) => (acc << BigInt(16)) + BigInt(parseInt(g, 16)), BigInt(0));
+}
+export function isCloudflareIp(ip: string): boolean {
+  const v4 = v4ToInt(ip.replace(/^::ffff:/i, ''));
+  if (v4 !== null) {
+    return CLOUDFLARE_V4.some((c) => { const [base, bits] = c.split('/'); const b = v4ToInt(base)!; const m = Number(bits); return Math.floor(v4 / 2 ** (32 - m)) === Math.floor(b / 2 ** (32 - m)); });
+  }
+  const v6 = v6ToBigInt(ip);
+  if (v6 === null) return false;
+  return CLOUDFLARE_V6.some((c) => { const [base, bits] = c.split('/'); const shift = BigInt(128 - Number(bits)); return (v6 >> shift) === (v6ToBigInt(base)! >> shift); });
+}
+
 export function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  // The right-most X-Forwarded-For entry is the one our own proxy wrote (its direct peer).
+  const peer = request.headers.get('x-forwarded-for')?.split(',').pop()?.trim() || '';
+  const cf = request.headers.get('cf-connecting-ip')?.trim();
+  if (cf && peer && isCloudflareIp(peer) && (v4ToInt(cf) !== null || v6ToBigInt(cf) !== null)) return cf;
+  return peer || 'unknown';
 }
 
 /**
@@ -75,7 +116,15 @@ export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, sc
   // This skips ONLY the rate limit: entitlement still comes from the forwarded cookie.
   // Never for checkout scopes: no page renders a checkout, so the marker has no
   // business there, and a leaked marker must not lift the checkout abuse limits.
-  if (!scope.includes('checkout') && isInternalSsrRequest(request)) return null;
+  // The render still gets its own, much larger per-visitor bucket, so one client
+  // looping page loads cannot drive unbounded upstream (Sheets/ESPN/DB) work.
+  if (!scope.includes('checkout') && isInternalSsrRequest(request)) {
+    // (no IP at all shares one bucket rather than going unlimited)
+    if (isRateLimited(`ssr:${scope}:${getClientIp(request)}`, Math.max(max * 8, 240), windowMs)) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
+    return null;
+  }
   // `scope` gives a route its own counter, so a strict limit (e.g. guest checkout)
   // is not consumed by, and does not consume, another route's budget.
   const key = scope ? `${scope}:${getClientIp(request)}` : getClientIp(request);

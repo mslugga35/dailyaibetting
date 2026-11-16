@@ -96,10 +96,19 @@ function TodayTab({ initialData }: { initialData: unknown }) {
                 {topOverall.length > 0 ? (
                   <ConsensusReport topOverall={topOverall} bySport={bySport} />
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No consensus picks available yet.</p>
-                    <p className="text-sm mt-2">Picks update throughout the day.</p>
-                  </div>
+                  (data?.tier !== 'premium' && (data?.totalConsensusCount ?? 0) > 0) ? (
+                    <div className="text-center py-8">
+                      <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
+                      <p className="font-semibold">{data?.totalConsensusCount} consensus picks today are Pro</p>
+                      <p className="text-sm text-muted-foreground mt-1 mb-4">The free preview shows today&apos;s top 5 across all sports.</p>
+                      <Button asChild><a href="/pricing">See Pro</a></Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No consensus picks available yet.</p>
+                      <p className="text-sm mt-2">Picks update throughout the day.</p>
+                    </div>
+                  )
                 )}
               </CardContent>
             </Card>

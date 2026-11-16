@@ -138,6 +138,10 @@ export interface ConsensusAPIResponse {
   normalizedCount?: number;
   capperCount?: number;
   consensusCount?: number;
+  /** Size of the full consensus list before the free-tier slice. */
+  totalConsensusCount?: number;
+  tier?: 'free' | 'premium';
+  entitlement?: 'unknown';
   isYesterday?: boolean;
   consensus: ConsensusPick[];
   topOverall: ConsensusPick[];

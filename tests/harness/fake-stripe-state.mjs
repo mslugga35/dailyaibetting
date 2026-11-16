@@ -54,6 +54,7 @@ export class FakeStripeState {
       customer: fields.customer,
       status: fields.status || 'active',
       cancel_at_period_end: fields.cancel_at_period_end ?? false,
+      cancel_at: fields.cancel_at ?? null,
       metadata: fields.metadata || {},
       items: {
         object: 'list',

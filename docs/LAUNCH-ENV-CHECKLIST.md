@@ -17,8 +17,8 @@ Values are never stored in git. Tick each box after verifying in the dashboard, 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | Anon key. | Unchanged. |
 | `SUPABASE_SERVICE_ROLE_KEY` | server | Service-role key. | Unchanged; never `NEXT_PUBLIC_`. |
 | `CRON_SECRET` | server | Long random string; same value in Vercel crons **and** the Hetzner `grade-and-persist` `.env.local`. Blank = every cron route returns 500 (fail closed). | `GET /api/cron/grade-picks` without the header → 401. |
-| `NEXT_PUBLIC_SITE_URL` | public | `https://dailyaibetting.com` (checkout success/cancel + server fetches). | |
-| `NEXT_PUBLIC_BASE_URL` | public | `https://dailyaibetting.com` (blog recap, notifications). | |
+| `NEXT_PUBLIC_SITE_URL` | public | Optional. `https://dailyaibetting.com` (checkout success/cancel + billing-portal return links); unset falls back to the same value. | |
+| `NEXT_PUBLIC_BASE_URL` | public | **Leave UNSET in production.** When unset, server-side self-fetches go over loopback to `http://127.0.0.1:$PORT` (PM2 sets `PORT=3103`). Setting it sends every page render out through Cloudflare and back (slow, rate-limit coupling), and as a `NEXT_PUBLIC_` value it is baked in at build time. | `grep NEXT_PUBLIC_BASE_URL .env.local` → nothing. |
 
 ## Remove / retire
 

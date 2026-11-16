@@ -146,6 +146,18 @@ for (const [stripeStatus, dbStatus, pro] of MAPPING) {
   });
 }
 
+test('portal cancel via cancel_at (cancel_at_period_end stays false) is recorded as cancelling, Pro kept until it ends', async () => {
+  const { sub } = seedSubscription({ userId: 'u7c', status: 'trialing' });
+  const end = sub.items.data[0].current_period_end;
+  const res = await deliver(subscriptionEvent('customer.subscription.updated', { ...sub, cancel_at_period_end: false, cancel_at: end }));
+  assert.equal(res.status, 200);
+  assert.equal(rowFor('u7c').cancel_at_period_end, true);
+  assert.equal(await isPremium('u7c'), true);
+  // renewing in the portal clears cancel_at -> renews again
+  await deliver(subscriptionEvent('customer.subscription.updated', { ...sub, cancel_at_period_end: false, cancel_at: null }));
+  assert.equal(rowFor('u7c').cancel_at_period_end, false);
+});
+
 test('customer.subscription.deleted revokes Pro', async () => {
   const { sub } = seedSubscription({ userId: 'u8', status: 'active' });
   const res = await deliver(subscriptionEvent('customer.subscription.deleted', { ...sub, status: 'canceled' }));

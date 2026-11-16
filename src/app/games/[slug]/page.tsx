@@ -49,7 +49,8 @@ async function getConsensusData(): Promise<ConsensusPick[]> {
       headers: await authHeaders(),
     });
     const result = await response.json();
-    return result.success ? result.data?.topOverall || [] : [];
+    // /api/consensus returns topOverall at the top level (there is no `data` wrapper).
+    return result.success ? result.topOverall || [] : [];
   } catch (error) {
     console.error('Failed to fetch consensus data:', error);
     return [];

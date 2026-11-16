@@ -12,7 +12,7 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
-import { getVerifiedPerformance, MIN_SAMPLE } from '@/lib/data/performance';
+import { getAllTimeRecord, MIN_SAMPLE } from '@/lib/data/performance';
 
 // Server-side data fetching
 async function getConsensusData() {
@@ -40,8 +40,7 @@ async function getConsensusData() {
 /** Verified, graded record straight from the database (no self-fetch over HTTP). */
 async function getTrackRecord() {
   try {
-    const perf = await getVerifiedPerformance();
-    return perf.allTime;
+    return await getAllTimeRecord();
   } catch {
     return null;
   }
