@@ -8,11 +8,10 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'DailyAI Picks — AI-Powered Best Bets Today',
-  description: 'Free daily AI picks powered by BallparkPal, Statcast, PrizePicks, and expert consensus. Covers MLB strikeout props, YRFI/NRFI, parlays, and best bets across all sports.',
+  description: 'Free daily AI picks from expert consensus, PrizePicks lines and live schedules. Parlays and best bets for the sports in season today.',
   keywords: [
     'daily AI picks', 'best bets today', 'AI sports picks',
-    'MLB strikeout props', 'YRFI NRFI', 'parlays today',
-    'BallparkPal picks', 'Statcast props', 'free sports picks',
+    'parlays today', 'free sports picks',
   ],
 };
 
