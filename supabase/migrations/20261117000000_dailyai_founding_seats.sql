@@ -33,6 +33,10 @@ create table if not exists public.dailyai_founding_seats (
   updated_at timestamptz not null default now()
 );
 
+-- Refund / dispute markers (recorded by the webhook; informational, they do not change status).
+alter table public.dailyai_founding_seats add column if not exists refunded_cents int not null default 0;
+alter table public.dailyai_founding_seats add column if not exists disputed_at timestamptz;
+
 -- At most one open or paying seat per Stripe customer.
 create unique index if not exists dailyai_founding_seats_one_open_per_customer
   on public.dailyai_founding_seats (stripe_customer_id)
@@ -253,3 +257,63 @@ revoke all on function public.dailyai_founding_transition(text, bigint, text, te
 grant execute on function public.dailyai_founding_stats(boolean) to service_role;
 grant execute on function public.dailyai_founding_reserve(text, uuid, int, int, boolean, boolean, int) to service_role;
 grant execute on function public.dailyai_founding_transition(text, bigint, text, text, uuid, timestamptz, int, boolean) to service_role;
+
+
+-- ---------------------------------------------------------------- one free trial per card
+-- Stripe card fingerprints that have had a DailyAI free trial. A new trial on a card
+-- already listed for a DIFFERENT customer is ended at once by the webhook (charged from
+-- day one; disclosed on the pricing page and at checkout).
+create table if not exists public.dailyai_trial_fingerprints (
+  fingerprint text primary key,
+  stripe_customer_id text not null,
+  stripe_subscription_id text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.dailyai_trial_fingerprints enable row level security;
+revoke all on public.dailyai_trial_fingerprints from public, anon, authenticated;
+grant select, insert on public.dailyai_trial_fingerprints to service_role;
+
+-- 'first' (recorded now) | 'same' (the same subscription again: a redelivery) | 'reused' (any other
+-- subscription, including a second concurrent one of the same customer)
+create or replace function public.dailyai_claim_trial_fingerprint(p_fingerprint text, p_customer text, p_subscription text)
+returns text
+language plpgsql security invoker set search_path = public as $$
+declare
+  v public.dailyai_trial_fingerprints%rowtype;
+begin
+  if coalesce(p_fingerprint, '') = '' or coalesce(p_customer, '') = '' or coalesce(p_subscription, '') = '' then
+    raise exception 'dailyai_claim_trial_fingerprint: invalid arguments';
+  end if;
+  insert into public.dailyai_trial_fingerprints (fingerprint, stripe_customer_id, stripe_subscription_id)
+  values (p_fingerprint, p_customer, p_subscription)
+  on conflict (fingerprint) do nothing;
+  if found then
+    return 'first';
+  end if;
+  select * into v from public.dailyai_trial_fingerprints where fingerprint = p_fingerprint;
+  if v.stripe_subscription_id = p_subscription then
+    return 'same';
+  end if;
+  return 'reused';
+end $$;
+revoke all on function public.dailyai_claim_trial_fingerprint(text, text, text) from public, anon, authenticated;
+grant execute on function public.dailyai_claim_trial_fingerprint(text, text, text) to service_role;
+
+-- ---------------------------------------------------------------- refunds and disputes
+-- One row per Stripe event (event id = primary key, so redelivery is a no-op).
+-- Recorded for DailyAI customers only; nothing is refunded or changed automatically.
+create table if not exists public.dailyai_billing_events (
+  stripe_event_id text primary key,
+  event_type text not null check (event_type in ('charge.refunded', 'charge.dispute.created')),
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  stripe_charge_id text,
+  amount_cents int,
+  refunded_cents int,
+  dispute_reason text,
+  created_at timestamptz not null default now()
+);
+create index if not exists dailyai_billing_events_customer_idx on public.dailyai_billing_events (stripe_customer_id);
+alter table public.dailyai_billing_events enable row level security;
+revoke all on public.dailyai_billing_events from public, anon, authenticated;
+grant select, insert on public.dailyai_billing_events to service_role;

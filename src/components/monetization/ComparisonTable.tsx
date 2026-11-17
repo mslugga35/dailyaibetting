@@ -16,11 +16,8 @@ export function ComparisonTable() {
 
   const features = [
     { feature: 'Consensus picks', free: 'Top 5 only', pro: 'Unlimited', freeIcon: 'limited' },
-    { feature: 'Pick delay', free: '5 minutes', pro: 'Real-time', freeIcon: 'limited' },
-    { feature: 'Individual capper picks', free: false, pro: '200+ cappers', freeIcon: 'x' },
-    { feature: 'Win rate grades', free: false, pro: 'Full grades & ROI', freeIcon: 'x' },
-    { feature: 'Pick history', free: '3 days', pro: '30-day archive', freeIcon: 'limited' },
-    { feature: 'Early access', free: false, pro: 'Before lines move', freeIcon: 'x' },
+    { feature: 'Individual capper picks', free: false, pro: 'Every tracked capper', freeIcon: 'x' },
+    { feature: 'Pick history', free: 'Summary stats', pro: 'Full pick-by-pick list', freeIcon: 'limited' },
   ];
 
   return (

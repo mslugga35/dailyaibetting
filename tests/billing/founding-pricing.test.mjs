@@ -76,7 +76,7 @@ test('no PRICING_MODE = legacy $20 exactly as before, no database read', async (
   assert.equal(rpcCalls('dailyai_founding_stats').length, 0);
 });
 
-test('founding offer reads the seat count; sold out = closed by default, regular only when configured', async () => {
+test('founding offer reads the seat count; sold out = $19.99 automatically (Pro never closes)', async () => {
   setup({ env: { ...FOUNDING_ENV, FOUNDING_SEAT_CAP: '3' } });
   seatRpc({ taken: 1 });
   let o = await offerMod.getCurrentOffer();
@@ -86,14 +86,29 @@ test('founding offer reads the seat count; sold out = closed by default, regular
 
   offerMod.resetOfferCache(); seatRpc({ taken: 3 });
   o = await offerMod.getCurrentOffer();
-  assert.equal(o.plan, null);
-  assert.equal(o.founding.soldOut, true);
-
-  setup({ env: { ...FOUNDING_ENV, FOUNDING_SEAT_CAP: '3', FOUNDING_SOLD_OUT: 'regular' } });
-  offerMod.resetOfferCache(); seatRpc({ taken: 3 });
-  o = await offerMod.getCurrentOffer();
   assert.equal(o.plan, 'regular');
   assert.equal(o.amountCents, 1999);
+  assert.equal(o.trialDays, 7);
+  assert.equal(o.founding.soldOut, true);
+});
+
+test('sold out: no price-bearing text anywhere says $9.99; regular $19.99 with trial date and rules', () => {
+  const soldOut = { mode: 'founding', plan: 'regular', amountCents: 1999, trialDays: 7, founding: { cap: 100, remaining: 0, soldOut: true } };
+  const now = new Date('2026-11-17T15:00:00Z');
+  const c = offerCopy(soldOut, now);
+  const all = JSON.stringify(c);
+  assert.doesNotMatch(all, /\$9\.99/);
+  assert.equal(c.price, '$19.99/mo');
+  assert.equal(c.ctaNew, 'Try 7 Days Free (New Members)');
+  assert.equal(c.ctaReturning, 'Upgrade to Pro – $19.99/mo');
+  assert.equal(c.lock, null, 'no founding lock offered once sold out');
+  assert.equal(c.seats, 'All 100 Founding Member spots are taken.');
+  assert.match(c.firstCharge, /first charge of \$19\.99 on November 24, 2026/);
+  assert.match(c.firstChargeRelative, /first charge of \$19\.99 is 7 days after you start/);
+  assert.match(c.trialRule, /One free trial per customer/);
+  // the personalised offer for a former founder also stays regular
+  setup({ env: FOUNDING_ENV });
+  assert.equal(offerMod.personalizeOffer(soldOut, FOUNDING).plan, 'regular');
 });
 
 test('a former founding member is shown the regular price, not $9.99', () => {
@@ -151,18 +166,8 @@ test('FOUNDING_TRIAL_DAYS=0 gives founding members no trial', async () => {
   assert.equal(harness().stripe.sessions[0].subscription_data.trial_period_days, undefined);
 });
 
-test('sold out (default closed) → 409, no Checkout Session', async () => {
+test('sold out → checkout sells regular $19.99 (no seat, promo codes as before, terms with first charge date)', async () => {
   setup({ env: FOUNDING_ENV });
-  seatRpc({ outcome: 'sold_out', taken: 100 });
-  const u = bearerUser('u_late');
-  const res = await checkout({ headers: u.headers });
-  assert.equal(res.status, 409);
-  assert.equal((await body(res)).soldOut, true);
-  assert.equal(harness().stripe.sessions.length, 0);
-});
-
-test('sold out with FOUNDING_SOLD_OUT=regular → regular $19.99 price, promo codes as before', async () => {
-  setup({ env: { ...FOUNDING_ENV, FOUNDING_SOLD_OUT: 'regular' } });
   seatRpc({ outcome: 'sold_out', taken: 100 });
   const u = bearerUser('u_late2');
   assert.equal((await checkout({ headers: u.headers })).status, 200);
@@ -170,6 +175,26 @@ test('sold out with FOUNDING_SOLD_OUT=regular → regular $19.99 price, promo co
   assert.deepEqual(s.line_items, [{ price: REGULAR, quantity: 1 }]);
   assert.equal(s.metadata.plan, 'regular');
   assert.equal(s.metadata.founding_seat_id, undefined);
+  assert.equal(s.subscription_data.trial_period_days, 7);
+  assert.doesNotMatch(s.custom_text.submit.message, /\$9\.99/);
+  assert.match(s.custom_text.submit.message, /first charge of \$19\.99 is 7 days after you start/);
+  assert.match(s.custom_text.submit.message, /One free trial per customer/);
+});
+
+test('regular mode (owner flipped the switch) → $19.99 for new customers, Stripe price verified', async () => {
+  setup({ env: { PRICING_MODE: 'regular', STRIPE_PRICE_PRO: REGULAR } });
+  harness().stripe.prices[REGULAR] = { unit_amount: 1999 };
+  const u = bearerUser('u_regular');
+  assert.equal((await checkout({ headers: u.headers })).status, 200);
+  assert.deepEqual(harness().stripe.sessions[0].line_items, [{ price: REGULAR, quantity: 1 }]);
+  assert.equal(rpcCalls('dailyai_founding_reserve').length, 0);
+});
+
+test('founding mode without STRIPE_PRICE_PRO fails closed (the sold-out fallback must exist)', async () => {
+  setup({ env: { PRICING_MODE: 'founding', STRIPE_PRICE_FOUNDING: FOUNDING } });
+  seatRpc();
+  assert.equal((await checkout({ headers: bearerUser('u_nopro').headers })).status, 500);
+  assert.equal(harness().stripe.sessions.length, 0);
 });
 
 test('a returning former founding member gets the regular price', async () => {
@@ -211,7 +236,7 @@ test('too many open founding checkouts (busy) → 409 try later, not "sold out"'
   const res = await checkout({ headers: u.headers });
   assert.equal(res.status, 409);
   const b = await body(res);
-  assert.equal(b.soldOut, false);
+  assert.equal(b.busy, true);
   assert.match(b.error, /try again/i);
   assert.equal(harness().stripe.sessions.length, 0);
 });
@@ -383,4 +408,148 @@ test('billing metrics endpoint requires the CRON_SECRET bearer', async () => {
   assert.equal(res.status, 401);
   const wrong = await quietly(() => metricsGET(req('/api/admin/billing-metrics', { headers: { Authorization: 'Bearer nope' } })));
   assert.equal(wrong.status, 401);
+});
+
+// ---------------------------------------------------------------- owner decisions (2026-11-17)
+
+test('$20 legacy price and its subscribers are preserved in founding mode: allowed, never moved, cannot double-subscribe', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const { allowedPriceIds } = await import('../../src/lib/stripe-prices.ts');
+  assert.ok(allowedPriceIds().has(DAILYAI_PRICE_ID), 'STRIPE_PRICE_ID stays an accepted DailyAI price');
+  const u = bearerUser('u_twenty');
+  const { sub } = seedSubscription({ userId: 'u_twenty', status: 'active' });
+  // an active $20 subscriber cannot start a founding checkout
+  assert.equal((await checkout({ headers: u.headers })).status, 400);
+  assert.equal(harness().stripe.sessions.length, 0);
+  // renewals / updates of the $20 subscription keep the $20 price and touch nothing else
+  await deliver(subscriptionEvent('customer.subscription.updated', { ...sub }));
+  await deliver(stripeEvent('invoice.paid', { id: 'in_20', object: 'invoice', amount_paid: 2000, parent: { subscription_details: { subscription: sub.id } } }));
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_twenty' }));
+  const row = harness().db.dump('user_subscriptions').find((r) => r.user_id === 'u_twenty');
+  assert.equal(row.price_id, DAILYAI_PRICE_ID);
+  assert.equal(row.status, 'active');
+  assert.equal(harness().stripe.callsTo('subscriptions.update').length, 0, 'no automatic change to a $20 subscription');
+  assert.equal(harness().stripe.subscriptions.find((x) => x.id === sub.id).items.data[0].price.id, DAILYAI_PRICE_ID);
+  assert.equal(rpcCalls('dailyai_founding_transition').length, 0);
+});
+
+test('a former $20 subscriber who cancelled may join at $9.99 while seats remain (no second trial)', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc({ seatId: 77 });
+  const u = bearerUser('u_was20');
+  seedSubscription({ userId: 'u_was20', status: 'canceled' });
+  assert.equal((await checkout({ headers: u.headers })).status, 200);
+  const [s] = harness().stripe.sessions;
+  assert.deepEqual(s.line_items, [{ price: FOUNDING, quantity: 1 }]);
+  assert.equal(s.metadata.founding_seat_id, '77');
+  assert.equal(s.subscription_data.trial_period_days, undefined, 'already had a trial');
+});
+
+test('one trial per person: another Stripe customer with the same email already subscribed → no trial (signed-in and guest)', async () => {
+  setup({ env: { ...FOUNDING_ENV, GUEST_CHECKOUT_ENABLED: 'true' } });
+  seatRpc();
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: 'twice@example.test' });
+  h.stripe.addSubscription({ customer: old.id, status: 'canceled', priceId: DAILYAI_PRICE_ID });
+  const u = bearerUser('u_twice', 'twice@example.test'); // signed-in path creates a NEW customer
+  assert.equal((await checkout({ headers: u.headers })).status, 200);
+  assert.equal(h.stripe.sessions[0].subscription_data.trial_period_days, undefined);
+
+  setup({ env: { ...FOUNDING_ENV, GUEST_CHECKOUT_ENABLED: 'true' } });
+  seatRpc();
+  const h2 = harness();
+  h2.stripe.addCustomer({ email: 'g@example.test' }); // first match, never subscribed
+  const second = h2.stripe.addCustomer({ email: 'g@example.test' });
+  h2.stripe.addSubscription({ customer: second.id, status: 'canceled', priceId: FOUNDING });
+  assert.equal((await checkout({ body: { guestEmail: 'g@example.test' } })).status, 200);
+  assert.equal(h2.stripe.sessions[0].subscription_data.trial_period_days, undefined);
+});
+
+function trialingFoundingSubWithCard(fingerprint) {
+  const h = harness();
+  h.stripe.paymentMethods.pm_1 = { type: 'card', card: { fingerprint, last4: '4242' } };
+  const customer = h.stripe.addCustomer({ email: 'card@example.test' });
+  return h.stripe.addSubscription({ customer: customer.id, status: 'trialing', priceId: FOUNDING, default_payment_method: 'pm_1', metadata: { user_id: 'u_card', founding_seat_id: '41' } });
+}
+
+test('one trial per card: a card already used for a trial by another customer → trial ended at once (charged from day one)', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
+  const sub = trialingFoundingSubWithCard('fp_used');
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_card' }));
+  const [up] = harness().stripe.callsTo('subscriptions.update');
+  assert.equal(up?.args.id, sub.id);
+  assert.equal(up?.args.params.trial_end, 'now');
+  const [claim] = rpcCalls('dailyai_claim_trial_fingerprint');
+  assert.deepEqual([claim.p_fingerprint, claim.p_subscription], ['fp_used', sub.id]);
+});
+
+test('one trial per card: a first-time card keeps its trial; legacy mode never checks (no migration needed)', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'first');
+  const sub = trialingFoundingSubWithCard('fp_new');
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_card' }));
+  assert.equal(harness().stripe.callsTo('subscriptions.update').length, 0);
+
+  setup();
+  const h = harness();
+  h.stripe.paymentMethods.pm_1 = { type: 'card', card: { fingerprint: 'fp_used' } };
+  const c = h.stripe.addCustomer({ email: 'l@example.test' });
+  const legacySub = h.stripe.addSubscription({ customer: c.id, status: 'trialing', default_payment_method: 'pm_1' });
+  await deliver(checkoutCompletedEvent({ sub: legacySub, userId: 'u_legacy_trial' }));
+  assert.equal(rpcCalls('dailyai_claim_trial_fingerprint').length, 0);
+  assert.equal(h.stripe.callsTo('subscriptions.update').length, 0);
+});
+
+test('charge.refunded / charge.dispute.created: recorded once per event for DailyAI customers, seat marked, nothing refunded or cancelled', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const h = harness();
+  const { customer, sub } = seedSubscription({ userId: 'u_ref', status: 'active', priceId: FOUNDING });
+  h.db.seed('dailyai_founding_seats', [{ id: 5, stripe_customer_id: customer.id, stripe_subscription_id: sub.id, status: 'converted', refunded_cents: 0, disputed_at: null }]);
+  // charge -> PaymentIntent -> invoice -> subscription
+  h.stripe.invoicePayments.pi_1 = 'in_ref1';
+  h.stripe.invoicePayments.pi_2 = 'in_ref2';
+  h.stripe.invoices.in_ref1 = { status: 'paid', amount_paid: 999, parent: { subscription_details: { subscription: sub.id } } };
+  h.stripe.invoices.in_ref2 = { status: 'paid', amount_paid: 999, parent: { subscription_details: { subscription: sub.id } } };
+  const refunded = stripeEvent('charge.refunded', { id: 'ch_1', object: 'charge', customer: customer.id, payment_intent: 'pi_1', amount: 999, amount_refunded: 999, refunded: true }, { id: 'evt_refund_1' });
+  assert.equal((await deliver(refunded)).status, 200);
+  assert.equal((await deliver(refunded)).status, 200, 'redelivery is fine');
+  h.stripe.charges.ch_2 = { customer: customer.id, payment_intent: 'pi_2', amount: 999, amount_refunded: 0 };
+  await deliver(stripeEvent('charge.dispute.created', { id: 'dp_1', object: 'dispute', charge: 'ch_2', amount: 999, reason: 'fraudulent' }, { id: 'evt_dispute_1' }));
+  const events = h.db.dump('dailyai_billing_events');
+  assert.equal(events.length, 2);
+  assert.deepEqual(events.map((e) => e.event_type).sort(), ['charge.dispute.created', 'charge.refunded']);
+  assert.equal(events.find((e) => e.event_type === 'charge.refunded').stripe_subscription_id, sub.id);
+  const seat = h.db.dump('dailyai_founding_seats')[0];
+  assert.equal(seat.refunded_cents, 999);
+  assert.ok(seat.disputed_at);
+  assert.equal(h.stripe.callsTo('subscriptions.update').length, 0);
+  assert.equal(h.db.dump('user_subscriptions').find((r) => r.user_id === 'u_ref').status, 'active', 'Pro ends only via the normal subscription events');
+
+  // a refund on the SAME customer for another product's subscription is not DailyAI's: ignored
+  const foreign = h.stripe.addSubscription({ customer: customer.id, status: 'active', priceId: 'price_someone_else' });
+  h.stripe.invoicePayments.pi_x = 'in_x';
+  h.stripe.invoices.in_x = { status: 'paid', amount_paid: 500, parent: { subscription_details: { subscription: foreign.id } } };
+  await deliver(stripeEvent('charge.refunded', { id: 'ch_x', object: 'charge', customer: customer.id, payment_intent: 'pi_x', amount: 500, amount_refunded: 500 }, { id: 'evt_refund_x' }));
+  // a one-off (non-invoice) charge is ignored too
+  await deliver(stripeEvent('charge.refunded', { id: 'ch_y', object: 'charge', customer: customer.id, payment_intent: 'pi_none', amount: 300, amount_refunded: 300 }, { id: 'evt_refund_y' }));
+  assert.equal(h.db.dump('dailyai_billing_events').length, 2);
+  assert.equal(h.db.dump('dailyai_founding_seats')[0].refunded_cents, 999, 'other product refund not added to the seat');
+});
+
+test('card check never touches a legacy $20 trialing subscription, even in founding mode', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const h = harness();
+  h.db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
+  h.stripe.paymentMethods.pm_1 = { type: 'card', card: { fingerprint: 'fp_used' } };
+  const c = h.stripe.addCustomer({ email: 'old20@example.test' });
+  const legacySub = h.stripe.addSubscription({ customer: c.id, status: 'trialing', priceId: DAILYAI_PRICE_ID, default_payment_method: 'pm_1' });
+  await deliver(checkoutCompletedEvent({ sub: legacySub, userId: 'u_old20_trial' }));
+  assert.equal(rpcCalls('dailyai_claim_trial_fingerprint').length, 0);
+  assert.equal(h.stripe.callsTo('subscriptions.update').length, 0);
 });

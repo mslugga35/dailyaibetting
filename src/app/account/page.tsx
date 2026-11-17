@@ -9,9 +9,10 @@ import { ManageSubscriptionButton } from '@/components/subscription/ManageSubscr
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { describeSubscriptionPrice } from '@/lib/pricing/subscription-price';
-import { offerCopy, CANCEL_POLICY, PLANS } from '@/lib/pricing/plans';
+import { offerCopy, CANCEL_POLICY, REFUND_NOTE, PLANS } from '@/lib/pricing/plans';
 
 export const metadata = { title: 'Account – DailyAI Betting' };
+export const dynamic = 'force-dynamic';
 
 export default async function AccountPage({
   searchParams,
@@ -65,7 +66,7 @@ export default async function AccountPage({
         <div className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-3">
           <Check className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm font-medium">
-            Welcome to Premium! You now have real-time access to all consensus picks.
+            Welcome to DailyAI Pro! You now have access to every consensus pick.
           </p>
         </div>
       )}
@@ -101,7 +102,7 @@ export default async function AccountPage({
                 variant={isPremium ? 'default' : 'outline'}
                 className={isPremium ? 'bg-primary text-primary-foreground ml-auto' : paymentProblem ? 'ml-auto border-amber-500/50 text-amber-400' : 'ml-auto'}
               >
-                {isPremium ? '⚡ Premium' : paymentProblem ? 'Payment problem' : 'Free'}
+                {isPremium ? '⚡ Pro' : paymentProblem ? 'Payment problem' : 'Free'}
               </Badge>
             )}
           </CardTitle>
@@ -145,7 +146,7 @@ export default async function AccountPage({
                 {billed?.amount && !sub.cancelAtPeriodEnd
                   ? `Renews every month at ${billed.amount} until you cancel${sub.status === 'trialing' ? ' (first charge when the free trial ends)' : ''}. `
                   : ''}
-                {CANCEL_POLICY}
+                {CANCEL_POLICY} {REFUND_NOTE}
               </p>
               <ManageSubscriptionButton />
             </>
@@ -164,8 +165,8 @@ export default async function AccountPage({
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                You&apos;re on the free plan. Upgrade to get real-time consensus picks,
-                MEGA/NUCLEAR alerts, full leaderboards, and AI analysis.
+                You&apos;re on the free plan. Upgrade to get every consensus pick,
+                MEGA/NUCLEAR alerts, individual capper pick detail and the full pick history.
               </p>
               <UpgradeButton />
               {/* Portal only for a real (e.g. canceled) subscription, not a checkout placeholder. */}

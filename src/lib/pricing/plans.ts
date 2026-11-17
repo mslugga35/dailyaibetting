@@ -40,7 +40,7 @@ export interface PublicOffer {
 }
 
 export interface OfferCopy {
-  /** "$9.99/mo", or null while unknown / closed. */
+  /** "$9.99/mo", or null while unknown. */
   price: string | null;
   planName: string;
   /** Main CTA for someone who has never subscribed (mentions the trial when there is one). */
@@ -53,40 +53,47 @@ export interface OfferCopy {
   after: string;
   /** Full trial + billing terms sentence (FAQ, pricing cards). */
   terms: string;
+  /** When the first charge happens for a trial started now (dated, for pages), or null without a trial. */
+  firstCharge: string | null;
+  /** The same without a calendar date (Stripe Checkout shows the live date itself). */
+  firstChargeRelative: string | null;
+  /** Who gets the trial (one per customer). Null without a trial. */
+  trialRule: string | null;
   /** Renewal + cancellation policy. */
   renewal: string;
   /** Founding only: the terms of the locked rate. */
   lock: string | null;
-  /** Founding only: honest seat count line. */
+  /** Founding mode only: honest seat count line. */
   seats: string | null;
 }
 
 export const CANCEL_POLICY =
   'Cancel anytime from Account > Manage Subscription. Cancelling stops future charges; you keep Pro until the end of the period you already paid for.';
 
-export function offerCopy(offer: PublicOffer | null): OfferCopy {
-  if (!offer) {
-    // Not loaded yet: never show a price we have not confirmed.
+/**
+ * Neutral refund pointer. Deliberately makes no promise either way: refunds follow the
+ * cancellation and refund policy (draft for legal review: docs/legal-drafts/) and the law.
+ */
+export const REFUND_NOTE =
+  'Refund questions are handled under our cancellation and refund policy; email support@dailyaibetting.com.';
+
+/** "November 24, 2026" (US Eastern). */
+export function formatChargeDate(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
+}
+
+export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): OfferCopy {
+  if (!offer || !offer.plan || offer.amountCents == null) {
+    // Not loaded yet, or misconfigured: never show a price we have not confirmed.
+    const loading = !offer;
     return {
-      price: null, planName: 'Pro', ctaNew: 'See Pro plans', ctaReturning: 'Upgrade to Pro',
-      trialLabel: null, after: CANCEL_POLICY, terms: CANCEL_POLICY, renewal: CANCEL_POLICY, lock: null, seats: null,
-    };
-  }
-  if ((!offer.plan || offer.amountCents == null) && !offer.founding) {
-    return {
-      price: null, planName: 'Pro', ctaNew: 'Pro is unavailable right now', ctaReturning: 'Pro is unavailable right now',
-      trialLabel: null, after: 'New Pro signups are paused right now. Please check back soon.',
-      terms: 'New Pro signups are paused right now. Please check back soon.', renewal: CANCEL_POLICY, lock: null, seats: null,
-    };
-  }
-  if (!offer.plan || offer.amountCents == null) {
-    return {
-      price: null, planName: 'Pro', ctaNew: 'Founding spots are full', ctaReturning: 'Founding spots are full',
+      price: null, planName: 'Pro',
+      ctaNew: loading ? 'See Pro plans' : 'Pro is unavailable right now',
+      ctaReturning: loading ? 'Upgrade to Pro' : 'Pro is unavailable right now',
       trialLabel: null,
-      after: 'All Founding Member spots are taken. New Pro signups reopen soon.',
-      terms: 'All Founding Member spots are taken. New Pro signups reopen soon.',
-      renewal: CANCEL_POLICY, lock: null,
-      seats: offer.founding ? `All ${offer.founding.cap} Founding Member spots are taken.` : null,
+      after: loading ? CANCEL_POLICY : 'New Pro signups are paused right now. Please check back soon.',
+      terms: loading ? CANCEL_POLICY : 'New Pro signups are paused right now. Please check back soon.',
+      firstCharge: null, firstChargeRelative: null, trialRule: null, renewal: CANCEL_POLICY, lock: null, seats: null,
     };
   }
 
@@ -96,9 +103,29 @@ export function offerCopy(offer: PublicOffer | null): OfferCopy {
   const t = offer.trialDays;
   const trialLabel = t > 0 ? `${t}-day free trial` : null;
   const planName = founding ? 'Founding Member' : 'Pro';
+  const firstCharge = t > 0
+    ? `First-time members who start the free trial today get their first charge of ${amount} on ${formatChargeDate(new Date(now.getTime() + t * 86400000))} (${t} days later), unless they cancel before then.`
+    : null;
+  const firstChargeRelative = t > 0
+    ? `Your first charge of ${amount} is ${t} days after you start the free trial, unless you cancel before then.`
+    : null;
+  // The card check is part of the founding/regular launch (it needs the founding migration).
+  const trialRule = t > 0
+    ? offer.mode === 'legacy'
+      ? 'One free trial per customer: first-time members only.'
+      : 'One free trial per customer: first-time members only. A payment card that was already used for a DailyAI free trial is charged from the first day.'
+    : null;
+  const f = offer.founding;
+  const seats = f
+    ? f.soldOut
+      ? `All ${f.cap} Founding Member spots are taken.`
+      : f.remaining == null
+        ? `Limited to the first ${f.cap} paying members.`
+        : `${f.remaining} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`
+    : null;
 
   if (!founding) {
-    // Wording kept identical to the pre-founding site for the legacy $20 plan.
+    // Price wording kept identical to the pre-founding site for the legacy $20 plan.
     return {
       price, planName,
       ctaNew: t > 0 ? `Try ${t} Days Free (New Members)` : `Upgrade to Pro – ${price}`,
@@ -108,12 +135,13 @@ export function offerCopy(offer: PublicOffer | null): OfferCopy {
       terms: t > 0
         ? `${t}-day free trial for first-time members, then ${price}. Cancel anytime before the trial ends and you won't be charged.`
         : `${price}, billed monthly until you cancel.`,
+      firstCharge, firstChargeRelative, trialRule,
       renewal: `Renews every month at ${amount} until you cancel. ${CANCEL_POLICY}`,
-      lock: null, seats: null,
+      lock: null,
+      seats: f?.soldOut ? seats : null,
     };
   }
 
-  const f = offer.founding;
   return {
     price, planName,
     ctaNew: t > 0 ? `Try ${t} Days Free – then ${price}` : `Claim Founding Price – ${price}`,
@@ -125,14 +153,9 @@ export function offerCopy(offer: PublicOffer | null): OfferCopy {
     terms: t > 0
       ? `${t}-day free trial for first-time members, then ${price} (Founding Member price), billed monthly. Cancel anytime before the trial ends and you won't be charged.`
       : `${price} (Founding Member price), billed monthly until you cancel.`,
+    firstCharge, firstChargeRelative, trialRule,
     renewal: `Renews every month at ${amount} until you cancel. ${CANCEL_POLICY}`,
     lock: `Your ${amount}/month Founding Member price stays locked for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment can't be collected after Stripe's retries), the founding price ends with it, and rejoining later is at the regular price.`,
-    seats: f
-      ? f.remaining == null
-        ? `Limited to the first ${f.cap} paying members.`
-        : f.remaining > 0
-          ? `${f.remaining} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`
-          : `All ${f.cap} Founding Member spots are taken.`
-      : null,
+    seats,
   };
 }

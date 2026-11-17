@@ -210,7 +210,7 @@ export default async function HomePage() {
                 ) : isPremium ? (
                   <Badge className="gap-1.5 bg-primary/20 text-primary border-primary/30">
                     <Zap className="h-3 w-3" />
-                    Premium
+                    Pro
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="gap-1.5 border-muted-foreground/30 text-muted-foreground">
@@ -237,7 +237,7 @@ export default async function HomePage() {
                         {hiddenPicksCount} more consensus picks locked
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Upgrade to Premium for access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
+                        Upgrade to Pro for access to all picks, MEGA/NUCLEAR alerts, and individual capper pick detail.
                       </p>
                       {offer.plan && priceCopy.price ? (
                         <UpgradeButton label={`Unlock All Picks – ${priceCopy.price}`} />

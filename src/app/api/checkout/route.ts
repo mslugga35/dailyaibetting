@@ -9,6 +9,7 @@ import {
   findOrCreateStripeCustomer,
   hasActiveSubscription,
   hasEverSubscribed,
+  hasEverSubscribedByEmail,
 } from '@/lib/guest-checkout';
 import {
   chooseCheckoutPlan,
@@ -26,11 +27,7 @@ function parseExpectedCents(v: unknown): number | null {
 }
 import type Stripe from 'stripe';
 
-const SOLD_OUT = {
-  sold_out: 'All Founding Member spots are taken. New Pro signups reopen soon.',
-  returning: 'The Founding Member price is for new founding members. New Pro signups at the regular price open soon.',
-  busy: 'Founding Member checkouts are busy right now. Please try again in a few minutes.',
-} as const;
+const BUSY = 'Founding Member checkouts are busy right now. Please try again in a few minutes.';
 
 /**
  * Create the Checkout Session for the plan on sale. Founding: a seat is reserved
@@ -50,7 +47,7 @@ async function createCheckout(opts: {
 }): Promise<NextResponse> {
   const choice = await chooseCheckoutPlan(opts.customerId, opts.userId);
   if (!choice.ok) {
-    return NextResponse.json({ error: SOLD_OUT[choice.reason], soldOut: choice.reason !== 'busy' }, { status: 409 });
+    return NextResponse.json({ error: BUSY, busy: true }, { status: 409 });
   }
   if (opts.expectedCents != null && opts.expectedCents !== PLANS[choice.plan].cents) {
     // The price changed since the page loaded (mode flipped, spots ran out, returning member).
@@ -94,10 +91,10 @@ async function createCheckout(opts: {
     const copy = offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: trialDays ?? 0, founding: null });
     params.expires_at = Math.floor(Date.now() / 1000) + FOUNDING_SESSION_SECONDS;
     params.subscription_data!.description = `DailyAI Pro – Founding Member (${copy.price}, locked while your subscription stays active)`;
-    params.custom_text = { submit: { message: `${copy.terms} ${copy.lock} ${CANCEL_POLICY}`.slice(0, 1200) } };
+    params.custom_text = { submit: { message: [copy.terms, copy.firstChargeRelative, copy.trialRule, copy.lock, CANCEL_POLICY].filter(Boolean).join(' ').slice(0, 1200) } };
   } else if (choice.plan === 'regular') {
     const copy = offerCopy({ mode: 'regular', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: trialDays ?? 0, founding: null });
-    params.custom_text = { submit: { message: `${copy.terms} ${copy.renewal}`.slice(0, 1200) } };
+    params.custom_text = { submit: { message: [copy.terms, copy.firstChargeRelative, copy.trialRule, copy.renewal].filter(Boolean).join(' ').slice(0, 1200) } };
   }
 
   let session: Stripe.Checkout.Session;
@@ -154,7 +151,8 @@ export async function POST(request: Request) {
         customerId,
         userId: null,
         guestEmail,
-        trialEligible: !(await hasEverSubscribed(stripe, customerId)),
+        // One trial per person: this customer, and every other customer with this email.
+        trialEligible: !(await hasEverSubscribed(stripe, customerId)) && !(await hasEverSubscribedByEmail(stripe, guestEmail)),
         successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}&guest=1`,
         cancelUrl: `${baseUrl}/pro`,
         expectedCents: parseExpectedCents(body?.expectedCents),
@@ -220,7 +218,9 @@ export async function POST(request: Request) {
     }
 
     // The free trial is for first-time subscribers only (no new trial after cancelling).
-    const trialEligible = !(existing.stripeSubscriptionId || (await hasEverSubscribed(stripe, customerId)));
+    const trialEligible = !(existing.stripeSubscriptionId
+      || (await hasEverSubscribed(stripe, customerId))
+      || (await hasEverSubscribedByEmail(stripe, user.email)));
     return await createCheckout({
       customerId,
       userId: user.id,
