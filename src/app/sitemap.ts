@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import harborPosts from '@/lib/harbor-posts.json';
+import { resolveBlogContent } from '@/lib/blog-content';
 
 const SPORTS = ['nba', 'nfl', 'nhl', 'mlb', 'ncaab', 'ncaaf'];
 
@@ -30,13 +31,15 @@ async function getBlogEntries(): Promise<MetadataRoute.Sitemap> {
     if (!supabase) return [];
     const { data } = await supabase
       .from('blog_posts')
-      .select('slug, published_at')
+      .select('slug, published_at, content')
       .eq('status', 'published')
       .eq('site', 'dailyaibetting')
       .order('published_at', { ascending: false })
       .limit(100);
     if (!data) return [];
-    return data.map((post) => ({
+    return data
+      .filter((post) => resolveBlogContent(post.content).kind !== 'broken')
+      .map((post) => ({
       url: `https://dailyaibetting.com/blog/${post.slug}`,
       lastModified: w3cDate(post.published_at) || new Date().toISOString(),
       changeFrequency: 'weekly' as const,

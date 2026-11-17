@@ -82,7 +82,7 @@ export default function FreeSportsPicksLayout({
           <ul className="text-muted-foreground space-y-2 mb-4">
             <li>• Multiple expert opinions reduce individual handicapper variance</li>
             <li>• Fire picks (3+ cappers) represent strongest agreement</li>
-            <li>• Real-time updates as new picks are released</li>
+            <li>• Frequent updates as new picks are released</li>
             <li>• Coverage across all major sports and bet types</li>
             <li>• 100% free - no subscription required</li>
           </ul>

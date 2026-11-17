@@ -84,7 +84,7 @@ export default function BlogPage() {
           Daily Betting Insights
         </h1>
         <p className="text-muted-foreground">
-          AI-generated analysis, picks previews, and betting strategy articles updated daily at 9 AM ET.
+          AI-assisted analysis, pick previews, and betting strategy articles. New articles are published as they are written.
         </p>
       </div>
 
@@ -220,13 +220,13 @@ export default function BlogPage() {
         <h2 className="text-xl font-semibold mb-3">About Our AI Sports Blog</h2>
         <p className="text-muted-foreground">
           Our AI-powered sports betting blog provides daily analysis, game previews, and betting insights
-          generated using advanced language models. Each morning at 9 AM ET, we publish fresh content
-          analyzing the day&apos;s betting opportunities based on expert consensus data.
+          written with the help of language models. New articles are published as they are written and
+          draw on expert consensus data. They are for entertainment and information only.
         </p>
         <p className="text-muted-foreground mt-4">
           Articles cover NFL, NBA, MLB, NHL, college football, and college basketball betting,
           with a focus on consensus plays where multiple professional handicappers agree.
-          Our AI analyzes patterns, trends, and expert picks to provide actionable insights.
+          The articles summarize patterns, trends, and expert picks; they are not betting advice.
         </p>
       </section>
     </div>

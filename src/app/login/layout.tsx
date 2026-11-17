@@ -2,10 +2,10 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sign In | DailyAI Betting',
-  description: 'Sign in to your DailyAI Betting account. Access your Pro subscription and premium picks.',
+  description: 'Sign in to your DailyAI Betting account. Access your Pro subscription and all consensus picks.',
   openGraph: {
     title: 'Sign In | DailyAI Betting',
-    description: 'Sign in to access premium betting picks and your subscription.',
+    description: 'Sign in to access all consensus picks and your subscription.',
     url: 'https://dailyaibetting.com/login',
     type: 'website',
   },

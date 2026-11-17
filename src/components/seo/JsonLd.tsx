@@ -162,7 +162,7 @@ export function FAQJsonLd() {
         name: 'Are these picks free?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'A free preview of each day\'s consensus picks is available without a credit card. Premium unlocks all consensus picks. We aggregate picks from expert cappers.',
+          text: 'A free preview of each day\'s consensus picks is available without a credit card. DailyAI Pro unlocks all consensus picks. We aggregate picks from expert cappers.',
         },
       },
     ],

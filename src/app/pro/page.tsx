@@ -4,7 +4,7 @@ import { useSubscription } from '@/lib/hooks/use-subscription';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Loader2, Zap, Target, BarChart3, Clock, Users } from 'lucide-react';
+import { Crown, Loader2, Target, BarChart3, Clock, Users } from 'lucide-react';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -130,12 +130,10 @@ export default function ProPage() {
   }
 
   const features = [
-    { icon: Zap, title: 'Real-time picks', desc: 'No 5-minute delay — get picks instantly' },
-    { icon: Users, title: '200+ cappers tracked', desc: 'Individual picks from every capper we monitor' },
-    { icon: BarChart3, title: 'Full stats & ROI', desc: 'Win rates, streaks, ROI for every capper' },
+    { icon: Users, title: 'Individual capper picks', desc: "See each tracked capper's picks and record" },
+    { icon: BarChart3, title: 'Detailed stats', desc: 'Tier breakdowns and capper pick detail' },
     { icon: Target, title: 'Unlimited consensus', desc: 'See every consensus pick, not just top 5' },
-    { icon: Clock, title: '30-day archive', desc: 'Full pick history with results and grades' },
-    { icon: Crown, title: 'Early access', desc: 'Get picks before lines move' },
+    { icon: Clock, title: 'Full pick history', desc: 'Pick-by-pick list with graded results' },
   ];
 
   return (
@@ -147,7 +145,7 @@ export default function ProPage() {
           Upgrade Your Edge
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          Get the full picture. Real-time picks, full capper stats, and unlimited consensus data.
+          Get the full picture. Unlimited consensus picks, capper pick detail, and the full pick history.
         </p>
       </div>
 

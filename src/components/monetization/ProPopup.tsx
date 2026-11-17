@@ -95,15 +95,15 @@ export function ProPopup() {
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-3">
               <Users className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-              <span className="text-sm">200+ individual capper picks daily</span>
+              <span className="text-sm">Individual picks from every tracked capper</span>
             </div>
             <div className="flex items-center gap-3">
               <Award className="h-5 w-5 text-blue-400 flex-shrink-0" />
-              <span className="text-sm">Full win rates, ROI & streak data</span>
+              <span className="text-sm">Detailed stats and tier breakdowns</span>
             </div>
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-purple-400 flex-shrink-0" />
-              <span className="text-sm">Real-time picks — no 5-min delay</span>
+              <span className="text-sm">Unlimited consensus picks</span>
             </div>
           </div>
 

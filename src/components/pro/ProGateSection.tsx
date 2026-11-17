@@ -31,7 +31,7 @@ export function ProGateSection({ children, preview, feature = 'this content' }: 
           </div>
           <h3 className="font-semibold text-lg mb-1">Upgrade to unlock {feature}</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Get full access to detailed stats, complete pick history, and real-time consensus data.
+            Get full access to detailed stats, the complete pick history, and every consensus pick.
           </p>
           <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
             <Link href={user ? '/pro' : '/login'}>
