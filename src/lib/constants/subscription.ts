@@ -6,15 +6,11 @@ export function isProStatus(status: string | null | undefined): boolean {
 }
 
 /**
- * Display copy for the Pro plan. The charged amount comes from the Stripe price
- * STRIPE_PRICE_ID; PRO_PRICE_DISPLAY must match it (verify in Stripe before launch).
- * The trial is applied by /api/checkout (trial_period_days), to FIRST-TIME
- * subscribers only, so all trial copy says so.
+ * Free-trial length for FIRST-TIME subscribers (applied by /api/checkout via
+ * trial_period_days). Founding Member trials use FOUNDING_TRIAL_DAYS (default: this).
+ *
+ * Prices and all price / trial / renewal wording live in src/lib/pricing/plans.ts
+ * (offerCopy) and are chosen by the server (src/lib/pricing/offer.ts). Do not
+ * hardcode a price string anywhere else.
  */
-export const PRO_PRICE_DISPLAY = '$20/mo';
 export const TRIAL_DAYS = 7;
-export const TRIAL_LABEL = `${TRIAL_DAYS}-day free trial`;
-export const TRIAL_CTA = `Try ${TRIAL_DAYS} Days Free (New Members)`;
-export const UPGRADE_CTA = `Upgrade to Pro – ${PRO_PRICE_DISPLAY}`;
-export const TRIAL_AFTER = `Then ${PRO_PRICE_DISPLAY}. Cancel anytime before the trial ends and you won't be charged.`;
-export const TRIAL_TERMS = `${TRIAL_DAYS}-day free trial for first-time members, then ${PRO_PRICE_DISPLAY}. Cancel anytime before the trial ends and you won't be charged.`;

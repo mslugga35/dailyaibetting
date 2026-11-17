@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { ManageSubscriptionButton } from '@/components/subscription/ManageSubscriptionButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
+import { describeSubscriptionPrice } from '@/lib/pricing/subscription-price';
+import { offerCopy, CANCEL_POLICY, PLANS } from '@/lib/pricing/plans';
 
 export const metadata = { title: 'Account – DailyAI Betting' };
 
@@ -47,6 +49,13 @@ export default async function AccountPage({
   // and the fix is updating the card in the portal, not a second subscription.
   const paymentProblem = !isPremium && sub?.status === 'past_due';
   const justUpgraded = searchParams.upgraded === '1';
+  // The plan and amount this subscriber is actually billed (their Stripe Price), not today's offer.
+  const billed = sub?.stripeSubscriptionId && (isPremium || paymentProblem)
+    ? await describeSubscriptionPrice(sub.priceId)
+    : null;
+  const lockTerms = billed?.plan === 'founding'
+    ? offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: 0, founding: null }).lock
+    : null;
 
   return (
     <div className="container px-4 py-12 max-w-2xl mx-auto">
@@ -103,6 +112,15 @@ export default async function AccountPage({
           ) : sub && isPremium ? (
             <>
               <div className="space-y-2 text-sm">
+                {billed && (
+                  <div className="flex justify-between" data-testid="account-plan">
+                    <span className="text-muted-foreground">Plan</span>
+                    <span>
+                      {billed.plan === 'founding' ? 'Founding Member' : 'Pro'}
+                      {billed.perPeriod ? ` – ${billed.perPeriod}` : ''}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>
                   <span className="capitalize text-emerald-400">{sub.status}</span>
@@ -116,6 +134,19 @@ export default async function AccountPage({
                   </div>
                 )}
               </div>
+              {billed?.plan === 'founding' && (
+                <p className="text-xs text-muted-foreground" data-testid="founding-lock">
+                  {sub.cancelAtPeriodEnd
+                    ? `Your Founding Member price stays in effect until ${sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toLocaleDateString() : 'the end of this period'}. If you let the subscription end, the founding price ends with it; renew before then to keep it.`
+                    : lockTerms}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {billed?.amount && !sub.cancelAtPeriodEnd
+                  ? `Renews every month at ${billed.amount} until you cancel${sub.status === 'trialing' ? ' (first charge when the free trial ends)' : ''}. `
+                  : ''}
+                {CANCEL_POLICY}
+              </p>
               <ManageSubscriptionButton />
             </>
           ) : paymentProblem ? (
@@ -123,6 +154,10 @@ export default async function AccountPage({
               <p className="text-sm text-muted-foreground">
                 Your last payment didn&apos;t go through, so Pro is paused. Update your card to
                 restore access; Stripe will retry the charge.
+                {billed?.perPeriod ? ` Your plan: ${billed.plan === 'founding' ? 'Founding Member' : 'Pro'} – ${billed.perPeriod}.` : ''}
+                {billed?.plan === 'founding'
+                  ? ' Fixing the card keeps your Founding Member price; if the subscription ends because the payment cannot be collected, the founding price ends too.'
+                  : ''}
               </p>
               <ManageSubscriptionButton />
             </>

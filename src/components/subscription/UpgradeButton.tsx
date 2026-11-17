@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UPGRADE_CTA } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 interface UpgradeButtonProps {
   className?: string;
@@ -15,6 +15,7 @@ interface UpgradeButtonProps {
 export function UpgradeButton({ className, variant = 'default', label }: UpgradeButtonProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const { offer, copy } = useOffer();
 
   async function handleUpgrade() {
     setLoading(true);
@@ -23,7 +24,13 @@ export function UpgradeButton({ className, variant = 'default', label }: Upgrade
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
     try {
-      const res = await fetch('/api/checkout', { method: 'POST', signal: controller.signal });
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        // The server refuses to charge a different amount than the one shown here.
+        body: JSON.stringify({ expectedCents: offer?.amountCents ?? null }),
+      });
       const data = await res.json().catch(() => ({}));
       if (data.url) {
         window.location.href = data.url;
@@ -59,7 +66,7 @@ export function UpgradeButton({ className, variant = 'default', label }: Upgrade
         className={cn(className)}
       >
         <Zap className="h-4 w-4 mr-2" />
-        {loading ? 'Redirecting…' : (label || UPGRADE_CTA)}
+        {loading ? 'Redirecting…' : (label || copy.ctaReturning)}
       </Button>
       {message && (
         <p role="alert" className="mt-2 text-sm text-amber-500">{message}</p>

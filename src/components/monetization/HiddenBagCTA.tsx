@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
 import { useSubscription } from '@/lib/context/subscription-context';
-import { TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 export function HiddenBagCTA() {
   const { isPro, loading } = useSubscription();
+  const { copy } = useOffer();
   // Members don't see the pitch; neither does anyone whose plan is still loading or
   // could not be verified (they may be paying).
   if (isPro || loading) return null;
@@ -63,11 +63,11 @@ export function HiddenBagCTA() {
           <Button size="lg" className="bg-emerald-700 hover:bg-emerald-800 text-white mb-3" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
-              {TRIAL_CTA}
+              {copy.ctaNew}
             </Link>
           </Button>
           <p className="text-sm text-muted-foreground">
-            {TRIAL_TERMS}
+            {copy.terms}
           </p>
         </div>
       </CardContent>

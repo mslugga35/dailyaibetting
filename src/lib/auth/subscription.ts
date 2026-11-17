@@ -32,6 +32,8 @@ export interface UserSubscription {
   stripeSubscriptionId: string | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  /** Stripe price of the tracked subscription (founding / regular / legacy $20 / other). */
+  priceId: string | null;
 }
 
 /** How long one entitlement read may take before it is treated as unavailable. */
@@ -121,6 +123,7 @@ export async function getUserSubscription(userId: string, opts: ReadOptions = {}
       stripeSubscriptionId: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
+      priceId: null,
     };
   }
 
@@ -132,6 +135,7 @@ export async function getUserSubscription(userId: string, opts: ReadOptions = {}
     stripeSubscriptionId: (data.stripe_subscription_id as string | null) ?? null,
     currentPeriodEnd: (data.current_period_end as string | null) ?? null,
     cancelAtPeriodEnd: Boolean(data.cancel_at_period_end),
+    priceId: (data.price_id as string | null) ?? null,
   };
 }
 

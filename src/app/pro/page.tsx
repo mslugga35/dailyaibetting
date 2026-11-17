@@ -8,12 +8,15 @@ import { Crown, Loader2, Zap, Target, BarChart3, Clock, Users } from 'lucide-rea
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 import Link from 'next/link';
 import { useState } from 'react';
-import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 const GUEST_CHECKOUT_ENABLED = process.env.NEXT_PUBLIC_GUEST_CHECKOUT_ENABLED === 'true';
 
 export default function ProPage() {
   const { isPro, status, user, loading } = useSubscription();
+  const { offer, copy } = useOffer();
+  const closed = !!offer && !offer.plan;
+  const cta = status === 'canceled' ? copy.ctaReturning : copy.ctaNew;
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [guestEmail, setGuestEmail] = useState('');
@@ -32,7 +35,7 @@ export default function ProPage() {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guestEmail: email }),
+        body: JSON.stringify({ guestEmail: email, expectedCents: offer?.amountCents ?? null }),
       });
       const data = await res.json();
       if (data.url) {
@@ -55,9 +58,11 @@ export default function ProPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/checkout', {
         method: 'POST',
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : {},
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ expectedCents: offer?.amountCents ?? null }),
       });
       const data = await res.json();
       if (data.url) {
@@ -155,14 +160,26 @@ export default function ProPage() {
       <Card className="border-emerald-500/30 mb-10">
         <CardContent className="p-8 text-center">
           <div className="mb-4">
-            <span className="text-5xl font-bold">{PRO_PRICE_DISPLAY.split('/')[0]}</span>
-            <span className="text-muted-foreground">/{PRO_PRICE_DISPLAY.split('/')[1] ?? 'mo'}</span>
+            {offer?.plan === 'founding' && (
+              <Badge variant="outline" className="mb-2 border-amber-500/50 text-amber-400">Founding Member</Badge>
+            )}
+            {copy.price ? (
+              <div>
+                <span className="text-5xl font-bold">{copy.price.split('/')[0]}</span>
+                <span className="text-muted-foreground">/{copy.price.split('/')[1] ?? 'mo'}</span>
+              </div>
+            ) : null}
           </div>
-          <p className="text-sm text-muted-foreground mb-6">
-            {TRIAL_TERMS}
+          <p className="text-sm text-muted-foreground mb-2">
+            {copy.terms}
           </p>
+          {copy.lock && <p className="text-xs text-muted-foreground mb-2">{copy.lock}</p>}
+          {copy.seats && <p className="text-xs font-medium text-amber-400 mb-2">{copy.seats}</p>}
+          <p className="text-xs text-muted-foreground mb-6">{copy.renewal}</p>
 
-          {user ? (
+          {closed ? (
+            <Button size="lg" className="w-full max-w-sm" disabled>{copy.ctaNew}</Button>
+          ) : user ? (
             <Button
               size="lg"
               className="w-full max-w-sm bg-emerald-700 hover:bg-emerald-800 text-white"
@@ -174,7 +191,7 @@ export default function ProPage() {
               ) : (
                 <Crown className="h-5 w-5 mr-2" />
               )}
-              {TRIAL_CTA}
+              {cta}
             </Button>
           ) : GUEST_CHECKOUT_ENABLED ? (
             <div className="w-full max-w-sm mx-auto">
@@ -198,7 +215,7 @@ export default function ProPage() {
                 ) : (
                   <Crown className="h-5 w-5 mr-2" />
                 )}
-                {TRIAL_CTA}
+                {cta}
               </Button>
               {guestError && <p className="text-sm text-red-400 mt-2">{guestError}</p>}
               <p className="text-xs text-muted-foreground mt-3">

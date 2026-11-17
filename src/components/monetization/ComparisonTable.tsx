@@ -6,10 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Check, X, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/lib/context/subscription-context';
-import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 export function ComparisonTable() {
   const { isPro, loading } = useSubscription();
+  const { copy } = useOffer();
   // Members don't need the free-vs-pro pitch; hidden while the plan is loading/unverified.
   if (isPro || loading) return null;
 
@@ -77,7 +78,7 @@ export function ComparisonTable() {
           <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
             <Link href="/pro">
               <Crown className="h-4 w-4 mr-2" />
-              {TRIAL_CTA}
+              {copy.ctaNew}
             </Link>
           </Button>
         </div>

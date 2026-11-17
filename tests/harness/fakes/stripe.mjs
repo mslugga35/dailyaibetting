@@ -44,6 +44,22 @@ const fakeStripe = {
       return JSON.parse(JSON.stringify(s));
     },
   },
+  invoices: {
+    async retrieve(invoiceId) {
+      st().record('invoices.retrieve', { id: invoiceId });
+      const inv = st().invoices[invoiceId];
+      if (!inv) throw Object.assign(new Error(`No such invoice: '${invoiceId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      return { id: invoiceId, object: 'invoice', ...inv };
+    },
+  },
+  prices: {
+    async retrieve(priceId) {
+      st().record('prices.retrieve', { id: priceId });
+      const p = st().prices[priceId];
+      if (!p) throw Object.assign(new Error(`No such price: '${priceId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      return { id: priceId, object: 'price', active: true, currency: 'usd', recurring: { interval: 'month', interval_count: 1 }, ...p };
+    },
+  },
   checkout: {
     sessions: {
       async create(params) {

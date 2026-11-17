@@ -17,6 +17,10 @@ export class FakeStripeState {
     this.subscriptions = [];
     this.sessions = [];
     this.portalSessions = [];
+    /** priceId -> partial Stripe Price (unit_amount, currency, recurring, active). */
+    this.prices = { [DAILYAI_PRICE_ID]: { unit_amount: 2000 } };
+    /** invoiceId -> partial Stripe Invoice (status, amount_paid). */
+    this.invoices = {};
     this.calls = [];
     this.failures = [];
   }
@@ -56,6 +60,7 @@ export class FakeStripeState {
       cancel_at_period_end: fields.cancel_at_period_end ?? false,
       cancel_at: fields.cancel_at ?? null,
       metadata: fields.metadata || {},
+      latest_invoice: fields.latest_invoice ?? null,
       items: {
         object: 'list',
         data: [{ id: id('si'), price: { id: priceId }, current_period_start: fields.current_period_start ?? now, current_period_end: fields.current_period_end ?? now + 30 * 86400 }],

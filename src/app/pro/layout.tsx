@@ -1,12 +1,17 @@
 import { Metadata } from 'next';
-import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { getCurrentOffer } from '@/lib/pricing/offer';
+import { offerCopy } from '@/lib/pricing/plans';
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const c = offerCopy(await getCurrentOffer());
+  // Price + trial wording comes from the plan on sale (same source as checkout).
+  const priceLine = c.price ? `${c.price}${c.trialLabel ? `, ${c.trialLabel} for first-time members` : ''}.` : '';
+  return {
   title: 'DailyAI Pro | Premium Sports Betting Picks & Analysis',
-  description: `Upgrade to DailyAI Pro for real-time picks, full capper stats, unlimited consensus data, and 30-day pick history. ${PRO_PRICE_DISPLAY}, ${TRIAL_DAYS}-day free trial for first-time members.`,
+  description: `Upgrade to DailyAI Pro for real-time picks, full capper stats, unlimited consensus data, and 30-day pick history. ${priceLine}`.trim(),
   openGraph: {
     title: 'DailyAI Pro - Premium Betting Picks',
-    description: `Real-time picks, full stats, and unlimited consensus data. ${PRO_PRICE_DISPLAY} with a ${TRIAL_DAYS}-day free trial for first-time members.`,
+    description: `Real-time picks, full stats, and unlimited consensus data. ${priceLine}`.trim(),
     url: 'https://dailyaibetting.com/pro',
     type: 'website',
     images: [
@@ -21,7 +26,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://dailyaibetting.com/pro',
   },
-};
+  };
+}
 
 export default function ProLayout({
   children,

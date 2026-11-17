@@ -6,12 +6,16 @@ import { Check, Zap, Lock, Brain, TrendingUp, Bell, Trophy, BarChart } from 'luc
 import Link from 'next/link';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
-import { PRO_PRICE_DISPLAY, TRIAL_AFTER, TRIAL_CTA, TRIAL_LABEL, TRIAL_TERMS, UPGRADE_CTA } from '@/lib/constants/subscription';
+import { getCurrentOffer, personalizeOffer } from '@/lib/pricing/offer';
+import { offerCopy } from '@/lib/pricing/plans';
 
-export const metadata = {
-  title: 'Pricing – DailyAI Betting Premium',
-  description: `Get all consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards for ${PRO_PRICE_DISPLAY}. ${TRIAL_LABEL} for first-time members.`,
-};
+export async function generateMetadata() {
+  const c = offerCopy(await getCurrentOffer());
+  return {
+    title: 'Pricing – DailyAI Betting Premium',
+    description: `Get all consensus picks, MEGA/NUCLEAR alerts, and full capper leaderboards${c.price ? ` for ${c.price}` : ''}.${c.trialLabel ? ` ${c.trialLabel} for first-time members.` : ''}`,
+  };
+}
 
 export default async function PricingPage() {
   let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
@@ -25,6 +29,11 @@ export default async function PricingPage() {
     unknown = true;
   }
   const isPremium = sub?.plan === 'premium';
+  // Same decision checkout makes (a former founding member is shown what they would get).
+  const offer = personalizeOffer(await getCurrentOffer(), sub?.priceId);
+  const copy = offerCopy(offer);
+  const closed = !offer.plan;
+  const returning = !!sub?.stripeSubscriptionId;
 
   return (
     <div className="container px-4 py-16 max-w-4xl mx-auto">
@@ -95,13 +104,22 @@ export default async function PricingPage() {
             <CardTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-primary" />
               Premium
+              {offer.plan === 'founding' && (
+                <Badge variant="outline" className="ml-auto border-amber-500/50 text-amber-400">Founding Member</Badge>
+              )}
             </CardTitle>
-            <div className="mt-2">
-              <span className="text-4xl font-bold">{PRO_PRICE_DISPLAY.split('/')[0]}</span>
-              <span className="text-muted-foreground">/{PRO_PRICE_DISPLAY.split('/')[1] ?? 'mo'}</span>
-            </div>
-            <p className="text-sm text-emerald-400 font-medium">{TRIAL_LABEL} for first-time members</p>
-            <p className="text-xs text-muted-foreground">{TRIAL_AFTER}</p>
+            {copy.price ? (
+              <div className="mt-2">
+                <span className="text-4xl font-bold">{copy.price.split('/')[0]}</span>
+                <span className="text-muted-foreground">/{copy.price.split('/')[1] ?? 'mo'}</span>
+              </div>
+            ) : null}
+            {copy.trialLabel && !returning && (
+              <p className="text-sm text-emerald-400 font-medium">{copy.trialLabel} for first-time members</p>
+            )}
+            <p className="text-xs text-muted-foreground">{copy.after}</p>
+            {copy.lock && <p className="text-xs text-muted-foreground" data-testid="founding-lock">{copy.lock}</p>}
+            {copy.seats && <p className="text-xs font-medium text-amber-400" data-testid="founding-seats">{copy.seats}</p>}
           </CardHeader>
           <CardContent className="space-y-3">
             {[
@@ -128,12 +146,14 @@ export default async function PricingPage() {
               <Button className="w-full mt-4" asChild>
                 <Link href="/account">Fix payment to restore Pro</Link>
               </Button>
+            ) : closed ? (
+              <Button className="w-full mt-4" disabled>{copy.ctaNew}</Button>
             ) : user ? (
               // The trial is for first-time subscribers only (checkout enforces it too).
-              <UpgradeButton className="w-full mt-4" label={sub?.stripeSubscriptionId ? UPGRADE_CTA : TRIAL_CTA} />
+              <UpgradeButton className="w-full mt-4" label={returning ? copy.ctaReturning : copy.ctaNew} />
             ) : (
               <Button className="w-full mt-4" asChild>
-                <Link href="/login?redirect=/pricing">{TRIAL_CTA}</Link>
+                <Link href="/login?redirect=/pricing">{copy.ctaNew}</Link>
               </Button>
             )}
           </CardContent>
@@ -152,8 +172,9 @@ export default async function PricingPage() {
         <h2 id="pricing-faq" className="text-2xl font-bold mb-4 text-center">Questions</h2>
         <div className="divide-y rounded-xl border bg-card">
           {[
-            ['How does the free trial work?', TRIAL_TERMS],
-            ['How do I cancel?', 'Open Account and choose Manage Subscription. Billing and cancellation are handled in the secure Stripe customer portal.'],
+            ['How does billing and the free trial work?', `${copy.terms} ${copy.renewal}`],
+            ...(copy.lock ? [['What is the Founding Member price?', `${copy.lock}${offer.founding ? ` It is limited to the first ${offer.founding.cap} paying members; a spot is held while you check out or are on the free trial, and counts once your first payment goes through.` : ''}`]] : []),
+            ['How do I cancel?', 'Open Account and choose Manage Subscription. Billing and cancellation are handled in the secure Stripe customer portal. Cancelling stops future charges; you keep Pro until the end of the period you already paid for.'],
             ['What do I get that free users do not?', 'Every consensus pick each day instead of the top 5, the strongest MEGA/NUCLEAR consensus alerts, the full capper leaderboard and every past pick from every capper. (The graded consensus track record on /results is free for everyone.)'],
             ['Is this betting advice? Do you guarantee wins?', 'No. We aggregate and grade picks from third-party cappers. Consensus means several cappers chose the same bet; it does not guarantee any outcome. Please bet responsibly.'],
             ['How is the track record calculated?', 'Every fire pick is graded win, loss or push from the final score. Win rate excludes pushes. Nothing is estimated; the full method is on the Results page.'],

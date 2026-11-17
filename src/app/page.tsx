@@ -11,7 +11,8 @@ import { RefreshButton } from '@/components/ui/RefreshButton';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
-import { PRO_PRICE_DISPLAY, TRIAL_DAYS, TRIAL_CTA, TRIAL_TERMS } from '@/lib/constants/subscription';
+import { getCurrentOffer } from '@/lib/pricing/offer';
+import { offerCopy } from '@/lib/pricing/plans';
 import { getAllTimeRecord, MIN_SAMPLE } from '@/lib/data/performance';
 
 // Server-side data fetching
@@ -50,6 +51,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function HomePage() {
+  const offer = await getCurrentOffer();
+  const priceCopy = offerCopy(offer);
   const [data, trackRecord] = await Promise.all([getConsensusData(), getTrackRecord()]);
   // Only advertise a win rate once the sample is meaningful; the full record is always on /results.
   const hasTrackRecord = !!trackRecord && trackRecord.decided >= MIN_SAMPLE;
@@ -136,7 +139,7 @@ export default async function HomePage() {
           <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
             <Link href="/pro">
               <Crown className="h-5 w-5 mr-2" />
-              {TRIAL_CTA}
+              {offer.plan ? priceCopy.ctaNew : 'See Pro'}
             </Link>
           </Button>
         </div>
@@ -236,7 +239,12 @@ export default async function HomePage() {
                       <p className="text-sm text-muted-foreground mb-4">
                         Upgrade to Premium for access to all picks, MEGA/NUCLEAR alerts, and full leaderboards.
                       </p>
-                      <UpgradeButton label={`Unlock All Picks – ${PRO_PRICE_DISPLAY}`} />
+                      {offer.plan && priceCopy.price ? (
+                        <UpgradeButton label={`Unlock All Picks – ${priceCopy.price}`} />
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{priceCopy.after}</p>
+                      )}
+                      {priceCopy.seats && <p className="mt-2 text-xs text-amber-400">{priceCopy.seats}</p>}
                     </div>
                   )}
                 </>

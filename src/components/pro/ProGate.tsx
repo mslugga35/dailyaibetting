@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, Crown } from 'lucide-react';
 import Link from 'next/link';
-import { PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 interface ProGateProps {
   children: React.ReactNode;
@@ -14,6 +14,7 @@ interface ProGateProps {
 
 export function ProGate({ children, fallback }: ProGateProps) {
   const { isPro, loading, user } = useSubscription();
+  const { copy } = useOffer();
 
   if (loading) {
     return (
@@ -40,7 +41,7 @@ export function ProGate({ children, fallback }: ProGateProps) {
         <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
           <Link href={user ? '/pro' : '/login'}>
             <Crown className="h-4 w-4 mr-2" />
-            {user ? `Upgrade to Pro — ${PRO_PRICE_DISPLAY}` : 'Sign in to upgrade'}
+            {user ? (copy.price ? `Upgrade to Pro — ${copy.price}` : 'Upgrade to Pro') : 'Sign in to upgrade'}
           </Link>
         </Button>
       </CardContent>
