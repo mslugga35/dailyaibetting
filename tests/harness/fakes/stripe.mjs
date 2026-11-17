@@ -37,11 +37,41 @@ const fakeStripe = {
       );
       return list(hit.slice(0, params?.limit ?? 10));
     },
+    async update(subId, params) {
+      st().record('subscriptions.update', { id: subId, params });
+      const s = st().subscriptions.find((x) => x.id === subId);
+      if (!s) throw Object.assign(new Error(`No such subscription: '${subId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      if (params?.trial_end === 'now' && s.status === 'trialing') s.status = 'active';
+      return JSON.parse(JSON.stringify(s));
+    },
     async retrieve(subId) {
       st().record('subscriptions.retrieve', { id: subId });
       const s = st().subscriptions.find((x) => x.id === subId);
       if (!s) throw Object.assign(new Error(`No such subscription: '${subId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
       return JSON.parse(JSON.stringify(s));
+    },
+  },
+  paymentMethods: {
+    async retrieve(id) {
+      st().record('paymentMethods.retrieve', { id });
+      const pm = st().paymentMethods[id];
+      if (!pm) throw Object.assign(new Error(`No such payment method: '${id}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      return { id, object: 'payment_method', ...pm };
+    },
+  },
+  charges: {
+    async retrieve(id) {
+      st().record('charges.retrieve', { id });
+      const c = st().charges[id];
+      if (!c) throw Object.assign(new Error(`No such charge: '${id}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      return { id, object: 'charge', ...c };
+    },
+  },
+  invoicePayments: {
+    async list(params) {
+      st().record('invoicePayments.list', params);
+      const inv = st().invoicePayments[params?.payment?.payment_intent];
+      return list(inv ? [{ object: 'invoice_payment', invoice: inv }] : []);
     },
   },
   invoices: {

@@ -35,6 +35,23 @@ export async function hasEverSubscribed(stripe: Stripe, customerId: string): Pro
 }
 
 /**
+ * True when ANY Stripe customer with this email has ever had a DailyAI subscription.
+ * Stripe does not dedupe customers by email: a guest checkout and a later signed-in
+ * checkout create two customers for one person, and each alone looks "new". One free
+ * trial per person means checking all of them. (Different email addresses for one
+ * person are caught later by the card-fingerprint check in the webhook.)
+ */
+export async function hasEverSubscribedByEmail(stripe: Stripe, email: string | null | undefined): Promise<boolean> {
+  const e = (email || '').trim();
+  if (!e) return false;
+  const variants = Array.from(new Set([e, e.toLowerCase()]));
+  const lists = await Promise.all(variants.map((v) => stripe.customers.list({ email: v, limit: 100 })));
+  const ids = Array.from(new Set(lists.flatMap((l) => l.data.map((c) => c.id))));
+  const subs = await Promise.all(ids.map((id) => dailyAiSubscriptions(stripe, id)));
+  return subs.some((x) => x.length > 0);
+}
+
+/**
  * The customer's DailyAI subscriptions (any status). The Stripe account is shared
  * with other products and customers are matched by email, so another product's
  * subscription must neither use up the DailyAI trial nor block a DailyAI checkout.

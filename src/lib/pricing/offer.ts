@@ -7,15 +7,15 @@
  *   PRICING_MODE                 legacy (default) | founding | regular   <- the owner's switch
  *   STRIPE_PRICE_ID              legacy $20 price existing subscribers hold (always honoured)
  *   STRIPE_PRICE_FOUNDING        $9.99/mo founding price (required for PRICING_MODE=founding)
- *   STRIPE_PRICE_PRO             $19.99/mo regular price (required for PRICING_MODE=regular)
+ *   STRIPE_PRICE_PRO             $19.99/mo regular price (required for PRICING_MODE=founding and
+ *                                regular: once the founding seats are used, new customers get it)
  *   FOUNDING_SEAT_CAP            default 100
  *   FOUNDING_MAX_OPEN_HOLDS      default 20: at most this many unpaid founding checkouts may
  *                                hold a seat at once (limits seat squatting)
  *   FOUNDING_SEAT_COUNT          historical (default: a paid founding member who later leaves
  *                                still uses a seat) | live (their seat is freed)
  *   FOUNDING_TRIAL_DAYS          default 7 (first-time members only; 0 = no trial)
- *   FOUNDING_SOLD_OUT            closed (default: no new Pro signups until the owner flips
- *                                PRICING_MODE=regular) | regular (sell $19.99 automatically)
+ *   (When the founding seats are used up, $19.99 is sold automatically: Pro never closes.)
  *   FOUNDING_RETURNING           regular (default: a former paying founding member is offered
  *                                STRIPE_PRICE_PRO, not the founding price) | founding
  *   STRIPE_PORTAL_CONFIGURATION_ID  billing-portal configuration with plan switching disabled
@@ -54,7 +54,6 @@ export interface PricingConfig {
   maxHolds: number;
   countEnded: boolean;
   foundingTrialDays: number;
-  soldOutSellsRegular: boolean;
   returningGetsFounding: boolean;
 }
 
@@ -69,15 +68,12 @@ export function pricingConfig(): PricingConfig {
     maxHolds: intEnv('FOUNDING_MAX_OPEN_HOLDS', 20, 1, 100000),
     countEnded: env('FOUNDING_SEAT_COUNT').toLowerCase() !== 'live',
     foundingTrialDays: intEnv('FOUNDING_TRIAL_DAYS', TRIAL_DAYS, 0, 30),
-    soldOutSellsRegular: env('FOUNDING_SOLD_OUT').toLowerCase() === 'regular',
     returningGetsFounding: env('FOUNDING_RETURNING').toLowerCase() === 'founding',
   };
   if (mode === 'founding' && !cfg.prices.founding) throw new PricingConfigError('PRICING_MODE=founding needs STRIPE_PRICE_FOUNDING');
+  if (mode === 'founding' && !cfg.prices.regular) throw new PricingConfigError('PRICING_MODE=founding needs STRIPE_PRICE_PRO (sold once the founding seats are used)');
   if (mode === 'regular' && !cfg.prices.regular) throw new PricingConfigError('PRICING_MODE=regular needs STRIPE_PRICE_PRO');
   if (mode === 'legacy' && !cfg.prices.legacy) throw new PricingConfigError('STRIPE_PRICE_ID not configured');
-  if (cfg.soldOutSellsRegular && mode === 'founding' && !cfg.prices.regular) {
-    throw new PricingConfigError('FOUNDING_SOLD_OUT=regular needs STRIPE_PRICE_PRO');
-  }
   return cfg;
 }
 
@@ -207,17 +203,15 @@ async function computeOffer(): Promise<PublicOffer> {
   if (!soldOut) {
     return { mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: cfg.foundingTrialDays, founding };
   }
-  if (cfg.soldOutSellsRegular) {
-    return { mode: 'founding', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: TRIAL_DAYS, founding };
-  }
-  return { mode: 'founding', plan: null, amountCents: null, trialDays: 0, founding };
+  // Seats used up: the regular price, automatically (Pro never closes).
+  return { mode: 'founding', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: TRIAL_DAYS, founding };
 }
 
 // ---------------------------------------------------------------- checkout decision
 
 export type CheckoutPlan =
   | { ok: true; plan: PlanKey; priceId: string; firstTimeTrialDays: number; seatId: number | null; newSeat: boolean }
-  | { ok: false; reason: 'sold_out' | 'returning' | 'busy' };
+  | { ok: false; reason: 'busy' };
 
 const verified = new Map<string, number>();
 /**
@@ -256,15 +250,11 @@ export async function chooseCheckoutPlan(customerId: string, userId: string | nu
       seatId: Number(r.seat_id), newSeat: r.outcome === 'reserved',
     };
   }
-  // A former paying founding member gets the regular price (owner rule); anyone else
-  // after the cap only when FOUNDING_SOLD_OUT=regular.
+  // Too many unpaid founding checkouts open at once: a short wait, not a closed store.
   if (r.outcome === 'busy') return { ok: false, reason: 'busy' };
-  const sellRegular = r.outcome === 'returning' ? !!cfg.prices.regular : cfg.soldOutSellsRegular;
-  if (sellRegular) {
-    await assertPriceMatches(cfg.prices.regular, 'regular');
-    return { ok: true, plan: 'regular', priceId: cfg.prices.regular, firstTimeTrialDays: TRIAL_DAYS, seatId: null, newSeat: false };
-  }
-  return { ok: false, reason: r.outcome === 'returning' ? 'returning' : 'sold_out' };
+  // Seats used up, or a former paying founding member: the regular price (owner rules).
+  await assertPriceMatches(cfg.prices.regular, 'regular');
+  return { ok: true, plan: 'regular', priceId: cfg.prices.regular, firstTimeTrialDays: TRIAL_DAYS, seatId: null, newSeat: false };
 }
 
 /** For tests. */

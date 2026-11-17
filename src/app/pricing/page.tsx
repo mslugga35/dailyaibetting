@@ -7,7 +7,10 @@ import Link from 'next/link';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { getCurrentOffer, personalizeOffer } from '@/lib/pricing/offer';
-import { offerCopy } from '@/lib/pricing/plans';
+import { offerCopy, REFUND_NOTE } from '@/lib/pricing/plans';
+
+// Price and seat count change at runtime (founding seats sell out -> $19.99): never prerender.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const c = offerCopy(await getCurrentOffer());
@@ -117,6 +120,8 @@ export default async function PricingPage() {
               <p className="text-sm text-emerald-400 font-medium">{copy.trialLabel} for first-time members</p>
             )}
             <p className="text-xs text-muted-foreground">{copy.after}</p>
+            {copy.firstCharge && !returning && <p className="text-xs text-muted-foreground" data-testid="first-charge">{copy.firstCharge}</p>}
+            {copy.trialRule && !returning && <p className="text-xs text-muted-foreground">{copy.trialRule}</p>}
             {copy.lock && <p className="text-xs text-muted-foreground" data-testid="founding-lock">{copy.lock}</p>}
             {copy.seats && <p className="text-xs font-medium text-amber-400" data-testid="founding-seats">{copy.seats}</p>}
           </CardHeader>
@@ -170,9 +175,10 @@ export default async function PricingPage() {
         <h2 id="pricing-faq" className="text-2xl font-bold mb-4 text-center">Questions</h2>
         <div className="divide-y rounded-xl border bg-card">
           {[
-            ['How does billing and the free trial work?', `${copy.terms} ${copy.renewal}`],
+            ['How does billing and the free trial work?', [copy.terms, copy.firstCharge, copy.trialRule, copy.renewal].filter(Boolean).join(' ')],
             ...(copy.lock ? [['What is the Founding Member price?', `${copy.lock}${offer.founding ? ` It is limited to the first ${offer.founding.cap} paying members; a spot is held while you check out or are on the free trial, and counts once your first payment goes through.` : ''}`]] : []),
             ['How do I cancel?', 'Open Account and choose Manage Subscription. Billing and cancellation are handled in the secure Stripe customer portal. Cancelling stops future charges; you keep Pro until the end of the period you already paid for.'],
+            ['Can I get a refund?', REFUND_NOTE],
             ['What do I get that free users do not?', 'Every consensus pick each day instead of the top 5, the strongest MEGA/NUCLEAR consensus alerts, individual capper pick detail and the full pick-by-pick history. (The graded consensus track record on /results is free for everyone.)'],
             ['Is this betting advice? Do you guarantee wins?', 'No. We aggregate and grade picks from third-party cappers. Consensus means several cappers chose the same bet; it does not guarantee any outcome. Please bet responsibly.'],
             ['How is the track record calculated?', 'Every fire pick is graded win, loss or push from the final score. Win rate excludes pushes. Nothing is estimated; the full method is on the Results page.'],

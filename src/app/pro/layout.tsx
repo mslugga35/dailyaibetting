@@ -2,6 +2,10 @@ import { Metadata } from 'next';
 import { getCurrentOffer } from '@/lib/pricing/offer';
 import { offerCopy } from '@/lib/pricing/plans';
 
+// The meta/OG description carries the price on sale, which changes at runtime (founding
+// seats sell out -> $19.99). Rendered per request so it never shows a stale price.
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const c = offerCopy(await getCurrentOffer());
   // Price + trial wording comes from the plan on sale (same source as checkout).

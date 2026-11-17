@@ -171,6 +171,8 @@ export default function ProPage() {
           <p className="text-sm text-muted-foreground mb-2">
             {copy.terms}
           </p>
+          {copy.firstCharge && status !== 'canceled' && <p className="text-xs text-muted-foreground mb-2">{copy.firstCharge}</p>}
+          {copy.trialRule && status !== 'canceled' && <p className="text-xs text-muted-foreground mb-2">{copy.trialRule}</p>}
           {copy.lock && <p className="text-xs text-muted-foreground mb-2">{copy.lock}</p>}
           {copy.seats && <p className="text-xs font-medium text-amber-400 mb-2">{copy.seats}</p>}
           <p className="text-xs text-muted-foreground mb-6">{copy.renewal}</p>

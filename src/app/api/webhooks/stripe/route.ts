@@ -104,6 +104,11 @@ export async function POST(req: NextRequest) {
         await handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
       }
+      case 'charge.refunded':
+      case 'charge.dispute.created': {
+        await handleRefundOrDispute(event);
+        break;
+      }
       case 'checkout.session.expired': {
         await handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
         break;
@@ -183,6 +188,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (await rowForSubscription(subscriptionId)) {
     await updateBySubscription(subscription);
     await syncFoundingSeat(subscription, session.metadata?.user_id || null);
+    await enforceOneTrialPerCard(subscription);
     return;
   }
 
@@ -269,6 +275,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw error;
   }
   await syncFoundingSeat(subscription, userId);
+  await enforceOneTrialPerCard(subscription);
 
   // Guest: access is now granted — email them the magic link to sign in.
   // Failure here must NOT throw: payment + access already succeeded, and the
@@ -399,4 +406,117 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
   const n = Number(session.metadata?.founding_seat_id);
   if (!foundingPriceId() || !Number.isSafeInteger(n) || n <= 0) return;
   await transitionFoundingSeat({ event: 'expired', seatId: n, sessionId: session.id });
+}
+
+// ---------------------------------------------------------------- one free trial per card
+
+/** Card and dispute bookkeeping need the founding migration, a prerequisite of founding/regular mode. */
+function billingTablesEnabled(): boolean {
+  const m = (process.env.PRICING_MODE || '').trim().toLowerCase();
+  return m === 'founding' || m === 'regular';
+}
+
+/**
+ * One free trial per payment card. Email checks at checkout catch the same person with
+ * the same email; a different email with the same card is only visible here, once the
+ * card is known. A trial on a card that already had a DailyAI trial under another
+ * customer is ended at once (charged from day one, as disclosed). Idempotent: a
+ * redelivery finds the subscription no longer trialing, or the fingerprint as 'same'.
+ */
+async function enforceOneTrialPerCard(subscription: Stripe.Subscription) {
+  if (!billingTablesEnabled() || subscription.status !== 'trialing') return;
+  // Only the new plans: a legacy $20 subscription is never modified automatically.
+  const newPrices = [process.env.STRIPE_PRICE_FOUNDING, process.env.STRIPE_PRICE_PRO].map((v) => (v || '').trim()).filter(Boolean);
+  if (!subscription.items.data.some((i) => newPrices.includes(i.price?.id))) return;
+  const pmRef = subscription.default_payment_method;
+  if (!pmRef) return;
+  const pm = typeof pmRef === 'string' ? await stripe.paymentMethods.retrieve(pmRef) : pmRef;
+  const fingerprint = pm.card?.fingerprint;
+  if (!fingerprint) return; // not a card (e.g. a wallet without a fingerprint): cannot check
+  const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+  const { data, error } = await supabaseAdmin.rpc('dailyai_claim_trial_fingerprint', {
+    p_fingerprint: fingerprint, p_customer: customer, p_subscription: subscription.id,
+  });
+  if (error) throw error;
+  if (data !== 'reused') return;
+  await stripe.subscriptions.update(subscription.id, { trial_end: 'now', proration_behavior: 'none' });
+  console.warn(`[Stripe Webhook] Trial ended for ${subscription.id}: card already used for a DailyAI trial by another customer`);
+}
+
+// ---------------------------------------------------------------- refunds and disputes
+
+/**
+ * Record refunds and disputes for DailyAI customers (idempotent by event id) and mark
+ * the founding seat. Nothing is refunded, cancelled or downgraded here: a refund that
+ * also cancels the subscription ends Pro through customer.subscription.deleted.
+ */
+async function handleRefundOrDispute(event: Stripe.Event) {
+  let charge: Stripe.Charge;
+  let dispute: Stripe.Dispute | null = null;
+  if (event.type === 'charge.dispute.created') {
+    dispute = event.data.object as Stripe.Dispute;
+    const ref = dispute.charge;
+    charge = typeof ref === 'string' ? await stripe.charges.retrieve(ref) : ref;
+  } else {
+    charge = event.data.object as Stripe.Charge;
+  }
+  const customer = typeof charge.customer === 'string' ? charge.customer : charge.customer?.id ?? null;
+  if (!customer) return;
+  // Attribute the charge to the subscription it paid for, and only if that is a DailyAI
+  // subscription: one Stripe customer can also hold another product's subscription.
+  const subscription = await subscriptionForCharge(charge);
+  if (!subscription || !isDailyAiSubscription(subscription)) return;
+  console.warn(`[Stripe Webhook] ${event.type} for DailyAI subscription ${subscription.id}: charge ${charge.id}, amount ${dispute ? dispute.amount : charge.amount_refunded}`);
+  if (!billingTablesEnabled()) return; // legacy mode: logged only
+  const row = { stripe_subscription_id: subscription.id };
+
+  const { error } = await supabaseAdmin.from('dailyai_billing_events').upsert({
+    stripe_event_id: event.id,
+    event_type: event.type,
+    stripe_customer_id: customer,
+    stripe_subscription_id: row.stripe_subscription_id,
+    stripe_charge_id: charge.id,
+    amount_cents: dispute ? dispute.amount : charge.amount,
+    refunded_cents: dispute ? null : charge.amount_refunded,
+    dispute_reason: dispute ? dispute.reason : null,
+  }, { onConflict: 'stripe_event_id', ignoreDuplicates: true });
+  if (error) throw error;
+
+  if (!isFoundingSubscription(subscription)) return;
+  const seatQuery = supabaseAdmin.from('dailyai_founding_seats');
+  if (dispute) {
+    const { error: seatError } = await seatQuery.update({ disputed_at: new Date().toISOString() })
+      .eq('stripe_subscription_id', subscription.id).is('disputed_at', null);
+    if (seatError) throw seatError;
+    return;
+  }
+  // Total refunded on this subscription = sum over its charges of each charge's latest
+  // (largest) amount_refunded: order-independent and safe to replay.
+  const { data: refunds, error: refundsError } = await supabaseAdmin
+    .from('dailyai_billing_events')
+    .select('stripe_charge_id, refunded_cents')
+    .eq('stripe_subscription_id', subscription.id)
+    .eq('event_type', 'charge.refunded');
+  if (refundsError) throw refundsError;
+  const perCharge = new Map<string, number>();
+  for (const r of (refunds || []) as { stripe_charge_id: string; refunded_cents: number | null }[]) {
+    perCharge.set(r.stripe_charge_id, Math.max(perCharge.get(r.stripe_charge_id) ?? 0, r.refunded_cents ?? 0));
+  }
+  const total = [...perCharge.values()].reduce((a, b) => a + b, 0);
+  const { error: seatError } = await seatQuery.update({ refunded_cents: total }).eq('stripe_subscription_id', subscription.id);
+  if (seatError) throw seatError;
+}
+
+/** The subscription a charge paid for (charge -> PaymentIntent -> invoice payment -> invoice), or null. */
+async function subscriptionForCharge(charge: Stripe.Charge): Promise<Stripe.Subscription | null> {
+  const pi = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+  if (!pi) return null;
+  const payments = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: pi }, limit: 1 });
+  const invRef = payments.data[0]?.invoice;
+  if (!invRef) return null; // not an invoice charge (e.g. a one-off payment)
+  const invoice = typeof invRef === 'string' ? await stripe.invoices.retrieve(invRef) : invRef;
+  if ('deleted' in invoice && invoice.deleted) return null;
+  const subRef = (invoice as Stripe.Invoice).parent?.subscription_details?.subscription;
+  const subId = typeof subRef === 'string' ? subRef : subRef?.id;
+  return subId ? stripe.subscriptions.retrieve(subId) : null;
 }
