@@ -15,6 +15,8 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
+import { getConsensusSource, fetchHbConsensus, toConsensusPick } from '@/lib/data/hb-consensus';
+import type { SharedConsensusLite } from '@/lib/ai-picks/consensus-section';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -25,6 +27,8 @@ const STATCAST_CACHE = join(homedir(), '.cache', 'hiddenbag', 'mlb-statcast.json
 export interface ReportContext {
   date: string;
   expertPicks: { picks: ExpertPick[]; capperCount: number };
+  /** Shared consensus groups (CONSENSUS_SOURCE=hb only); null in legacy mode or on failure. */
+  sharedConsensus?: SharedConsensusLite[] | null;
   ballparkPal: BallparkPalData | null;
   statcast: StatcastData | null;
   prizePicks: PrizePicksProp[];
@@ -403,14 +407,28 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ]);
 }
 
+/** Today's shared consensus (no LLM, no paid API). Null when not in hb mode or unreadable. */
+async function collectSharedConsensus(): Promise<SharedConsensusLite[] | null> {
+  if (getConsensusSource() !== 'hb') return null;
+  try {
+    const rows = await fetchHbConsensus([getTodayET()], { minCappers: 2 });
+    return rows.map(toConsensusPick).map((c) => ({
+      sport: c.sport, bet: c.bet, capperCount: c.capperCount, cappers: c.cappers, opposingCount: c.opposingCount, tier: c.tier,
+    }));
+  } catch {
+    return null;
+  }
+}
+
 export async function collectAllData(): Promise<ReportContext> {
-  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket, kalshi] = await Promise.all([
+  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket, kalshi, sharedConsensus] = await Promise.all([
     withTimeout(collectExpertPicks(), 20000, { picks: [], capperCount: 0 }),
     withTimeout(collectPrizePicks(), 15000, []),
     withTimeout(collectMLBSchedule(), 15000, []),
     withTimeout(collectESPN(), 15000, {} as Record<string, ESPNGame[]>),
     withTimeout(collectPolymarket(), 15000, []),
     withTimeout(collectKalshi(), 20000, []),
+    withTimeout(collectSharedConsensus(), 15000, null),
   ]);
 
   return {
@@ -419,6 +437,7 @@ export async function collectAllData(): Promise<ReportContext> {
       timeZone: 'America/New_York',
     }),
     expertPicks,
+    sharedConsensus,
     ballparkPal: collectBallparkPal(),
     statcast: collectStatcast(),
     prizePicks,

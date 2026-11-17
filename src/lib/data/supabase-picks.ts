@@ -18,7 +18,7 @@ import { RawPick } from '../consensus/consensus-builder';
 import { identifySport } from '../consensus/team-mappings';
 import { getTodayET, getYesterdayET } from '../utils/date';
 import { logger } from '../utils/logger';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 // Supabase configuration
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -161,6 +161,40 @@ function hbPickToRawPick(pick: any, dateStr: string, gameMap?: Map<string, GameR
   };
 }
 
+const PICK_SELECT = `
+  id, sport, team, opponent, pick_type, line, odds, units, source, posted_at, created_at, matched_game_id,
+  capper:hb_cappers(name)
+`;
+
+/**
+ * Every hb_picks row created in [utcStart, utcEnd], paged with a stable order.
+ * PostgREST silently caps an unpaginated select at 1000 rows; busy days exceed it,
+ * which used to drop picks (and cappers) from consensus without any error.
+ * Advances by rows received and stops only on an empty page.
+ */
+export async function fetchAllPicksInWindow(
+  supabase: SupabaseClient,
+  utcStart: string,
+  utcEnd: string,
+): Promise<{ data: Record<string, unknown>[] | null; error: { message: string } | null }> {
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; from < 50_000;) {
+    const { data, error } = await supabase
+      .from('hb_picks')
+      .select(PICK_SELECT)
+      .gte('created_at', utcStart)
+      .lte('created_at', utcEnd)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + 999);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    from += data.length;
+  }
+  return { data: rows, error: null };
+}
+
 /**
  * Fetch picks from Supabase hb_picks table
  * Returns picks in RawPick format for consensus builder
@@ -189,26 +223,8 @@ export async function fetchPicksFromSupabase(): Promise<RawPick[]> {
     
     logger.debug('Supabase', `Fetching picks for ET day ${todayStr}: ${utcStart} to ${utcEnd}`);
     
-    // Fetch today's picks with capper names + game ID
-    const { data: picks, error } = await supabase
-      .from('hb_picks')
-      .select(`
-        id,
-        sport,
-        team,
-        opponent,
-        pick_type,
-        line,
-        odds,
-        units,
-        source,
-        posted_at,
-        created_at,
-        matched_game_id,
-        capper:hb_cappers(name)
-      `)
-      .gte('created_at', utcStart)
-      .lte('created_at', utcEnd);
+    // Fetch today's picks with capper names + game ID (paged past the 1000-row cap)
+    const { data: picks, error } = await fetchAllPicksInWindow(supabase, utcStart, utcEnd);
 
     if (error) {
       logger.error('Supabase', `Failed to fetch picks: ${error.message}`);
@@ -271,14 +287,7 @@ export async function fetchYesterdayPicksFromSupabase(): Promise<RawPick[]> {
     const utcStart = `${yesterdayStr}T00:00:00Z`;
     const utcEnd = `${nextDay.toISOString().split('T')[0]}T04:59:59Z`;
 
-    const { data: picks, error } = await supabase
-      .from('hb_picks')
-      .select(`
-        id, sport, team, opponent, pick_type, line, odds, units, source, posted_at, created_at, matched_game_id,
-        capper:hb_cappers(name)
-      `)
-      .gte('created_at', utcStart)
-      .lte('created_at', utcEnd);
+    const { data: picks, error } = await fetchAllPicksInWindow(supabase, utcStart, utcEnd);
 
     if (error || !picks || picks.length === 0) return [];
 

@@ -15,6 +15,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
 import { callOpenRouter } from '@/lib/utils/openrouter';
+import { consensusSection } from '@/lib/ai-picks/consensus-section';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,25 +81,9 @@ function buildPickUserPrompt(data: ReportContext): string {
   const sections: string[] = [];
   sections.push(`# DATA FOR ${data.date}\n`);
 
-  // Expert picks with consensus counts
-  if (data.expertPicks?.picks?.length > 0) {
-    const picks = data.expertPicks.picks;
-    // Group and count consensus
-    const bets: Record<string, { count: number; cappers: string[]; sport: string; line: string | null; odds: string | null }> = {};
-    for (const p of picks) {
-      const key = `${p.sport}|${p.team}|${p.pick_type}|${p.line || ''}`.toLowerCase();
-      if (!bets[key]) bets[key] = { count: 0, cappers: [], sport: p.sport, line: p.line, odds: p.odds };
-      bets[key].count++;
-      if (!bets[key].cappers.includes(p.capper_name)) bets[key].cappers.push(p.capper_name);
-    }
-
-    sections.push(`## EXPERT CONSENSUS (${picks.length} picks, ${data.expertPicks.capperCount} cappers)`);
-    const sorted = Object.entries(bets).sort((a, b) => b[1].count - a[1].count);
-    for (const [key, bet] of sorted.slice(0, 40)) {
-      const parts = key.split('|');
-      sections.push(`- ${parts[0].toUpperCase()} | ${parts[1]} ${parts[2]} ${parts[3]} | ${bet.count} cappers (${bet.cappers.slice(0, 5).join(', ')})`);
-    }
-  }
+  // Expert consensus: the SHARED consensus when CONSENSUS_SOURCE=hb (same counts
+  // both sites show), else the legacy raw-pick grouping.
+  sections.push(...consensusSection(data.sharedConsensus, data.expertPicks));
 
   // BallparkPal
   if (data.ballparkPal) {

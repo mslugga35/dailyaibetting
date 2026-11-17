@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { windowStartET } from '@/lib/utils/date';
+import { recordTable } from '@/lib/data/record-source';
 
 /**
  * Verified performance, computed ONLY from graded rows in consensus_results
@@ -70,7 +71,7 @@ type Filter = { since?: string; sport?: string; min?: number; max?: number | nul
 
 async function countRecord(db: SupabaseClient, f: Filter): Promise<Record3> {
   const count = async (result: 'WIN' | 'LOSS' | 'PUSH') => {
-    let q = db.from('consensus_results').select('id', { count: 'exact', head: true }).eq('is_fire', true).eq('result', result);
+    let q = db.from(recordTable()).select('id', { count: 'exact', head: true }).eq('is_fire', true).eq('result', result);
     if (f.since) q = q.gte('pick_date', f.since);
     if (f.sport) q = q.eq('sport', f.sport);
     if (f.min !== undefined) q = q.gte('capper_count', f.min);
@@ -109,7 +110,7 @@ export async function getVerifiedPerformance(db: SupabaseClient | null = service
   if (!db) {
     return { configured: false, allTime: EMPTY, last30: EMPTY, last7: EMPTY, bySport: [], byCapperCount: [], firstGradedDate: null, lastGradedDate: null, recent: [] };
   }
-  const graded = () => db.from('consensus_results').select('pick_date').eq('is_fire', true).in('result', ['WIN', 'LOSS', 'PUSH']);
+  const graded = () => db.from(recordTable()).select('pick_date').eq('is_fire', true).in('result', ['WIN', 'LOSS', 'PUSH']);
   const [allTime, last30, last7, sports, buckets, first, last, recent] = await Promise.all([
     countRecord(db, {}),
     countRecord(db, { since: daysAgo(30) }),
@@ -118,7 +119,7 @@ export async function getVerifiedPerformance(db: SupabaseClient | null = service
     Promise.all(CAPPER_BUCKETS.map(async (b) => ({ ...b, ...(await countRecord(db, { min: b.min, max: b.max })) }))),
     graded().order('pick_date', { ascending: true }).limit(1),
     graded().order('pick_date', { ascending: false }).limit(1),
-    db.from('consensus_results')
+    db.from(recordTable())
       .select('pick_date, sport, bet, line, capper_count, result, final_score')
       .eq('is_fire', true)
       .in('result', ['WIN', 'LOSS', 'PUSH'])

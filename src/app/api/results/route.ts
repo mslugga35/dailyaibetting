@@ -3,6 +3,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { rateLimitGuard, parseIntParam, cronAuthGuard, isCronAuthorized, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { isAdminUser } from '@/lib/auth/admin';
+import { recordTable } from '@/lib/data/record-source';
+import { getConsensusSource } from '@/lib/data/hb-consensus';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -11,7 +13,11 @@ function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // The shared record (hb_consensus_record) is service-role only: never fall back to
+  // the anon key for it (that would only turn a config error into a confusing 500).
+  const supabaseKey = getConsensusSource() === 'hb'
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     console.warn('Supabase not configured - results tracking disabled');
@@ -38,7 +44,7 @@ function daysAgoISO(days: number): string {
 async function countRecord(db: SupabaseClient, sinceDate: string | null) {
   const count = async (result: 'WIN' | 'LOSS') => {
     let q = db
-      .from('consensus_results')
+      .from(recordTable())
       .select('id', { count: 'exact', head: true })
       .eq('is_fire', true)
       .eq('result', result);
@@ -59,6 +65,11 @@ export async function GET(request: Request) {
     if (limited) return limited;
 
     const db = getSupabase();
+
+    // Shared-record mode without the service key is a misconfiguration, not "no data yet".
+    if (!db && getConsensusSource() === 'hb') {
+      return NextResponse.json({ success: false, error: 'Results temporarily unavailable' }, { status: 503 });
+    }
 
     // Return mock data if Supabase not configured
     if (!db) {
@@ -89,8 +100,9 @@ export async function GET(request: Request) {
         const windowed = searchParams.has('days');
         if (!windowed) {
           let query = db
-            .from('consensus_results')
+            .from(recordTable())
             .select('*')
+            .eq('is_fire', true)
             .neq('result', 'PENDING')
             .order('pick_date', { ascending: false })
             .limit(50);
@@ -101,8 +113,9 @@ export async function GET(request: Request) {
         const rows: unknown[] = [];
         for (let from = 0; from < MAX_WINDOW_ROWS; from += PAGE) {
           let page = db
-            .from('consensus_results')
+            .from(recordTable())
             .select('*')
+            .eq('is_fire', true)
             .neq('result', 'PENDING')
             .gte('pick_date', daysAgoISO(days))
             .order('pick_date', { ascending: false })
@@ -157,7 +170,7 @@ export async function GET(request: Request) {
           }
         }
         ({ data, error } = await db
-          .from('consensus_results')
+          .from(recordTable())
           .select('*')
           .eq('result', 'PENDING')
           .order('pick_date', { ascending: false }));
@@ -172,7 +185,7 @@ export async function GET(request: Request) {
           countRecord(db, null),
           countRecord(db, since30),
           db
-            .from('consensus_results')
+            .from(recordTable())
             .select('result, pick_date')
             .eq('is_fire', true)
             .neq('result', 'PENDING')
