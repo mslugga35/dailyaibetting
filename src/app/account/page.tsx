@@ -65,7 +65,7 @@ export default async function AccountPage({
         <div className="mb-6 p-4 rounded-lg bg-primary/10 border border-primary/30 flex items-center gap-3">
           <Check className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm font-medium">
-            Welcome to Premium! You now have real-time access to all consensus picks.
+            Welcome to DailyAI Pro! You now see every consensus pick each day.
           </p>
         </div>
       )}
@@ -101,7 +101,7 @@ export default async function AccountPage({
                 variant={isPremium ? 'default' : 'outline'}
                 className={isPremium ? 'bg-primary text-primary-foreground ml-auto' : paymentProblem ? 'ml-auto border-amber-500/50 text-amber-400' : 'ml-auto'}
               >
-                {isPremium ? '⚡ Premium' : paymentProblem ? 'Payment problem' : 'Free'}
+                {isPremium ? '⚡ Pro' : paymentProblem ? 'Payment problem' : 'Free'}
               </Badge>
             )}
           </CardTitle>
@@ -164,8 +164,8 @@ export default async function AccountPage({
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                You&apos;re on the free plan. Upgrade to get real-time consensus picks,
-                MEGA/NUCLEAR alerts, full leaderboards, and AI analysis.
+                You&apos;re on the free plan. Upgrade to see every consensus pick each day,
+                MEGA/NUCLEAR alerts, individual capper pick detail and the full pick history.
               </p>
               <UpgradeButton />
               {/* Portal only for a real (e.g. canceled) subscription, not a checkout placeholder. */}

@@ -4,7 +4,7 @@ import { Trophy, ShieldCheck, Info, CheckCircle, XCircle, MinusCircle, Scale } f
 import { getVerifiedPerformance, MIN_SAMPLE, type Record3 } from '@/lib/data/performance';
 
 export const metadata: Metadata = {
-  title: 'Verified Track Record – Graded Consensus Results | DailyAI Betting',
+  title: 'Graded Track Record – Consensus Results | DailyAI Betting',
   description:
     'Every graded fire pick (3+ capper consensus), counted from final scores. Wins, losses and pushes by period, sport and consensus strength, with our methodology. No guarantees.',
 };
@@ -68,7 +68,7 @@ export default async function ResultsPage() {
         </div>
         <h1 className="flex items-center justify-center gap-3 text-3xl font-bold md:text-4xl">
           <Trophy className="h-8 w-8 text-emerald-400" aria-hidden="true" />
-          Verified Track Record
+          Graded Track Record
         </h1>
         <p className="mx-auto mt-2 max-w-2xl text-muted-foreground">
           Every fire pick (3+ cappers on the same bet) that has been graded, win or lose. Past results do not

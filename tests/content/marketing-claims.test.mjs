@@ -23,12 +23,15 @@ const MARKETING = [
   'src/app/pro', 'src/app/pricing', 'src/app/page.tsx', 'src/app/login', 'src/app/sportsbooks',
   'src/app/free-sports-picks', 'src/app/blog', 'src/app/daily-ai-picks', 'src/components/monetization',
   'src/components/pro', 'src/components/picks/YesterdayResults.tsx', 'src/components/seo',
+  'src/app/account', 'src/app/results', 'src/app/cappers/[slug]/page.tsx',
 ].flatMap((p) => walk(join(ROOT, p)));
 
 const FORBIDDEN = [
   [/200\+/, 'unverifiable "200+" capper count'],
   [/real-?time/i, '"real-time" (data refreshes by polling, no real-time delivery)'],
   [/early access/i, '"early access" (not implemented)'],
+  [/Verified Track Record/i, '"Verified" record (picks are self-reported and still being re-graded)'],
+  [/Unlock All Picks|full capper stats/i, 'overstated Pro scope'],
   [/5[- ]?min(ute)?s?\s+delay|no 5-min|pick delay/i, 'pick-delay claim (no delay exists in code)'],
   [/before lines move/i, '"before lines move" (not implemented)'],
   [/consistent profits?|guaranteed (profit|win)/i, 'profit/guarantee claim'],

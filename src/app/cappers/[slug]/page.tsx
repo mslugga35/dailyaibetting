@@ -185,7 +185,7 @@ export default async function CapperProfilePage({ params }: PageProps) {
 
       {/* Pro-gated: Recent form, by sport, and recent picks */}
       <ProGateSection
-        feature="full capper stats"
+        feature="individual capper pick detail"
         preview={
           <div className="mb-4 p-4 rounded-lg border border-dashed border-muted-foreground/20 text-center text-sm text-muted-foreground">
             Sign up for Pro to see {capper.name}&apos;s recent form, sport breakdowns, and pick history

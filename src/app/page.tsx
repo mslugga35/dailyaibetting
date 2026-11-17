@@ -240,7 +240,7 @@ export default async function HomePage() {
                         Upgrade to Pro for access to all picks, MEGA/NUCLEAR alerts, and individual capper pick detail.
                       </p>
                       {offer.plan && priceCopy.price ? (
-                        <UpgradeButton label={`Unlock All Picks – ${priceCopy.price}`} />
+                        <UpgradeButton label={`See Every Consensus Pick – ${priceCopy.price}`} />
                       ) : (
                         <p className="text-sm text-muted-foreground">{priceCopy.after}</p>
                       )}
