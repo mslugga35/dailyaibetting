@@ -60,8 +60,9 @@ hb_cappers┘        uses scripts/lib/consensus-core.mjs (pure engine)
     (spread: more than max(3, 20%); total: more than max(3, 10%)), is a `line_outlier`.
     This catches first-half lines filed as game lines.
 * **Game resolution.** Each pick's game is resolved from scratch: the `game_time` hint
-  first, then `matched_game_id` if it is not stale, then the team's next game. A game is
-  only a candidate if it starts in [pick time − 6 h, pick time + 72 h]. Pick time is
+  first, then `matched_game_id` if it is not stale, then the team's next unstarted game.
+  Only the strongest team-name match competes. A game is only a candidate if it starts
+  in [pick time − 6 h, pick time + 72 h], or + 8 days for NFL/NCAAF. Pick time is
   min(posted_at, created_at), because `posted_at` is synthetic for some sources.
   `matched_game_id` is NOT trusted; see "Data-quality findings".
 * **Who counts.**
@@ -157,8 +158,9 @@ Measured on the local e2e (Postgres + PostgREST in Docker, fixture 1,251 picks):
 
 * **A full writer cycle** takes 2.4 s for the first cycle (62 groups written) and ~1 s for a steady-state
   cycle, both including node start.
-* **A new pick** (insert → one writer cycle → visible through both readers): **1.19 s**,
-  with the writer cycle at 0.98 s including node start. This excludes the poll wait.
+* **A new pick** (insert → one writer cycle → visible through both readers): **1.2–3.4 s**
+  across two runs, with the writer cycle at 1.0–3.0 s including node start. This excludes
+  the poll wait.
 * **Engine alone:** ~2.6 s on 11,770 real picks; ~0.4 s at production cycle size
   (~2–3k picks).
 
@@ -179,16 +181,16 @@ Measured `created_at − posted_at`: p50 6 s, p90 33 min (backfill and reconcile
 
 Read-only, 2026-06-01..2026-11-16, 54,090 picks, 15,889 games:
 
-* Old DailyAI record (`consensus_results`): **963-908-17 (51.5%)**, 2,074 fire rows, 186
-  pending.
-* **New shared fire record: 1186-1101-26 (51.9%)**. Breakdown:
-  * By tier: consensus 982-908-22 (52.0%), caution 204-193-4 (51.4%).
-  * By market: ML 662-606 (52.2%), spread 316-306-13 (50.8%), total 208-189-13 (52.4%).
-  * Crowded 7+: 189-203-3 (48.2%).
-  * Lean (2 cappers): 676-590-19 (53.4%).
-  * 118 pending (no final score in `hb_games`) and 16 void.
-* Stored per-pick grades vs the final-score group grade disagree on **38.8%** of graded
-  fire groups (897 of 2,312). The stored hb-auto-grade results cannot be trusted while
+* Old DailyAI record (`consensus_results`): **963-910-17 (51.4%)** at the 2026-11-17
+  re-read (963-908-17 earlier the same day), 2,074 fire rows, 184 pending.
+* **New shared fire record (post-review engine): 1236-1137-26 (52.1%)**. Breakdown:
+  * By tier: consensus 1020-934-22 (52.2%), caution 216-203-4 (51.6%).
+  * By market: ML 707-624 (53.1%), spread 316-311-13 (50.4%), total 213-202-13 (51.3%).
+  * Crowded 7+: 199-204-3 (49.4%).
+  * Lean (2 cappers): 694-614-17 (53.1%).
+  * 113 pending (no final score in `hb_games`) and 18 void.
+* Stored per-pick grades vs the final-score group grade disagree on **39.0%** of graded
+  fire groups (936 of 2,399). The stored hb-auto-grade results cannot be trusted while
   the matcher bug stands.
 * Conclusion: the consensus has no demonstrated edge (≈ break-even at −110). More
   agreement does not mean better results, so the product should not imply it does.
@@ -211,6 +213,47 @@ Read-only, 2026-06-01..2026-11-16, 54,090 picks, 15,889 games:
 3. Duplicate capper identities exist: 71 normalized-name collisions in `hb_cappers`, plus
    Ray Monohan / Razor Ray Monohan. The writer merges them at read time. Merging the rows
    themselves is a data operation.
+
+## Independent review (2026-11-17), what was fixed
+
+**Adversarial Evaluator: APPROVE WITH FIXES.** Fixed, each with a regression test
+that fails on the pre-fix core:
+
+* **Empty or failed `hb_games` / `hb_cappers` reads.** These used to wipe or corrupt the
+  board. The cycle now aborts on such a read, and also when more than 60% of in-scope
+  picks match no game. A mass delete (more than 30% of a date's groups in one cycle) is
+  refused unless `--allow-mass-delete` is passed.
+* **Sibling-team mismatch.** "Kansas" went to Kansas State. Only the strongest name
+  match now competes.
+* **Picks posted during game A for game B.** They now prefer the unstarted game.
+* **NFL/NCAAF lookahead.** Picks posted up to 8 days ahead are now matched (the old
+  limit was 72 h).
+* **Line outliers.** Two voters on different lines are both kept, and a line crossing
+  pick'em is no longer a sign outlier. The magnitude rule needs 3 or more voters.
+* **Team or period totals without `bet_category`.** These are dropped below a per-sport
+  game-total minimum (`GAME_TOTAL_MIN`).
+* **Unknown capper ids.** A pick whose capper is not in `hb_cappers` never counts.
+* **Late final scores.** Older pending groups are re-graded (`regradePending`, every
+  ~30 min, 14 days back).
+* **`hb_consensus_stats` 30-day window.** It now uses the ET date, not UTC.
+
+**Security Engineer: APPROVE WITH FIXES, no critical or high findings.** Fixed:
+
+* `/api/results` no longer falls back to the anon key in hb mode; it returns 503
+  without the service key.
+* `recent` now lists fire rows only.
+* The monitor incident lookup uses `limit(1)` instead of `maybeSingle()`, so a
+  duplicate open row cannot cause alert spam, and insert errors are logged.
+* The e2e refuses any Docker container that is not `hbsc-*`.
+
+Still open, by design or deferred:
+
+* `import 'server-only'` guards. The `server-only` package is not installed in DailyAI.
+* "One writer" is enforced by convention. Project A shares one service_role across 17
+  apps, and a dedicated writer role would be stronger.
+* Before applying 20261117b, grep the other 16 apps on project A for anon reads of
+  `hb_consensus_track`, `hb_consensus_stats` and `hb_consensus_by_sport`.
+* `first_seen` resets if a group vanishes for a cycle and comes back.
 
 ## Deferred (with reason)
 

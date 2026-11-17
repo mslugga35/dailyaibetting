@@ -200,3 +200,12 @@ test('AI-picks prompt uses the shared consensus counts when present', () => {
   const legacy = consensusSection(null, { picks: [{ sport: 'nba', team: 'Knicks', pick_type: 'moneyline', line: null, odds: null, capper_name: 'A' }], capperCount: 1 });
   assert.match(legacy[0], /1 picks, 1 cappers/);
 });
+
+test('/api/results in hb mode: recent lists fire rows only (shared record also holds 2-capper groups)', async () => {
+  harness().db.seed('hb_consensus_record', [
+    { id: 'f', pick_date: getYesterdayET(), sport: 'NBA', bet: 'F', capper_count: 3, is_fire: true, result: 'WIN' },
+    { id: 'l', pick_date: getYesterdayET(), sport: 'NBA', bet: 'L', capper_count: 2, is_fire: false, result: 'LOSS' },
+  ]);
+  const recent = await body(await get(resultsRoute, '/api/results?view=recent'));
+  assert.deepEqual(recent.data.map((r) => r.id), ['f']);
+});

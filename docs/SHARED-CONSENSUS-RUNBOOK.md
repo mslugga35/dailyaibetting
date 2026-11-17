@@ -62,7 +62,7 @@ node scripts/consensus-writer.mjs --backfill 2026-06-01 <today-3>
 ```
 This takes about 1 minute per month of data and only reads `hb_picks` / `hb_games`. The
 expected order of magnitude (from the 2026-11-17 local recompute) is fire
-**1186-1101-26** for 2026-06-01..11-16, with ~118 pending for games that have no final
+**1236-1137-26** for 2026-06-01..11-16, with ~113 pending for games that have no final
 score.
 
 ## 4. Start the writer and monitor (PM2)
@@ -97,7 +97,9 @@ subscriber and check that it shows separate ML, spread and total cards with line
 
 ## 7. HiddenBag trust bar and results page on the shared record
 
-Only after step 3 is verified:
+Only after step 3 is verified, and after grepping the other apps on project A for reads of
+`hb_consensus_track`, `hb_consensus_stats` and `hb_consensus_by_sport` (this migration revokes
+anon/authenticated access on them):
 ```
 node scripts/lib/supabase-sql.mjs "$(cat supabase/migrations/20261117b_consensus_track_from_live.sql)"
 ```

@@ -4,6 +4,7 @@ import { rateLimitGuard, parseIntParam, cronAuthGuard, isCronAuthorized, resolve
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { isAdminUser } from '@/lib/auth/admin';
 import { recordTable } from '@/lib/data/record-source';
+import { getConsensusSource } from '@/lib/data/hb-consensus';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -12,7 +13,11 @@ function getSupabase(): SupabaseClient | null {
   if (supabase) return supabase;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // The shared record (hb_consensus_record) is service-role only: never fall back to
+  // the anon key for it (that would only turn a config error into a confusing 500).
+  const supabaseKey = getConsensusSource() === 'hb'
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY
+    : process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     console.warn('Supabase not configured - results tracking disabled');
@@ -61,6 +66,11 @@ export async function GET(request: Request) {
 
     const db = getSupabase();
 
+    // Shared-record mode without the service key is a misconfiguration, not "no data yet".
+    if (!db && getConsensusSource() === 'hb') {
+      return NextResponse.json({ success: false, error: 'Results temporarily unavailable' }, { status: 503 });
+    }
+
     // Return mock data if Supabase not configured
     if (!db) {
       return NextResponse.json({
@@ -92,6 +102,7 @@ export async function GET(request: Request) {
           let query = db
             .from(recordTable())
             .select('*')
+            .eq('is_fire', true)
             .neq('result', 'PENDING')
             .order('pick_date', { ascending: false })
             .limit(50);
@@ -104,6 +115,7 @@ export async function GET(request: Request) {
           let page = db
             .from(recordTable())
             .select('*')
+            .eq('is_fire', true)
             .neq('result', 'PENDING')
             .gte('pick_date', daysAgoISO(days))
             .order('pick_date', { ascending: false })
