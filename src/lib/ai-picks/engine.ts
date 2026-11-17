@@ -4,8 +4,9 @@
  * Unlike the daily-ai-picks report (prose), this produces machine-readable picks
  * that get saved to `ai_picks` table and auto-graded against ESPN results.
  *
- * Data sources: BallparkPal sims, Statcast K%/whiff%, expert consensus,
- * PrizePicks lines, MLB Stats API, ESPN schedule.
+ * Data sources (in-season sports only, see daily-ai-picks/season.ts): expert
+ * consensus, PrizePicks lines, MLB Stats API, ESPN schedule, Kalshi, Polymarket.
+ * BallparkPal/Statcast were removed 2026-11-17.
  *
  * @created 2026-03-29
  */
@@ -54,25 +55,25 @@ RULES:
 - Use ONLY the data provided. Never invent stats, odds, or games.
 - Output ONLY a JSON array. No markdown, no prose, no explanation outside the JSON.
 - Each pick must have a clear, specific bet (team + line or prop + line).
-- Confidence 1-10: 10 = near-lock (5+ cappers agree + sim data confirms), 1 = speculative.
+- Confidence 1-10: 10 = near-lock (5+ cappers agree + market data confirms), 1 = speculative.
 - Generate 8-15 picks total across all available sports and bet types.
-- Prioritize picks where MULTIPLE signals align (consensus + sims + stats).
+- Prioritize picks where MULTIPLE signals align (consensus + market prices + stats).
 - Include a mix: 3-5 high confidence (7-10), 3-5 medium (5-6), 2-3 value plays (3-4).
-- For MLB: include K props, NRFI/YRFI, and game totals when data supports them.
+- Only pick sports that appear in the data. If MLB data is present: K props, NRFI/YRFI and game totals are allowed.
 - bet_type must be one of: ML, SPREAD, OVER, UNDER, K_OVER, K_UNDER, NRFI, YRFI, PROP
-- data_sources must list which signals fired (e.g. {"consensus": 5, "ballparkPal": true, "statcast": {"whiffPct": 35.2}})
+- data_sources must list which signals fired (e.g. {"consensus": 5, "kalshi": 0.62})
 
 OUTPUT FORMAT (JSON array only):
 [
   {
-    "sport": "MLB",
-    "team": "Yankees",
-    "opponent": "Red Sox",
-    "bet_type": "K_OVER",
-    "line": "O 6.5 Ks",
-    "confidence": 8,
-    "reasoning": "Gerrit Cole K% 28.5, whiff 32%, facing bottom-5 K% lineup. BallparkPal sim: 7.2 expected Ks. 4 cappers on Over.",
-    "data_sources": {"consensus": 4, "ballparkPal": true, "statcast": {"kPct": 28.5, "whiffPct": 32}}
+    "sport": "NBA",
+    "team": "Celtics",
+    "opponent": "Knicks",
+    "bet_type": "SPREAD",
+    "line": "-4.5",
+    "confidence": 7,
+    "reasoning": "4 cappers on Celtics -4.5; Kalshi game market 64% Celtics.",
+    "data_sources": {"consensus": 4, "kalshi": 0.64}
   }
 ]`;
 }
@@ -84,31 +85,6 @@ function buildPickUserPrompt(data: ReportContext): string {
   // Expert consensus: the SHARED consensus when CONSENSUS_SOURCE=hb (same counts
   // both sites show), else the legacy raw-pick grouping.
   sections.push(...consensusSection(data.sharedConsensus, data.expertPicks));
-
-  // BallparkPal
-  if (data.ballparkPal) {
-    const bpp = data.ballparkPal as Record<string, { tables?: Array<{ headers: string[]; rows: string[][] }> }>;
-    const pages = ['strikeouts', 'first-inning', 'first5', 'game-sims', 'positive-ev', 'homeruns'];
-    for (const page of pages) {
-      const pd = bpp[page];
-      if (pd?.tables?.[0]) {
-        sections.push(`\n### BPP: ${page}`);
-        sections.push(`Columns: ${pd.tables[0].headers.join(' | ')}`);
-        pd.tables[0].rows.slice(0, 15).forEach(r => sections.push(`- ${r.join(' | ')}`));
-      }
-    }
-  }
-
-  // Statcast alerts
-  if (data.statcast?.alerts && Array.isArray(data.statcast.alerts)) {
-    const active = data.statcast.alerts.filter((a: Record<string, unknown>) => a.signal !== 'neutral');
-    if (active.length > 0) {
-      sections.push('\n## STATCAST ALERTS');
-      for (const a of active) {
-        sections.push(`- ${a.pitcher} (${a.team} vs ${a.opponent}): K-line ${a.kLine ?? '?'}, Expected ${a.expectedK ?? '?'} Ks, Edge ${a.edge ?? '?'}%, Whiff ${a.whiffPct ?? '?'}%, Chase ${a.chasePct ?? '?'}%, Signal: ${a.signal}`);
-      }
-    }
-  }
 
   // PrizePicks K props
   if (data.prizePicks?.length > 0) {
@@ -340,7 +316,7 @@ export async function generateAIPicks(force = false): Promise<EngineResult> {
 
   // No expert picks = nothing to analyse: do not pay for a model call.
   if (context.expertPicks.picks.length === 0) {
-    return { picks: [], generated: false, skipReason: 'no_expert_picks', pickCount: 0, dataStats: { expertPicks: 0, mlbGames: context.mlbSchedule.length, hasBallparkPal: !!context.ballparkPal, hasStatcast: !!context.statcast, espnSports: Object.keys(context.espnSchedule).length } };
+    return { picks: [], generated: false, skipReason: 'no_expert_picks', pickCount: 0, dataStats: { expertPicks: 0, mlbGames: context.mlbSchedule.length, hasBallparkPal: false, hasStatcast: false, espnSports: Object.keys(context.espnSchedule).length } };
   }
 
   // Build prompts and call Claude
@@ -364,8 +340,8 @@ export async function generateAIPicks(force = false): Promise<EngineResult> {
     dataStats: {
       expertPicks: context.expertPicks.picks.length,
       mlbGames: context.mlbSchedule.length,
-      hasBallparkPal: !!context.ballparkPal,
-      hasStatcast: !!context.statcast,
+      hasBallparkPal: false,
+      hasStatcast: false,
       espnSports: Object.keys(context.espnSchedule).length,
     },
   };

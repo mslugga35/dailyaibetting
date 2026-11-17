@@ -5,7 +5,7 @@
  * POST — force-refresh (requires CRON_SECRET auth)
  *
  * Report is generated locally by hb-daily-ai-report PM2 cron (3x/day)
- * because BallparkPal + Statcast data lives on local filesystem.
+ * because data collection + the model call exceed a request timeout.
  * This route only reads/writes the Supabase cache.
  */
 

@@ -596,17 +596,17 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
               </Section>
             )}
 
-            {/* AI Picks Tab — BallparkPal + Statcast enriched report */}
+            {/* AI Picks Tab — daily AI report (in-season sports only) */}
             {data.aiReport && (
               <Section value="ai-picks" viewAll={viewAll} className="space-y-6 mt-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5 text-primary" />
-                      AI Analysis — BallparkPal + Statcast
+                      AI Analysis
                     </CardTitle>
                     <CardDescription>
-                      AI-generated picks powered by simulation data, K-prop scanner, and expert consensus
+                      AI-generated picks from expert consensus, market prices and today&apos;s schedule
                       {data.aiReportGeneratedAt && (
                         <span className="ml-2 text-xs">
                           Updated {new Date(data.aiReportGeneratedAt).toLocaleTimeString('en-US', {

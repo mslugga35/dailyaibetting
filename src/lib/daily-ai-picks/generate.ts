@@ -1,15 +1,16 @@
 /**
  * DailyAI Picks report cache reader.
  *
- * Reports are generated locally by `hiddenbag-v2/scripts/daily-ai-report.mjs`
- * (PM2 cron, 3x/day) because BallparkPal + Statcast data lives on the local
- * filesystem. This module only reads the cached report from Supabase.
- *
- * generateFreshReport() is kept for the POST /api/daily-ai-picks fallback
- * but produces an inferior report (no BallparkPal/Statcast data on Vercel).
+ * generateDailyReport() only reads today's cached report from Supabase.
+ * generateFreshReport() (cron) collects the data, calls the model once, checks the
+ * parlay arithmetic and the report's shape, then stores it.
  *
  * @created 2026-03-27
- * @updated 2026-03-28 — split cache-read vs generation, local script is primary
+ * @updated 2026-03-28 — split cache-read vs generation
+ * @updated 2026-11-17 — BallparkPal/Statcast removed (has_ballparkpal/has_statcast
+ *   are still written, always false, so the shared daily_ai_report schema is
+ *   unchanged); season-aware sports; parlay-math correction + report-sanity floor
+ *   ported from hiddenbag-v2/scripts/daily-ai-report.mjs.
  */
 
 import { collectAllData, type ReportContext } from './collect';
@@ -18,6 +19,17 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
 import { callOpenRouter } from '@/lib/utils/openrouter';
+import { validateParlayMath } from './parlay-math';
+import { classifyReport } from './report-sanity';
+
+/**
+ * Output cap per run. A full in-season-MLB report measured 15–25k chars (~4–7k
+ * tokens) on HB; without the MLB sections roughly half the sections remain.
+ * The cap also sizes the OpenRouter budget guard's worst-case reservation.
+ */
+export function maxTokensFor(inSeasonSports: string[]): number {
+  return inSeasonSports.includes('mlb') ? 12000 : 8000;
+}
 
 const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (3x/day refresh via cron)
 
@@ -67,8 +79,9 @@ async function cacheReport(report: string, context: ReportContext): Promise<void
       report_text: report,
       expert_pick_count: context.expertPicks?.picks?.length || 0,
       mlb_game_count: context.mlbSchedule?.length || 0,
-      has_ballparkpal: !!context.ballparkPal,
-      has_statcast: !!context.statcast,
+      // Columns kept for the shared schema; both sources were removed 2026-11-17.
+      has_ballparkpal: false,
+      has_statcast: false,
       generated_at: new Date().toISOString(),
     }, { onConflict: 'report_date' });
   // A paid report that was not stored must fail loudly, not report success.
@@ -88,9 +101,15 @@ export interface GenerateResult {
     cappers: number;
     mlbGames: number;
     prizePicksProps: number;
+    /** always false since 2026-11-17; kept so API consumers do not break */
     hasBallparkPal: boolean;
+    /** always false since 2026-11-17; kept so API consumers do not break */
     hasStatcast: boolean;
     sportCount: number;
+    /** in-season sports the report covered */
+    sports?: string[];
+    /** parlay figures corrected before storing */
+    parlayCorrections?: number;
   };
 }
 
@@ -137,8 +156,7 @@ export async function generateFreshReport(): Promise<GenerateResult> {
     return { report: existing.report, cached: true, skipReason: 'already_generated', generatedAt: existing.generatedAt, dataStats: NO_STATS };
   }
 
-  // BallparkPal + Statcast are optional MLB extras that only exist on the local
-  // box; the report covers every sport from consensus, ESPN and PrizePicks without them.
+  // Only in-season sports are collected and prompted (see ./season.ts).
   const context = await collectAllData();
   if (context.expertPicks.picks.length === 0) {
     return { report: '', cached: false, skipReason: 'no_expert_picks', generatedAt: new Date().toISOString(), dataStats: NO_STATS };
@@ -146,7 +164,19 @@ export async function generateFreshReport(): Promise<GenerateResult> {
 
   const system = buildSystemPrompt();
   const user = buildUserPrompt(context);
-  const report = await callOpenRouter(system, user, { maxTokens: 12000 });
+  const rawReport = await callOpenRouter(system, user, { maxTokens: maxTokensFor(context.inSeasonSports) });
+
+  // Never store wreckage: an empty reply, an error stub or a truncated tail.
+  // The call was paid either way; failing loudly beats publishing it.
+  const verdict = classifyReport(rawReport);
+  if (!verdict.ok) throw new Error(`Model result is not a report: ${verdict.reason}`);
+
+  // The model compounds parlay odds wrong intermittently (HB measured a 12-leg
+  // parlay quoted at "+150 to +250" when it was +1099). Correct inline.
+  const { issues, corrected: report } = validateParlayMath(rawReport);
+  if (issues.length) {
+    console.warn(`[daily-ai-picks] ${issues.length} parlay figure(s) corrected inline`);
+  }
 
   await cacheReport(report, context);
 
@@ -159,9 +189,11 @@ export async function generateFreshReport(): Promise<GenerateResult> {
       cappers: context.expertPicks.capperCount,
       mlbGames: context.mlbSchedule.length,
       prizePicksProps: context.prizePicks.length,
-      hasBallparkPal: !!context.ballparkPal,
-      hasStatcast: !!context.statcast,
-      sportCount: Object.keys(context.espnSchedule).length,
+      hasBallparkPal: false,
+      hasStatcast: false,
+      sportCount: context.inSeasonSports.length,
+      sports: context.inSeasonSports,
+      parlayCorrections: issues.length,
     },
   };
 }

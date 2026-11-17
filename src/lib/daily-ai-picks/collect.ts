@@ -2,13 +2,16 @@
  * Data collectors for DailyAI Picks report.
  * Gathers all data sources into a single structured context for the AI prompt.
  *
- * Sources:
+ * Sources (all network, all free; nothing is read from the local filesystem):
  *   1. Supabase hb_picks — expert picks from Discord + scrapers
- *   2. BallparkPal cache — K center, HR zone, YRFI, F5, +EV, park factors
- *   3. Statcast cache — K%, whiff%, chase% from mlb-statcast-scanner
- *   4. PrizePicks API — live MLB prop lines (free, no auth)
- *   5. MLB Stats API — probable pitchers + schedule (free)
- *   6. ESPN API — multi-sport schedule (free)
+ *   2. ESPN API — multi-sport scoreboards; also decides which sports are in season
+ *   3. PrizePicks API — prop lines, only for in-season leagues
+ *   4. MLB Stats API — probable pitchers, only while MLB is in season
+ *   5. Polymarket / Kalshi — market prices (Kalshi series filtered to in-season sports)
+ *
+ * BallparkPal and Statcast were removed 2026-11-17: both were MLB-only caches that
+ * existed only on one local box, and the report must follow the calendar instead
+ * of assuming baseball. See ./season.ts.
  *
  * @created 2026-03-27
  */
@@ -17,28 +20,28 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
 import { getConsensusSource, fetchHbConsensus, toConsensusPick } from '@/lib/data/hb-consensus';
 import type { SharedConsensusLite } from '@/lib/ai-picks/consensus-section';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-
-const BPP_DIR = join(homedir(), '.cache', 'ballparkpal');
-const STATCAST_CACHE = join(homedir(), '.cache', 'hiddenbag', 'mlb-statcast.json');
+import {
+  TRACKED_SPORTS, decideInSeasonSports, normalizeSport,
+  type EspnSeasonSignal, type TrackedSport,
+} from './season';
 
 export interface ReportContext {
   date: string;
   expertPicks: { picks: ExpertPick[]; capperCount: number };
   /** Shared consensus groups (CONSENSUS_SOURCE=hb only); null in legacy mode or on failure. */
   sharedConsensus?: SharedConsensusLite[] | null;
-  ballparkPal: BallparkPalData | null;
-  statcast: StatcastData | null;
   prizePicks: PrizePicksProp[];
   mlbSchedule: MLBGame[];
   espnSchedule: Record<string, ESPNGame[]>;
   polymarket: Array<{ question: string; probability: number; volume24hr: number }>;
   kalshi: KalshiMarket[];
+  /** sport keys (hb_sport_type) the report covers today, from ./season.ts */
+  inSeasonSports: string[];
+  /** sport key → why it is in or out today */
+  seasonReasons: Record<string, string>;
 }
 
-interface ExpertPick {
+export interface ExpertPick {
   sport: string;
   team: string;
   opponent: string | null;
@@ -50,27 +53,9 @@ interface ExpertPick {
   posted_at: string;
 }
 
-interface BallparkPalData {
-  date: string;
-  [page: string]: unknown;
-}
-
-interface StatcastData {
-  alerts: Array<{
-    pitcher: string;
-    team: string;
-    opponent: string;
-    kLine: number | null;
-    expectedK: number | null;
-    edge: number | null;
-    whiffPct: number | null;
-    chasePct: number | null;
-    swingPct: number | null;
-    signal: string;
-  }>;
-}
-
-interface PrizePicksProp {
+export interface PrizePicksProp {
+  /** hb_sport_type key of the league the line came from */
+  sport: string;
   player: string;
   team: string;
   position: string;
@@ -79,7 +64,7 @@ interface PrizePicksProp {
   startTime: string;
 }
 
-interface MLBGame {
+export interface MLBGame {
   awayAbbr: string;
   homeAbbr: string;
   awayRecord: string;
@@ -90,7 +75,7 @@ interface MLBGame {
   gameTime: string;
 }
 
-interface ESPNGame {
+export interface ESPNGame {
   name: string;
   status: string;
   homeTeam: string;
@@ -137,38 +122,29 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
   }
 }
 
-// ── BallparkPal Cache ─────────────────────────────────────────────────────────
-
-function collectBallparkPal(): BallparkPalData | null {
-  const today = getTodayET();
-  const combinedFile = join(BPP_DIR, today, 'combined.json');
-
-  if (existsSync(combinedFile)) {
-    return { date: today, ...JSON.parse(readFileSync(combinedFile, 'utf8')) };
-  }
-
-  // Fall back to yesterday
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const yesterdayFile = join(BPP_DIR, yesterday, 'combined.json');
-  if (existsSync(yesterdayFile)) {
-    return { date: yesterday, ...JSON.parse(readFileSync(yesterdayFile, 'utf8')) };
-  }
-
-  return null;
-}
-
-// ── Statcast Cache ────────────────────────────────────────────────────────────
-
-function collectStatcast(): StatcastData | null {
-  if (!existsSync(STATCAST_CACHE)) return null;
-  return JSON.parse(readFileSync(STATCAST_CACHE, 'utf8'));
-}
-
 // ── PrizePicks API ────────────────────────────────────────────────────────────
 
-async function collectPrizePicks(): Promise<PrizePicksProp[]> {
+/**
+ * PrizePicks league ids per sport. Only leagues for in-season sports are fetched.
+ * mlb=2 was the id this module always used; nba/nhl/nfl ids are PrizePicks'
+ * documented-by-usage ids (UNVERIFIED against the live API in this change — a wrong
+ * id returns no lines, it cannot add an off-season sport).
+ */
+export const PRIZEPICKS_LEAGUES: Partial<Record<TrackedSport, number>> = {
+  mlb: 2, nba: 7, nhl: 8, nfl: 9,
+};
+
+async function collectPrizePicks(sports: string[]): Promise<PrizePicksProp[]> {
+  const leagues = sports
+    .map((s) => [s, PRIZEPICKS_LEAGUES[s as TrackedSport]] as const)
+    .filter((e): e is readonly [string, number] => typeof e[1] === 'number');
+  const results = await Promise.all(leagues.map(([sport, id]) => collectPrizePicksLeague(sport, id)));
+  return results.flat();
+}
+
+async function collectPrizePicksLeague(sport: string, leagueId: number): Promise<PrizePicksProp[]> {
   try {
-    const res = await fetch('https://partner-api.prizepicks.com/projections?league_id=2&per_page=250', {
+    const res = await fetch(`https://partner-api.prizepicks.com/projections?league_id=${leagueId}&per_page=250`, {
       next: { revalidate: 3600 }, // cache 1 hour
     });
     if (!res.ok) return [];
@@ -194,6 +170,7 @@ async function collectPrizePicks(): Promise<PrizePicksProp[]> {
       const player = playerMap[playerId || ''] || { name: `ID:${playerId}`, team: '', position: '' };
 
       props.push({
+        sport,
         player: player.name,
         team: player.team,
         position: player.position,
@@ -245,23 +222,31 @@ async function collectMLBSchedule(): Promise<MLBGame[]> {
 
 // ── ESPN Multi-Sport ──────────────────────────────────────────────────────────
 
-async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
-  const sports = [
-    { key: 'nba', path: 'basketball/nba' },
-    { key: 'nhl', path: 'hockey/nhl' },
-    { key: 'mlb', path: 'baseball/mlb' },
-  ];
+interface ESPNResult {
+  schedule: Record<string, ESPNGame[]>;
+  signals: Partial<Record<TrackedSport, EspnSeasonSignal>>;
+}
 
+async function collectESPN(): Promise<ESPNResult> {
   const schedule: Record<string, ESPNGame[]> = {};
+  const signals: Partial<Record<TrackedSport, EspnSeasonSignal>> = {};
   const results = await Promise.allSettled(
-    sports.map(async (sport) => {
-      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport.path}/scoreboard`, {
+    TRACKED_SPORTS.map(async (sport) => {
+      const res = await fetch(`https://site.api.espn.com/apis/site/v2/sports/${sport.espnPath}/scoreboard`, {
         next: { revalidate: 3600 },
       });
-      if (!res.ok) return { key: sport.key, games: [] as ESPNGame[] };
+      // A failed fetch is "unknown", not "no games": season.ts falls back to the calendar.
+      if (!res.ok) throw new Error(`ESPN ${sport.key} ${res.status}`);
       const data = await res.json();
+      const events = (data.events || []) as Array<Record<string, unknown>>;
+      const rawType = (data.leagues as Array<{ season?: { type?: { type?: unknown } } }> | undefined)?.[0]?.season?.type?.type;
+      const signal: EspnSeasonSignal = {
+        fetched: true,
+        eventDates: events.map((e) => String(e.date || '')).filter(Boolean),
+        seasonType: Number.isFinite(Number(rawType)) && rawType !== null && rawType !== undefined ? Number(rawType) : null,
+      };
 
-      const games: ESPNGame[] = (data.events || []).map((e: Record<string, unknown>) => {
+      const games: ESPNGame[] = events.map((e: Record<string, unknown>) => {
         const comp = (e.competitions as Array<Record<string, unknown>>)?.[0];
         const competitors = comp?.competitors as Array<Record<string, unknown>> || [];
         const home = competitors.find((c: Record<string, unknown>) => c.homeAway === 'home') as Record<string, unknown> | undefined;
@@ -279,15 +264,15 @@ async function collectESPN(): Promise<Record<string, ESPNGame[]>> {
           awayRecord: awayRecords?.[0]?.summary || '',
         };
       });
-      return { key: sport.key, games };
+      return { key: sport.key, games, signal };
     })
   );
   for (const r of results) {
-    if (r.status === 'fulfilled' && r.value.games.length > 0) {
-      schedule[r.value.key] = r.value.games;
-    }
+    if (r.status !== 'fulfilled') continue;
+    signals[r.value.key] = r.value.signal;
+    if (r.value.games.length > 0) schedule[r.value.key] = r.value.games;
   }
-  return schedule;
+  return { schedule, signals };
 }
 
 // ── Kalshi Sports Markets (player props, K's, NRFI, spreads) ─────────────────
@@ -301,23 +286,26 @@ interface KalshiMarket {
   series: string;
 }
 
-async function collectKalshi(): Promise<KalshiMarket[]> {
-  const sportsSeries = [
-    'KXMLBKS',     // MLB strikeouts
-    'KXMLBHR',     // MLB home runs
-    'KXMLBF5',     // MLB first 5 innings
-    'KXMLBOU',     // MLB over/under
-    'KXMLBNRFI',   // NRFI
-    'KXMLBYRFI',   // YRFI
-    'KXMLBRUNS',   // MLB team total runs
-    'KXNBAPTS',    // NBA player points
-    'KXNBAAST',    // NBA assists
-    'KXNBAREB',    // NBA rebounds
-    'KXNBA3PT',    // NBA threes
-    'KXNBAGAME',   // NBA game winner
-    'KXNBASPREAD', // NBA spread
-    'KXNHLGAME',   // NHL game winner
-  ];
+const KALSHI_SERIES: Array<[string, TrackedSport]> = [
+  ['KXMLBKS', 'mlb'],     // MLB strikeouts
+  ['KXMLBHR', 'mlb'],     // MLB home runs
+  ['KXMLBF5', 'mlb'],     // MLB first 5 innings
+  ['KXMLBOU', 'mlb'],     // MLB over/under
+  ['KXMLBNRFI', 'mlb'],   // NRFI
+  ['KXMLBYRFI', 'mlb'],   // YRFI
+  ['KXMLBRUNS', 'mlb'],   // MLB team total runs
+  ['KXNBAPTS', 'nba'],    // NBA player points
+  ['KXNBAAST', 'nba'],    // NBA assists
+  ['KXNBAREB', 'nba'],    // NBA rebounds
+  ['KXNBA3PT', 'nba'],    // NBA threes
+  ['KXNBAGAME', 'nba'],   // NBA game winner
+  ['KXNBASPREAD', 'nba'], // NBA spread
+  ['KXNHLGAME', 'nhl'],   // NHL game winner
+];
+
+async function collectKalshi(sports: string[]): Promise<KalshiMarket[]> {
+  const sportsSeries = KALSHI_SERIES.filter(([, sport]) => sports.includes(sport)).map(([series]) => series);
+  if (sportsSeries.length === 0) return [];
 
   try {
     const allMarkets: KalshiMarket[] = [];
@@ -401,10 +389,11 @@ async function collectPolymarket(): Promise<PolymarketOdds[]> {
  * try/catch to safe defaults, so the fallback here only fires on a true hang.
  */
 function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   return Promise.race([
     promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
+    new Promise<T>((resolve) => { timer = setTimeout(() => resolve(fallback), ms); }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 /** Today's shared consensus (no LLM, no paid API). Null when not in hb mode or unreadable. */
@@ -420,30 +409,63 @@ async function collectSharedConsensus(): Promise<SharedConsensusLite[] | null> {
   }
 }
 
-export async function collectAllData(): Promise<ReportContext> {
-  const [expertPicks, prizePicks, mlbSchedule, espnSchedule, polymarket, kalshi, sharedConsensus] = await Promise.all([
+/** Keep only picks for in-season sports; sport normalised to its hb_sport_type key. */
+export function filterPicksToSeason(
+  expertPicks: ReportContext['expertPicks'],
+  inSeason: string[],
+): ReportContext['expertPicks'] {
+  const keep = new Set(inSeason);
+  const picks = expertPicks.picks
+    .map((p) => ({ ...p, sport: normalizeSport(p.sport) }))
+    .filter((p) => keep.has(p.sport));
+  return { picks, capperCount: new Set(picks.map((p) => p.capper_name)).size };
+}
+
+export function countPicksBySport(picks: Array<{ sport: string | null }>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const p of picks) {
+    const s = normalizeSport(p.sport);
+    counts[s] = (counts[s] || 0) + 1;
+  }
+  return counts;
+}
+
+export async function collectAllData(now: Date = new Date()): Promise<ReportContext> {
+  // Phase 1: what decides the season (ESPN + today's picks), plus anything sport-agnostic.
+  const [rawPicks, espn, polymarket, sharedConsensus] = await Promise.all([
     withTimeout(collectExpertPicks(), 20000, { picks: [], capperCount: 0 }),
-    withTimeout(collectPrizePicks(), 15000, []),
-    withTimeout(collectMLBSchedule(), 15000, []),
-    withTimeout(collectESPN(), 15000, {} as Record<string, ESPNGame[]>),
+    withTimeout(collectESPN(), 15000, { schedule: {}, signals: {} } as ESPNResult),
     withTimeout(collectPolymarket(), 15000, []),
-    withTimeout(collectKalshi(), 20000, []),
     withTimeout(collectSharedConsensus(), 15000, null),
   ]);
 
+  const season = decideInSeasonSports(espn.signals, countPicksBySport(rawPicks.picks), now);
+  const inSeason = season.inSeason;
+
+  // Phase 2: sport-specific sources, only for sports that are in season.
+  const [prizePicks, mlbSchedule, kalshi] = await Promise.all([
+    withTimeout(collectPrizePicks(inSeason), 15000, []),
+    inSeason.includes('mlb') ? withTimeout(collectMLBSchedule(), 15000, []) : Promise.resolve([] as MLBGame[]),
+    withTimeout(collectKalshi(inSeason), 20000, []),
+  ]);
+
+  const espnSchedule = Object.fromEntries(
+    Object.entries(espn.schedule).filter(([sport]) => inSeason.includes(sport)),
+  );
+
   return {
-    date: new Date().toLocaleDateString('en-US', {
+    date: now.toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
       timeZone: 'America/New_York',
     }),
-    expertPicks,
+    expertPicks: filterPicksToSeason(rawPicks, inSeason),
     sharedConsensus,
-    ballparkPal: collectBallparkPal(),
-    statcast: collectStatcast(),
     prizePicks,
     mlbSchedule,
     espnSchedule,
     polymarket,
     kalshi,
+    inSeasonSports: inSeason,
+    seasonReasons: season.reasons,
   };
 }
