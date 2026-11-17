@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { cronAuthGuard } from '@/lib/api-helpers';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { standardizeTeamName as canonicalTeamName } from '@/lib/consensus/team-mappings';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -66,13 +67,11 @@ function getSupabase(): SupabaseClient | null {
 
 // ============ TEAM STANDARDIZATION (simplified) ============
 
+// Canonical key from the shared, sport-aware mapping, so "Lakers", "Los Angeles Lakers"
+// and "LAL" are the same team. (The old local version only lower-cased and stripped
+// "Los/La", so a pick on "Lakers" never matched ESPN's "Los Angeles Lakers".)
 function standardizeTeamName(team: string, sport: string): string {
-  // Basic standardization - strip common prefixes/suffixes
-  return team
-    .replace(/^(The|Los|La)\s+/i, '')
-    .replace(/\s+(FC|SC)$/i, '')
-    .trim()
-    .toLowerCase();
+  return canonicalTeamName(team, sport).trim().toLowerCase();
 }
 
 // Extract team name from pick text like "Lakers -5.5" or "Over 220.5"

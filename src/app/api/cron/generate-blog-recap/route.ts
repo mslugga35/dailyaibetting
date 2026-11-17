@@ -2,7 +2,7 @@
  * Daily Blog Recap Generator
  *
  * Generates an SEO-optimized blog post from today's consensus fire picks.
- * Runs once daily at 9 AM ET via Vercel cron.
+ * Runs once daily (Hetzner systemd timer, see ops/hetzner-cron).
  *
  * Post targets keywords: "AI sports picks today [date]", "consensus picks today",
  * "best bets today", sport-specific terms based on what's in the picks.
@@ -11,6 +11,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthGuard, INTERNAL_SSR_HEADER, internalSsrToken } from '@/lib/api-helpers';
 import { internalBaseUrl } from '@/lib/data/server-fetch';
+import { callOpenRouter } from '@/lib/utils/openrouter';
+import { getTodayET } from '@/lib/utils/date';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
@@ -51,8 +53,6 @@ async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
 }
 
 async function generateRecapPost(picks: ConsensusPick[], dateStr: string): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
 
   const sports = [...new Set(picks.map((p) => p.sport))].join(', ');
   const fireCount = picks.filter((p) => p.capper_count >= 3).length;
@@ -82,30 +82,8 @@ Requirements:
 - Include natural mentions of "expert consensus", "AI-powered analysis", "free sports picks"
 - Do NOT include <html>, <head>, or <body> tags — just the article content starting with <h1>`;
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://dailyaibetting.com',
-    },
-    body: JSON.stringify({
-      model: 'anthropic/claude-haiku-4-5',
-      max_tokens: 1500,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter ${res.status}: ${err}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
+  // Budget-guarded (fails closed when the monthly cap is not configured or reached).
+  return callOpenRouter(systemPrompt, userPrompt, { model: 'anthropic/claude-haiku-4-5', maxTokens: 1500 });
 }
 
 export async function GET(req: NextRequest) {
@@ -121,18 +99,23 @@ export async function GET(req: NextRequest) {
     day: 'numeric',
     timeZone: 'America/New_York',
   });
-  const isoDate = today.toISOString().split('T')[0];
+  // ET calendar date (the UTC date is already tomorrow after 7/8 PM ET)
+  const isoDate = getTodayET();
   const slug = `ai-consensus-picks-today-${isoDate}`;
 
   const supabase = getSupabaseAdmin();
 
   // Skip if already generated today
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('blog_posts')
     .select('id')
     .eq('slug', slug)
     .eq('site', 'dailyaibetting')
-    .single();
+    .maybeSingle();
+  // Unknown = do not pay for a possible duplicate post.
+  if (existingError) {
+    return NextResponse.json({ success: false, error: 'Could not check for an existing post' }, { status: 500 });
+  }
 
   if (existing) {
     return NextResponse.json({ success: true, skipped: true, slug, reason: 'Already generated today' });

@@ -91,6 +91,11 @@ export async function GET(req: NextRequest) {
   try {
     const result = await generateFreshReport();
 
+    if (result.skipReason) {
+      // Nothing new was generated (no paid call): do not re-post to Discord.
+      return NextResponse.json({ success: true, skipped: true, reason: result.skipReason });
+    }
+
     // Post to Discord consensus channel
     await postToDiscord(result.report);
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=DailyAI: grade AI picks against final scores (03:15 ET daily, free: ESPN only)
+
+[Timer]
+# Explicit zone: correct across DST. 03:15 avoids the 02:00-03:00 hour that is skipped
+# (spring) or repeated as 01:00-02:00 (fall).
+OnCalendar=*-*-* 03:15:00 America/New_York
+Persistent=true
+AccuracySec=1min
+Unit=dailyai-cron@grade-picks.service
+
+[Install]
+WantedBy=timers.target

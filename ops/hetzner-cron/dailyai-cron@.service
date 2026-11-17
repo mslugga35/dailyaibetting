@@ -1,0 +1,19 @@
+[Unit]
+Description=DailyAI scheduled job: %i
+Documentation=file:///usr/local/lib/dailyai-cron/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/dailyai-cron/dailyai-job.sh %i
+# A oneshot unit is never started twice concurrently by systemd; the script also flocks.
+TimeoutStartSec=20min
+Nice=10
+StateDirectory=dailyai-cron
+LogsDirectory=dailyai-cron
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/lock

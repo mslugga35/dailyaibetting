@@ -12,6 +12,7 @@
 
 import { collectAllData, type ReportContext } from '@/lib/daily-ai-picks/collect';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
 import { callOpenRouter } from '@/lib/utils/openrouter';
 
@@ -31,6 +32,8 @@ export interface AIPick {
 interface EngineResult {
   picks: AIPick[];
   generated: boolean;
+  /** why nothing was generated (no paid call was made) */
+  skipReason?: 'already_generated' | 'no_expert_picks';
   pickCount: number;
   dataStats: {
     expertPicks: number;
@@ -233,7 +236,9 @@ function parsePicks(raw: string): AIPick[] {
 // ── Save to Supabase ─────────────────────────────────────────────────────────
 
 async function savePicks(picks: AIPick[]): Promise<number> {
-  const supabase = await createServerSupabaseClient();
+  if (picks.length === 0) return 0;
+  // ai_picks RLS allows writes by service_role only; a cron has no user session.
+  const supabase = getServiceRoleClient();
   const today = getTodayET();
 
   const rows = picks.map(p => ({
@@ -262,14 +267,16 @@ async function savePicks(picks: AIPick[]): Promise<number> {
 // ── Check if already generated today ─────────────────────────────────────────
 
 async function alreadyGenerated(): Promise<boolean> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = getServiceRoleClient();
   const today = getTodayET();
 
-  const { count } = await supabase
+  const { count, error } = await supabase
     .from('ai_picks')
     .select('id', { count: 'exact', head: true })
     .eq('pick_date', today);
 
+  // Unknown = do not pay for a possible duplicate.
+  if (error) throw new Error(`Could not check today's AI picks: ${error.message}`);
   return (count ?? 0) > 0;
 }
 
@@ -340,11 +347,16 @@ async function postToDiscord(picks: AIPick[]): Promise<void> {
 export async function generateAIPicks(force = false): Promise<EngineResult> {
   // Don't double-generate
   if (!force && await alreadyGenerated()) {
-    return { picks: [], generated: false, pickCount: 0, dataStats: { expertPicks: 0, mlbGames: 0, hasBallparkPal: false, hasStatcast: false, espnSports: 0 } };
+    return { picks: [], generated: false, skipReason: 'already_generated', pickCount: 0, dataStats: { expertPicks: 0, mlbGames: 0, hasBallparkPal: false, hasStatcast: false, espnSports: 0 } };
   }
 
   // Collect all data
   const context = await collectAllData();
+
+  // No expert picks = nothing to analyse: do not pay for a model call.
+  if (context.expertPicks.picks.length === 0) {
+    return { picks: [], generated: false, skipReason: 'no_expert_picks', pickCount: 0, dataStats: { expertPicks: 0, mlbGames: context.mlbSchedule.length, hasBallparkPal: !!context.ballparkPal, hasStatcast: !!context.statcast, espnSports: Object.keys(context.espnSchedule).length } };
+  }
 
   // Build prompts and call Claude
   const system = buildPickSystemPrompt();

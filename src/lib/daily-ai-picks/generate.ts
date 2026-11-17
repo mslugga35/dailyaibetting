@@ -15,6 +15,7 @@
 import { collectAllData, type ReportContext } from './collect';
 import { buildSystemPrompt, buildUserPrompt } from './prompt';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
 import { callOpenRouter } from '@/lib/utils/openrouter';
 
@@ -48,14 +49,21 @@ async function getCachedReport(allowStale = false): Promise<{ report: string; ge
   }
 }
 
-async function cacheReport(report: string, context: ReportContext): Promise<void> {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const today = getTodayET();
+/** Today's stored report via the service-role client. Throws when the check itself fails (unknown = do not pay). */
+async function getTodaysStoredReport(): Promise<{ report: string; generatedAt: string } | null> {
+  const { data, error } = await getServiceRoleClient()
+    .from('daily_ai_report')
+    .select('report_text, generated_at')
+    .eq('report_date', getTodayET())
+    .maybeSingle();
+  if (error) throw new Error(`Could not check today's report: ${error.message}`);
+  return data?.report_text ? { report: data.report_text, generatedAt: data.generated_at } : null;
+}
 
-    // Upsert — update if today's row exists, insert if not
-    await supabase.from('daily_ai_report').upsert({
-      report_date: today,
+async function cacheReport(report: string, context: ReportContext): Promise<void> {
+  // daily_ai_report is written by service_role only; a cron has no user session.
+  const { error } = await getServiceRoleClient().from('daily_ai_report').upsert({
+      report_date: getTodayET(),
       report_text: report,
       expert_pick_count: context.expertPicks?.picks?.length || 0,
       mlb_game_count: context.mlbSchedule?.length || 0,
@@ -63,9 +71,8 @@ async function cacheReport(report: string, context: ReportContext): Promise<void
       has_statcast: !!context.statcast,
       generated_at: new Date().toISOString(),
     }, { onConflict: 'report_date' });
-  } catch {
-    // Non-fatal — page still works without cache
-  }
+  // A paid report that was not stored must fail loudly, not report success.
+  if (error) throw new Error(`Failed to store report: ${error.message}`);
 }
 
 // ── Main Generator ────────────────────────────────────────────────────────────
@@ -73,6 +80,8 @@ async function cacheReport(report: string, context: ReportContext): Promise<void
 export interface GenerateResult {
   report: string;
   cached: boolean;
+  /** set when no paid call was made */
+  skipReason?: 'already_generated' | 'no_expert_picks';
   generatedAt: string;
   dataStats: {
     expertPicks: number;
@@ -115,19 +124,24 @@ export async function generateDailyReport(): Promise<GenerateResult | null> {
  * Generate a fresh report. Called ONLY by the cron API route —
  * collects data from 6 APIs + calls Claude, takes 60-120s.
  */
-export async function generateFreshReport(): Promise<GenerateResult> {
-  const context = await collectAllData();
+const NO_STATS: GenerateResult['dataStats'] = {
+  expertPicks: 0, cappers: 0, mlbGames: 0, prizePicksProps: 0,
+  hasBallparkPal: false, hasStatcast: false, sportCount: 0,
+};
 
-  // Environment guard — the premium BallparkPal + Statcast caches live on the
-  // LOCAL box (where hiddenbag-v2/scripts/daily-ai-report.mjs runs the canonical
-  // $0 generation). If BOTH are absent we are NOT on that box (e.g. Vercel/Hetzner),
-  // so refuse: generating here would produce an inferior report via PAID OpenRouter
-  // AND overwrite today's good local report in Supabase. Bail before the LLM call.
-  if (!context.ballparkPal && !context.statcast) {
-    throw new Error(
-      'Premium caches (BallparkPal + Statcast) unavailable in this environment — ' +
-      'refusing to overwrite the local-generated report. Generation runs locally only.'
-    );
+export async function generateFreshReport(): Promise<GenerateResult> {
+  // One report per ET day: never pay to duplicate or overwrite today's report
+  // (including one published by the local hiddenbag-v2 generator).
+  const existing = await getTodaysStoredReport();
+  if (existing) {
+    return { report: existing.report, cached: true, skipReason: 'already_generated', generatedAt: existing.generatedAt, dataStats: NO_STATS };
+  }
+
+  // BallparkPal + Statcast are optional MLB extras that only exist on the local
+  // box; the report covers every sport from consensus, ESPN and PrizePicks without them.
+  const context = await collectAllData();
+  if (context.expertPicks.picks.length === 0) {
+    return { report: '', cached: false, skipReason: 'no_expert_picks', generatedAt: new Date().toISOString(), dataStats: NO_STATS };
   }
 
   const system = buildSystemPrompt();

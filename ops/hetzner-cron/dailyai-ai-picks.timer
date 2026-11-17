@@ -1,0 +1,11 @@
+[Unit]
+Description=DailyAI: generate today's AI picks (10:00 ET daily, PAID: OpenRouter Sonnet)
+
+[Timer]
+OnCalendar=*-*-* 10:00:00 America/New_York
+Persistent=true
+AccuracySec=1min
+Unit=dailyai-cron@ai-picks.service
+
+[Install]
+WantedBy=timers.target

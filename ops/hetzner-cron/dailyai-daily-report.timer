@@ -1,0 +1,11 @@
+[Unit]
+Description=DailyAI: generate today's AI report (10:20 ET daily, PAID: OpenRouter Sonnet)
+
+[Timer]
+OnCalendar=*-*-* 10:20:00 America/New_York
+Persistent=true
+AccuracySec=1min
+Unit=dailyai-cron@daily-report.service
+
+[Install]
+WantedBy=timers.target

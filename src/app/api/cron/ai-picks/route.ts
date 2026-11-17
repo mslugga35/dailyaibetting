@@ -30,7 +30,10 @@ export async function GET(request: Request) {
     if (!result.generated) {
       return NextResponse.json({
         success: true,
-        message: 'Already generated today',
+        skipped: true,
+        message: result.skipReason === 'no_expert_picks'
+          ? 'Skipped: no expert picks to analyse (no paid call made)'
+          : 'Already generated today',
         pickCount: 0,
         duration: Date.now() - start,
       });

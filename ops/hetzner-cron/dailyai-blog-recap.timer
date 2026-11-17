@@ -1,0 +1,11 @@
+[Unit]
+Description=DailyAI: write today's consensus blog recap (10:40 ET daily, PAID: OpenRouter Haiku)
+
+[Timer]
+OnCalendar=*-*-* 10:40:00 America/New_York
+Persistent=true
+AccuracySec=1min
+Unit=dailyai-cron@blog-recap.service
+
+[Install]
+WantedBy=timers.target

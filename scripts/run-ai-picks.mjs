@@ -257,6 +257,33 @@ if (process.argv.includes('--dump-prompt')) {
   process.exit(0);
 }
 
+// Same fail-closed monthly cap as the app (src/lib/utils/openrouter.ts): no confirmed
+// headroom under OPENROUTER_MONTHLY_BUDGET_USD = no paid call.
+{
+  const budget = Number((process.env.OPENROUTER_MONTHLY_BUDGET_USD ?? '').trim());
+  if (!(budget > 0 && budget <= 100)) {
+    console.error('OPENROUTER_MONTHLY_BUDGET_USD not configured: refusing paid call');
+    process.exit(1);
+  }
+  const reserve = Math.ceil((SYSTEM_PROMPT.length + prompt.length) / 3) * 3.3e-6 + 6000 * 16.5e-6;
+  let used;
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/key', {
+      headers: { Authorization: `Bearer ${OPENROUTER_KEY}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (r.ok) used = (await r.json())?.data?.usage_monthly;
+  } catch { /* handled below */ }
+  if (typeof used !== 'number' || !Number.isFinite(used)) {
+    console.error('OpenRouter usage check failed: refusing paid call');
+    process.exit(1);
+  }
+  if (used + reserve > budget) {
+    console.error(`Monthly AI budget reached ($${used.toFixed(2)} of $${budget.toFixed(2)}): refusing paid call`);
+    process.exit(1);
+  }
+}
+
 console.log('\nCalling Claude via OpenRouter...');
 
 // ── Call Claude ──────────────────────────────────────────────────────────────

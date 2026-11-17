@@ -1,0 +1,2 @@
+# Server-side scripts and systemd units must keep LF endings
+ops/hetzner-cron/** text eol=lf
