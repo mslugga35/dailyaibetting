@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthGuard, rateLimitGuard } from '@/lib/api-helpers';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
+import { getAiReportStatus } from '@/lib/daily-ai-picks/report-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,7 +32,17 @@ export async function GET(request: Request) {
       .single();
 
     if (!data?.report_text) {
-      return NextResponse.json({ success: false, error: 'No report generated yet today' }, { status: 404 });
+      const info = getAiReportStatus(new Date(), false);
+      return NextResponse.json(
+        {
+          success: false,
+          error: info.status === 'pending' ? 'Report not yet published today' : 'Report unavailable today',
+          status: info.status,
+          reason: info.reason,
+          expectedAt: info.expectedAt,
+        },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({

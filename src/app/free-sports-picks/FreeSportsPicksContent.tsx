@@ -244,7 +244,7 @@ export function FreeSportsPicksContent({ initialData }: { initialData: unknown }
             the same bet, we mark it as a 🔥 <strong>Fire Pick</strong>.
           </p>
           <ul>
-            <li><strong>Real-time updates</strong> &ndash; Picks refresh automatically as cappers release their plays</li>
+            <li><strong>Frequent updates</strong> &ndash; Picks refresh automatically throughout the day as cappers release their plays</li>
             <li><strong>No registration required</strong> &ndash; All picks are 100% free to view</li>
             <li><strong>Multi-sport coverage</strong> &ndash; NFL, NBA, MLB, NHL, college football, and basketball</li>
             <li><strong>Transparent tracking</strong> &ndash; See exactly which cappers agree on each pick</li>

@@ -151,7 +151,7 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
               <span className="font-semibold">Want full pick history and capper grades?</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              DailyAI Pro tracks 200+ cappers with W/L records, ROI, and 30-day history.
+              DailyAI Pro unlocks individual capper pick detail and the full pick-by-pick history.
             </p>
             <Link
               href="/pro"

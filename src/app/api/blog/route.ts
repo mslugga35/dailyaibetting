@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import harborPosts from '@/lib/harbor-posts.json';
+import { resolveBlogContent, displayTitle } from '@/lib/blog-content';
 import { rateLimitGuard, parseIntParam, safeEqual } from '@/lib/api-helpers';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
     // List posts (filter by category=daily-picks for dailyaibetting posts)
     let query = supabase
       .from('blog_posts')
-      .select('id, slug, title, excerpt, category, tags, featured_image, published_at, view_count, author', { count: 'exact' })
+      .select('id, slug, title, excerpt, content, category, tags, featured_image, published_at, view_count, author', { count: 'exact' })
       .eq('status', 'published')
       .eq('site', 'dailyaibetting')
       .order('published_at', { ascending: false })
@@ -85,19 +86,22 @@ export async function GET(request: Request) {
     }
 
     // Merge Harbor SEO posts (dedupe by slug)
-    const dbPosts = data || [];
+    // Hide rows whose content is unrecoverable raw JSON; drop the heavy content field from the list.
+    const dbPosts = (data || [])
+      .filter((p: { content?: string }) => resolveBlogContent(p.content).kind !== 'broken')
+      .map(({ content: _content, ...rest }: { content?: string } & Record<string, unknown>) => rest) as Array<Record<string, unknown> & { slug: string; published_at: string }>;
     const dbSlugs = new Set(dbPosts.map((p: { slug: string }) => p.slug));
     const harbor = (harborPosts as Array<Record<string, unknown>>)
       .filter(p => !dbSlugs.has(p.slug as string))
       .map(p => ({
         id: `harbor-${p.slug}`,
         slug: p.slug,
-        title: p.title,
+        title: displayTitle(p.slug as string, p.title as string),
         excerpt: p.description,
         category: 'analysis',
         tags: p.tags || [],
         featured_image: null,
-        published_at: p.date,
+        published_at: p.date as string,
         view_count: 0,
         author: p.author || 'DailyAI Betting',
       }));

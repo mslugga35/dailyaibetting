@@ -7,8 +7,8 @@ import { ExternalLink, Zap, Shield, Award, Clock } from 'lucide-react';
 const FEATURES = [
   {
     icon: Zap,
-    title: 'Live Odds',
-    description: 'Real-time odds updates across all major sportsbooks',
+    title: 'Compare Books',
+    description: 'Compare major sportsbooks in one place',
   },
   {
     icon: Shield,

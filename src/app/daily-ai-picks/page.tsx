@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
+import { getAiReportStatus } from '@/lib/daily-ai-picks/report-status';
 import { DailyAIPicksContent } from './DailyAIPicksContent';
 
 // Dynamic — data collection (6 APIs + AI generation) takes >60s, exceeds static build timeout.
@@ -7,7 +8,7 @@ import { DailyAIPicksContent } from './DailyAIPicksContent';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'DailyAI Picks — AI-Powered Best Bets Today',
+  title: 'DailyAI Picks — AI Best Bets Today',
   description: 'Free daily AI picks powered by BallparkPal, Statcast, PrizePicks, and expert consensus. Covers MLB strikeout props, YRFI/NRFI, parlays, and best bets across all sports.',
   keywords: [
     'daily AI picks', 'best bets today', 'AI sports picks',
@@ -24,5 +25,5 @@ export default async function DailyAIPicksPage() {
     result = null;
   }
 
-  return <DailyAIPicksContent result={result} />;
+  return <DailyAIPicksContent result={result} reportStatus={getAiReportStatus(new Date(), !!result)} />;
 }
