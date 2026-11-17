@@ -6,13 +6,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { X, Crown, Users, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useSubscription } from '@/lib/hooks/use-subscription';
-import { TRIAL_DAYS, PRO_PRICE_DISPLAY } from '@/lib/constants/subscription';
-import { TRIAL_CTA } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 export function ProPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const hasTriggeredRef = useRef(false);
   const { isPro, loading } = useSubscription();
+  const { offer, copy } = useOffer();
 
   useEffect(() => {
     if (loading || isPro) return;
@@ -81,15 +81,16 @@ export function ProPopup() {
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-sm mb-4">
               <Crown className="h-4 w-4" />
-              Limited Time Offer
+              {offer?.plan === 'founding' ? 'Founding Member price' : 'DailyAI Pro'}
             </div>
             <h3 className="text-2xl font-bold mb-2">Wait! Don&apos;t Miss Out</h3>
             <p className="text-lg font-semibold text-emerald-400 mb-2">
-              New members try DailyAI Pro free for {TRIAL_DAYS} days
+              {copy.trialLabel ? `New members try DailyAI Pro free for ${offer?.trialDays} days` : copy.price ? `DailyAI Pro – ${copy.price}` : 'DailyAI Pro'}
             </p>
             <p className="text-muted-foreground text-sm">
-              Then just {PRO_PRICE_DISPLAY}. Cancel anytime.
+              {copy.after}
             </p>
+            {copy.seats && <p className="text-xs text-amber-400 mt-1">{copy.seats}</p>}
           </div>
 
           <div className="space-y-3 mb-6">
@@ -116,7 +117,7 @@ export function ProPopup() {
             >
               <Link href="/pro">
                 <Crown className="h-5 w-5 mr-2" />
-                {TRIAL_CTA}
+                {copy.ctaNew}
               </Link>
             </Button>
 

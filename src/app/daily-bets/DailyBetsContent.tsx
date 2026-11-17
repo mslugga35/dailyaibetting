@@ -30,7 +30,7 @@ import { useDailyBets } from '@/lib/hooks/use-daily-bets';
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
-import { UPGRADE_CTA } from '@/lib/constants/subscription';
+import { useOffer } from '@/lib/hooks/use-offer';
 
 function Section({ value, viewAll, className, children }: {
   value: string;
@@ -46,6 +46,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
   const { data, isLoading, error, refetch } = useDailyBets(initialData as never);
   const [copied, setCopied] = useState(false);
   const [viewAll, setViewAll] = useState(false);
+  const { copy: priceCopy } = useOffer();
   const formattedReport = useMemo(
     () => data?.aiReport ? formatMarkdown(data.aiReport, false) : '',
     [data?.aiReport],
@@ -228,7 +229,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                 Pro unlocks every pick, parlays built from the full slate, player props and MLB analysis.
               </p>
               <Link href="/pricing" className="shrink-0 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
-                {UPGRADE_CTA}
+                {priceCopy.ctaReturning}
               </Link>
             </div>
           ) : null}

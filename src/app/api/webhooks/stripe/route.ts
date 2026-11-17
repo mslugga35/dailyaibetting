@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 import { provisionGuestAndMagicLink, sendGuestAccessEmail, isGuestCheckoutEnabled } from '@/lib/guest-checkout';
 import { allowedPriceIds, hasDailyAiPrice } from '@/lib/stripe-prices';
+import { transitionFoundingSeat, type SeatEvent } from '@/lib/pricing/offer';
 
 /** DailyAI's own prices only (shared Stripe account, B2): see lib/stripe-prices. */
 function isDailyAiSubscription(subscription: Stripe.Subscription): boolean {
@@ -99,6 +100,14 @@ export async function POST(req: NextRequest) {
         await handleSubscriptionDeleted(subscription);
         break;
       }
+      case 'invoice.paid': {
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        break;
+      }
+      case 'checkout.session.expired': {
+        await handleCheckoutExpired(event.data.object as Stripe.Checkout.Session);
+        break;
+      }
       default:
         break;
     }
@@ -173,6 +182,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // and no second email (B5).
   if (await rowForSubscription(subscriptionId)) {
     await updateBySubscription(subscription);
+    await syncFoundingSeat(subscription, session.metadata?.user_id || null);
     return;
   }
 
@@ -258,6 +268,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     logError('Supabase upsert error', error);
     throw error;
   }
+  await syncFoundingSeat(subscription, userId);
 
   // Guest: access is now granted — email them the magic link to sign in.
   // Failure here must NOT throw: payment + access already succeeded, and the
@@ -277,7 +288,9 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
   if (await rowForSubscription(payload.id)) {
     // Write Stripe's current state, not the event payload: a stale update delivered
     // after a cancellation must not re-grant Pro (B5 ordering).
-    await updateBySubscription(await stripe.subscriptions.retrieve(payload.id));
+    const current = await stripe.subscriptions.retrieve(payload.id);
+    await updateBySubscription(current);
+    await syncFoundingSeat(current, null);
     return;
   }
   if (!isDailyAiSubscription(payload)) return; // another product on the shared account (B2)
@@ -295,6 +308,8 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
 }
 
 async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
+  // A founding seat follows its subscription even when no row was ever written.
+  if (isFoundingSubscription(payload)) await transitionSeat('ended', payload, null);
   // Only touch a row we track (any price); nothing to cancel otherwise.
   if (!(await rowForSubscription(payload.id))) return;
   const { error } = await supabaseAdmin
@@ -309,4 +324,79 @@ async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
     logError('Subscription delete error', error);
     throw error;
   }
+}
+
+// ---------------------------------------------------------------- Founding Member seats
+
+function foundingPriceId(): string {
+  return (process.env.STRIPE_PRICE_FOUNDING || '').trim();
+}
+
+/** A subscription on the founding price, or one created by a founding checkout. */
+function isFoundingSubscription(subscription: Stripe.Subscription): boolean {
+  const price = foundingPriceId();
+  if (!price) return false;
+  return subscription.items.data.some((i) => i.price?.id === price) || !!subscription.metadata?.founding_seat_id;
+}
+
+function seatIdOf(subscription: Stripe.Subscription): number | null {
+  const n = Number(subscription.metadata?.founding_seat_id);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+async function transitionSeat(event: SeatEvent, subscription: Stripe.Subscription, userId: string | null) {
+  const r = await transitionFoundingSeat({ event, seatId: seatIdOf(subscription), subscriptionId: subscription.id, userId });
+  if (!r && subscription.status !== 'canceled' && subscription.status !== 'incomplete_expired') {
+    // A founding-price subscription that never had a seat (created in the Dashboard, or a
+    // plan switch): it is not counted against the cap. A person must review it.
+    console.error(`[Stripe Webhook] MANUAL REVIEW: founding-price subscription ${subscription.id} has no founding seat (not counted against the cap)`);
+  }
+  if (r?.over_cap) {
+    console.error(`[Stripe Webhook] MANUAL REVIEW: founding seat ${r.seat_id} re-claimed beyond the cap for subscription ${subscription.id}`);
+  }
+}
+
+/** True when the subscription's latest invoice actually collected money. */
+async function latestInvoicePaid(subscription: Stripe.Subscription): Promise<boolean> {
+  const ref = subscription.latest_invoice;
+  if (!ref) return false;
+  const inv = typeof ref === 'string' ? await stripe.invoices.retrieve(ref) : ref;
+  return inv.status === 'paid' && inv.amount_paid > 0;
+}
+
+/**
+ * Keep the seat in step with Stripe's CURRENT subscription state (idempotent: the
+ * database only moves a seat forward). A seat converts only when money was collected:
+ * when a trial ends Stripe briefly reports the subscription "active" while the first
+ * invoice is still unpaid, so "active" alone is not proof of payment.
+ * canceled = ended; anything else = subscription exists but unpaid.
+ */
+async function syncFoundingSeat(subscription: Stripe.Subscription, userId: string | null) {
+  if (!isFoundingSubscription(subscription)) return;
+  const st = subscription.status;
+  let event: SeatEvent;
+  if (st === 'canceled' || st === 'incomplete_expired') event = 'ended';
+  else if ((st === 'active' || st === 'past_due') && (await latestInvoicePaid(subscription))) event = 'paid';
+  else event = 'started';
+  await transitionSeat(event, subscription, userId);
+}
+
+/** invoice.paid with money collected: the precise "first successful payment" signal. */
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  if (!foundingPriceId() || !(invoice.amount_paid > 0)) return;
+  const inv = invoice as Stripe.Invoice & { subscription?: string | { id: string } | null };
+  const ref = invoice.parent?.subscription_details?.subscription ?? inv.subscription ?? null;
+  const subscriptionId = typeof ref === 'string' ? ref : ref?.id;
+  if (!subscriptionId) return;
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  // Map from the subscription's CURRENT status: a payment event that arrives after the
+  // subscription already ended must not convert (re-claim) its seat.
+  await syncFoundingSeat(subscription, null);
+}
+
+/** An abandoned founding checkout frees its seat at once (the hold would expire anyway). */
+async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
+  const n = Number(session.metadata?.founding_seat_id);
+  if (!foundingPriceId() || !Number.isSafeInteger(n) || n <= 0) return;
+  await transitionFoundingSeat({ event: 'expired', seatId: n, sessionId: session.id });
 }

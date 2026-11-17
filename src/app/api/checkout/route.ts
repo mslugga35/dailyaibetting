@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited } from '@/lib/api-helpers';
-import { isProStatus, TRIAL_DAYS } from '@/lib/constants/subscription';
+import { isProStatus } from '@/lib/constants/subscription';
 import { getUserSubscription, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import {
   isGuestCheckoutEnabled,
@@ -10,6 +10,115 @@ import {
   hasActiveSubscription,
   hasEverSubscribed,
 } from '@/lib/guest-checkout';
+import {
+  chooseCheckoutPlan,
+  transitionFoundingSeat,
+  FOUNDING_SESSION_SECONDS,
+  FOUNDING_HOLD_GRACE_SECONDS,
+  PricingConfigError,
+} from '@/lib/pricing/offer';
+import { offerCopy, formatMonthly, PLANS, CANCEL_POLICY } from '@/lib/pricing/plans';
+
+/** Optional `expectedCents` from the page (bounded integer), else null. */
+function parseExpectedCents(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isInteger(n) && n > 0 && n <= 100000 ? n : null;
+}
+import type Stripe from 'stripe';
+
+const SOLD_OUT = {
+  sold_out: 'All Founding Member spots are taken. New Pro signups reopen soon.',
+  returning: 'The Founding Member price is for new founding members. New Pro signups at the regular price open soon.',
+  busy: 'Founding Member checkouts are busy right now. Please try again in a few minutes.',
+} as const;
+
+/**
+ * Create the Checkout Session for the plan on sale. Founding: a seat is reserved
+ * first (atomic, capped); the session expires in 31 minutes and the hold outlives it,
+ * so an abandoned checkout frees its seat and a session can never complete on a
+ * released seat. Returns a NextResponse.
+ */
+async function createCheckout(opts: {
+  customerId: string;
+  userId: string | null;
+  guestEmail: string | null;
+  trialEligible: boolean;
+  successUrl: string;
+  cancelUrl: string;
+  /** Monthly cents the page showed the customer; checkout refuses to charge anything else. */
+  expectedCents: number | null;
+}): Promise<NextResponse> {
+  const choice = await chooseCheckoutPlan(opts.customerId, opts.userId);
+  if (!choice.ok) {
+    return NextResponse.json({ error: SOLD_OUT[choice.reason], soldOut: choice.reason !== 'busy' }, { status: 409 });
+  }
+  if (opts.expectedCents != null && opts.expectedCents !== PLANS[choice.plan].cents) {
+    // The price changed since the page loaded (mode flipped, spots ran out, returning member).
+    if (choice.seatId != null && choice.newSeat) {
+      await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+    }
+    return NextResponse.json({
+      error: `The price is now ${formatMonthly(PLANS[choice.plan].cents)}. Please review it and try again.`,
+      priceChanged: true,
+      amountCents: PLANS[choice.plan].cents,
+    }, { status: 409 });
+  }
+  const trialDays = opts.trialEligible && choice.firstTimeTrialDays > 0 ? choice.firstTimeTrialDays : undefined;
+  const ids: Record<string, string> = opts.userId ? { user_id: opts.userId } : { guest_email: opts.guestEmail || '' };
+  const founding = choice.plan === 'founding';
+  // Legacy mode keeps exactly the metadata it always had.
+  const metadata: Record<string, string> = {
+    ...ids,
+    ...(choice.plan !== 'legacy' ? { plan: choice.plan } : {}),
+    ...(choice.seatId != null ? { founding_seat_id: String(choice.seatId) } : {}),
+  };
+
+  const params: Stripe.Checkout.SessionCreateParams = {
+    customer: opts.customerId,
+    mode: 'subscription',
+    // Omit payment_method_types so Stripe auto-enables Apple Pay, Google Pay,
+    // and Link (one-tap) per the Dashboard's automatic payment methods setting.
+    line_items: [{ price: choice.priceId, quantity: 1 }],
+    subscription_data: {
+      ...(trialDays ? { trial_period_days: trialDays } : {}),
+      metadata,
+    },
+    metadata,
+    success_url: opts.successUrl,
+    cancel_url: opts.cancelUrl,
+    // A promotion code on top of the founding price is not part of the offer, and a
+    // 100%-off code would make a "paying" seat that never pays.
+    allow_promotion_codes: !founding,
+  };
+  if (founding) {
+    const copy = offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: trialDays ?? 0, founding: null });
+    params.expires_at = Math.floor(Date.now() / 1000) + FOUNDING_SESSION_SECONDS;
+    params.subscription_data!.description = `DailyAI Pro – Founding Member (${copy.price}, locked while your subscription stays active)`;
+    params.custom_text = { submit: { message: `${copy.terms} ${copy.lock} ${CANCEL_POLICY}`.slice(0, 1200) } };
+  } else if (choice.plan === 'regular') {
+    const copy = offerCopy({ mode: 'regular', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: trialDays ?? 0, founding: null });
+    params.custom_text = { submit: { message: `${copy.terms} ${copy.renewal}`.slice(0, 1200) } };
+  }
+
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create(params);
+  } catch (err) {
+    // Give back a seat this request just reserved (not one an earlier open checkout holds).
+    if (choice.seatId != null && choice.newSeat) {
+      await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+    }
+    throw err;
+  }
+  if (choice.seatId != null) {
+    const expires = (session.expires_at ?? params.expires_at ?? 0) + FOUNDING_HOLD_GRACE_SECONDS;
+    await transitionFoundingSeat({
+      event: 'session', seatId: choice.seatId, sessionId: session.id,
+      holdUntil: new Date(expires * 1000).toISOString(),
+    });
+  }
+  return NextResponse.json(opts.guestEmail ? { url: session.url, guest: true } : { url: session.url });
+}
 
 export async function POST(request: Request) {
   try {
@@ -41,22 +150,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'This email already has an active subscription' }, { status: 400 });
       }
       // The free trial is for first-time subscribers only.
-      const guestTrial = (await hasEverSubscribed(stripe, customerId)) ? undefined : TRIAL_DAYS;
-      const guestSession = await stripe.checkout.sessions.create({
-        customer: customerId,
-        mode: 'subscription',
-        // Omit payment_method_types so Stripe auto-enables Apple Pay / Google Pay / Link.
-        line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-        subscription_data: {
-          ...(guestTrial ? { trial_period_days: guestTrial } : {}),
-          metadata: { guest_email: guestEmail },
-        },
-        metadata: { guest_email: guestEmail },
-        success_url: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}&guest=1`,
-        cancel_url: `${baseUrl}/pro`,
-        allow_promotion_codes: true,
+      return await createCheckout({
+        customerId,
+        userId: null,
+        guestEmail,
+        trialEligible: !(await hasEverSubscribed(stripe, customerId)),
+        successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}&guest=1`,
+        cancelUrl: `${baseUrl}/pro`,
+        expectedCents: parseExpectedCents(body?.expectedCents),
       });
-      return NextResponse.json({ url: guestSession.url, guest: true });
     }
 
     // Signed-in users: cap checkout attempts per account (each can create a Stripe session).
@@ -118,28 +220,19 @@ export async function POST(request: Request) {
     }
 
     // The free trial is for first-time subscribers only (no new trial after cancelling).
-    const trialDays = existing.stripeSubscriptionId || (await hasEverSubscribed(stripe, customerId))
-      ? undefined
-      : TRIAL_DAYS;
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
-      // Omit payment_method_types so Stripe auto-enables Apple Pay, Google Pay,
-      // and Link (one-tap) per the Dashboard's automatic payment methods setting.
-      line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
-      subscription_data: {
-        ...(trialDays ? { trial_period_days: trialDays } : {}),
-        metadata: { user_id: user.id },
-      },
-      metadata: { user_id: user.id },
-      success_url: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/pro`,
-      allow_promotion_codes: true,
+    const trialEligible = !(existing.stripeSubscriptionId || (await hasEverSubscribed(stripe, customerId)));
+    return await createCheckout({
+      customerId,
+      userId: user.id,
+      guestEmail: null,
+      trialEligible,
+      successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/pro`,
+      expectedCents: parseExpectedCents(body?.expectedCents),
     });
-
-    return NextResponse.json({ url: session.url });
   } catch (error) {
     const e = error as { code?: string; message?: string } | null;
+    if (error instanceof PricingConfigError) console.error('Checkout pricing config error:', e?.message);
     console.error('Checkout error:', e?.code || '(no code)', e?.message || String(error));
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
