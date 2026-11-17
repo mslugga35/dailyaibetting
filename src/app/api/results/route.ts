@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { rateLimitGuard, parseIntParam, cronAuthGuard, isCronAuthorized, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { isAdminUser } from '@/lib/auth/admin';
+import { recordTable } from '@/lib/data/record-source';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -38,7 +39,7 @@ function daysAgoISO(days: number): string {
 async function countRecord(db: SupabaseClient, sinceDate: string | null) {
   const count = async (result: 'WIN' | 'LOSS') => {
     let q = db
-      .from('consensus_results')
+      .from(recordTable())
       .select('id', { count: 'exact', head: true })
       .eq('is_fire', true)
       .eq('result', result);
@@ -89,7 +90,7 @@ export async function GET(request: Request) {
         const windowed = searchParams.has('days');
         if (!windowed) {
           let query = db
-            .from('consensus_results')
+            .from(recordTable())
             .select('*')
             .neq('result', 'PENDING')
             .order('pick_date', { ascending: false })
@@ -101,7 +102,7 @@ export async function GET(request: Request) {
         const rows: unknown[] = [];
         for (let from = 0; from < MAX_WINDOW_ROWS; from += PAGE) {
           let page = db
-            .from('consensus_results')
+            .from(recordTable())
             .select('*')
             .neq('result', 'PENDING')
             .gte('pick_date', daysAgoISO(days))
@@ -157,7 +158,7 @@ export async function GET(request: Request) {
           }
         }
         ({ data, error } = await db
-          .from('consensus_results')
+          .from(recordTable())
           .select('*')
           .eq('result', 'PENDING')
           .order('pick_date', { ascending: false }));
@@ -172,7 +173,7 @@ export async function GET(request: Request) {
           countRecord(db, null),
           countRecord(db, since30),
           db
-            .from('consensus_results')
+            .from(recordTable())
             .select('result, pick_date')
             .eq('is_fire', true)
             .neq('result', 'PENDING')

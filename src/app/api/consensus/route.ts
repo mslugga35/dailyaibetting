@@ -11,7 +11,11 @@
  *   ?date=yesterday   - Get yesterday's consensus with W/L results
  *
  * Data flow:
- *   getAllPicksFromSources() → normalizePicks() → ESPN filter → buildConsensus()
+ *   CONSENSUS_SOURCE=hb (shared): hb_consensus_live (written by HiddenBag's one
+ *     consensus writer) → fetchHbConsensus() → ConsensusPick. DailyAI computes
+ *     nothing; results come from the shared record. Gating below is unchanged.
+ *   CONSENSUS_SOURCE=legacy (default until the flip; rollback path):
+ *     getAllPicksFromSources() → normalizePicks() → ESPN filter → buildConsensus()
  *
  * @module app/api/consensus
  */
@@ -32,6 +36,13 @@ import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { logger } from '@/lib/utils/logger';
 import { getCurrentUser, isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { rateLimitGuard, parseIntParam, isCronAuthorized } from '@/lib/api-helpers';
+import {
+  getConsensusSource,
+  fetchHbConsensus,
+  toConsensusPick,
+  toNormalizedPicks,
+  toLetterResult,
+} from '@/lib/data/hb-consensus';
 
 const FREE_TIER_LIMIT = 5;
 
@@ -100,6 +111,14 @@ export async function GET(request: Request) {
       }
     }
     const userIsPremium = entitlement === 'premium';
+
+    // --- Shared consensus (one writer on HiddenBag, identical on both sites) ---
+    if (getConsensusSource() === 'hb') {
+      // `await` so a read failure lands in the catch below (500), never a fallback.
+      return dateParam === 'yesterday'
+        ? await handleHbYesterday(sport, minCappers, userIsPremium, entitlement)
+        : await handleHbToday(sport, minCappers, userIsPremium, entitlement);
+    }
 
     // --- Yesterday's consensus with results ---
     if (dateParam === 'yesterday') {
@@ -193,6 +212,104 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Today's SHARED consensus. Same response shape and the same free-tier rule as the
+ * legacy path: the free slice is the overall top FREE_TIER_LIMIT chosen before any
+ * sport / minCappers filter, and every list is intersected with it.
+ */
+async function handleHbToday(sport: string | null, minCappers: number, userIsPremium: boolean, entitlement: Entitlement) {
+  const today = getTodayET();
+  const rows = await fetchHbConsensus([today], { minCappers: 2 });
+  const all = rows.map(toConsensusPick);
+  const formatted = formatConsensusOutput(all);
+  const filtered = rows.filter((r) => r.capper_count >= minCappers && (!sport || sport.toUpperCase() === 'ALL' || r.sport === sport.toLowerCase()));
+  const consensus = filtered.map(toConsensusPick);
+  const allPicks = toNormalizedPicks(rows);
+  const picksByCapper = groupPicksByCapper(allPicks);
+  const insights = buildInsights(all, allPicks);
+
+  const freeIds = freePickIds(formatted.filteredConsensus);
+  const isFree = (p: { id: string }) => freeIds.has(p.id);
+  return NextResponse.json({
+    success: true,
+    source: 'hb',
+    timestamp: new Date().toISOString(),
+    date: today,
+    totalPicks: allPicks.length,
+    normalizedCount: allPicks.length,
+    capperCount: Object.keys(picksByCapper).length,
+    consensusCount: consensus.length,
+    firePickCount: consensus.filter((p) => p.capperCount >= 3).length,
+    consensus: userIsPremium ? consensus : consensus.filter(isFree),
+    topOverall: userIsPremium ? formatted.topOverall : formatted.topOverall.filter(isFree),
+    bySport: userIsPremium ? formatted.bySport : Object.fromEntries(
+      Object.entries(formatted.bySport).map(([s, picks]) => [s, picks.filter(isFree)])
+    ),
+    fadeThePublic: userIsPremium ? formatted.fadeThePublic : [],
+    insights: userIsPremium ? insights : {},
+    picksByCapper: userIsPremium ? picksByCapper : {},
+    allPicks: userIsPremium ? allPicks : [],
+    tier: userIsPremium ? 'premium' : 'free',
+    entitlement,
+    freeTierLimit: FREE_TIER_LIMIT,
+    totalConsensusCount: consensus.length,
+  }, {
+    headers: { 'Cache-Control': 'private, no-store' },
+  });
+}
+
+/**
+ * Yesterday's SHARED consensus with results from the shared record (graded by the
+ * HiddenBag writer from final scores). No ESPN call, no local grading.
+ */
+async function handleHbYesterday(sport: string | null, minCappers: number, userIsPremium: boolean, entitlement: Entitlement) {
+  const yesterday = getYesterdayET();
+  const rows = await fetchHbConsensus([yesterday], { minCappers: 2 });
+  const resultOf = new Map(rows.map((r) => [r.group_key, toLetterResult(r.result)]));
+  const all = rows.map(toConsensusPick);
+  const formatted = formatConsensusOutput(all);
+  const gradedConsensus = rows
+    .filter((r) => r.capper_count >= minCappers && (!sport || sport.toUpperCase() === 'ALL' || r.sport === sport.toLowerCase()))
+    .map((r) => ({ ...toConsensusPick(r), result: toLetterResult(r.result) }));
+
+  const graded = gradedConsensus.filter((p) => p.result !== null);
+  const wins = graded.filter((p) => p.result === 'W').length;
+  const losses = graded.filter((p) => p.result === 'L').length;
+  const pushes = graded.filter((p) => p.result === 'P').length;
+  const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
+  const fireGraded = graded.filter((p) => p.capperCount >= 3);
+  const fireWins = fireGraded.filter((p) => p.result === 'W').length;
+  const fireLosses = fireGraded.filter((p) => p.result === 'L').length;
+  const fireWinRate = fireWins + fireLosses > 0 ? Math.round((fireWins / (fireWins + fireLosses)) * 100) : 0;
+
+  const freeIds = freePickIds(formatted.filteredConsensus);
+  const isFree = (p: { id: string }) => userIsPremium || freeIds.has(p.id);
+  const withResult = <T extends { id: string }>(p: T) => ({ ...p, result: resultOf.get(p.id) ?? null });
+
+  return NextResponse.json({
+    success: true,
+    source: 'hb',
+    timestamp: new Date().toISOString(),
+    date: yesterday,
+    isYesterday: true,
+    entitlement,
+    totalPicks: toNormalizedPicks(rows).length,
+    consensusCount: gradedConsensus.length,
+    consensus: gradedConsensus.filter(isFree),
+    topOverall: formatted.topOverall.filter(isFree).map(withResult),
+    bySport: Object.fromEntries(
+      Object.entries(formatted.bySport).map(([s, picks]) => [s, picks.filter(isFree).map(withResult)])
+    ),
+    stats: {
+      wins, losses, pushes, winRate, totalGraded: graded.length,
+      fireWins, fireLosses, fireWinRate, fireTotal: fireGraded.length,
+      gamesWithScores: new Set(rows.filter((r) => r.final_score).map((r) => r.game_id)).size,
+    },
+  }, {
+    headers: { 'Cache-Control': 'private, no-store' },
+  });
 }
 
 /**
