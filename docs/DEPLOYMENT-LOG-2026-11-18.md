@@ -72,3 +72,24 @@ Rollback (reverse order): `20261118c_ROLLBACK`, `20261118b_ROLLBACK`, `20261117b
 1 verify-anon/verify-as-roles (service-only consensus, write probes) ✅ · 2 games-cache ceiling ✅ · 3 tiebreak ✅ · 4 JSDoc ✅ ·
 5 backfill: `hb_consensus_live` 2026-06-01..11-18, 170 days, 2,540 fire groups; the one empty day (07-13, MLB All-Star break)
 recomputes to 0 groups with the writer's engine ✅ · 6 all five migrations (17, 17b, 18, 18b, 18c) verified live ✅.
+
+## Stage 3: HB PR #29 merged (owner, 16:19Z)
+- Preview build fixed by adding only NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (role=anon) to Preview; service key stays Production-only.
+- Merge 488c5e2, Vercel prod dpl_8pXinPHTUawkhaDbiCuqmfc51eXX READY (rollback: dpl_6RFMUFTyXHsCgMEZwfFBUwjxQx6Y). `/`, `/results` (1236-1140-26), `/leaderboard` (92), `/consensus` (paywalled) OK.
+- Paywall rollback (32ea808) now restores the read path only, never the anon write hole; paywall tests 45/45, mutation-checked.
+
+## Stage 5: re-grade applied (16:2x-16:3xZ)
+- Fresh prep `C:/Users/mpmmo/wt/regrade-20261118-stage5`: READY, 20,354 rows, holds 2,382, 0 disagree, rehearsal 16/16 (plan 20,350-20,351 / 2,381-2,383).
+- 01-backup 20,354; 02-apply 01..11 all applied; 03-verify regraded 20,302 / rematched 20,354 (no optimistic skips); holds backup 2,382; 05 flagged 2,382, result_changed 0.
+- `update-capper-stats.mjs` on Hetzner: 354 cappers, 0 errors.
+- Team markets since 06-01, holds excluded: 14,065-12,680-286 (52.6%) vs plan 14,043-12,662-286 (difference = picks graded since the plan).
+- Backups kept: `hb_picks_regrade_bak_20261118`, `hb_picks_regrade_holds_20261118`. Rollback: `final/sql/99-ROLLBACK.sql` then update-capper-stats.
+- Follow-up (not in plan, not changed): 4 picks outside the plan graded on a game that started before posting: 965bd063, ca513e68, eb0b7864, 765f70d5. e9a025d8 (Nets) is held (stats-excluded) but still displays "loss".
+
+## Stage 6: DailyAI deployed (f768379)
+- Fast-forward ad8cd80..f768379, GH Actions run 44349504073 OK; commit-info = f768379. Rollback: redeploy ad8cd80.
+- Server-local `src/lib/harbor-posts.json` (+18 lines) backed up to `/root/backups/dai-20261118/`, restored after the hard reset, rebuilt, restarted, `pm2 save`. NOTE: gh-deploy.sh stashes `lib/harbor-posts.json`, not `src/lib/...`, so each deploy wipes it.
+- Checks: `/ /pricing /pro /results /daily-ai-picks /api/consensus` 200, `/account` -> login, `/admin` 404; pricing $20/mo + 7-day trial, no founding offer.
+- `CONSENSUS_SOURCE=hb` (`.env.local`, backup `env.local.bak`): API source=hb, 11 consensus / 6 fire = HB `hb_consensus_live`.
+- Stale test: writer stopped 16:41:16Z; 503 `stale:true` confirmed. At ~16:48Z a transient PostgREST pool timeout hung one DAI request and failed the writer's first run after restart; DAI rolled back to legacy for ~3 min, writer recovered 16:50:35Z, DB 35/90 connections, `hb` re-enabled 16:53Z, 4/4 checks 200 (11/6).
+- `dailyai-track-record` stopped + saved, BUT it has `cron_restart 0 15 * * *`, so PM2 will start it again tomorrow 15:00Z. Retire with `pm2 delete dailyai-track-record && pm2 save` (owner OK).
