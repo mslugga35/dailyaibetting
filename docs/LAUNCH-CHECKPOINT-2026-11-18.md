@@ -11,7 +11,7 @@ Runbook: `docs/PRODUCTION-RUNBOOK-2026-11-18.md` (stages, checks, rollback).
 | Stripe test e2e | `C:/Users/mpmmo/DirectoryWebsites/Sites/dailyaibetting/local-test/` (`run-founding-e2e.sh`, git-excluded) | key on disk, never ask for it |
 
 `hb-trial-merge/node_modules` and `bot/node_modules` are junctions to `C:/Users/mpmmo/hiddenbag-v2`; Turbopack refuses them,
-so build there with `npx next build --webpack`, or build a clean clone (done 2026-11-18).
+so build there with `npx next build --webpack`, or build a clean clone (attempted 2026-11-18, stopped by low memory).
 
 ## Stages
 | # | Stage | Status |

@@ -7,7 +7,7 @@ Progress, open items and recovery steps: `docs/LAUNCH-CHECKPOINT-2026-11-18.md`.
 | Artifact | Where | Evidence |
 |---|---|---|
 | DailyAI bundle | `integrate/launch-bundle` (worktree `C:/Users/mpmmo/wt/dai-integrate`) | harness 408/408, tsc 0, build OK; founding Stripe-test e2e 75/0 (+1 blocked: portal bot challenge) on `9b9f986`; the rerun on `4191757` (security-review fixes) was stopped by low memory, **rerun before Stage 8** |
-| HiddenBag branch on `origin/master` | `feat/shared-consensus-on-master` (worktree `C:/Users/mpmmo/wt/hb-trial-merge`) | jest 486, bot 434, consensus 50, tsc 0, `next build --webpack` OK (clean-clone Turbopack build stopped by low memory: rerun before Stage 3) |
+| HiddenBag branch on `origin/master` | `feat/shared-consensus-on-master` (worktree `C:/Users/mpmmo/wt/hb-trial-merge`) | jest 478 + stats guard 8, bot 434, consensus 50, tsc 0, `next build --webpack` OK (clean-clone Turbopack build stopped by low memory: rerun before Stage 3) |
 | Re-grade pipeline | HB `scripts/qa/regrade-prepare.sh` (dry run → independent verify → exclusions → verify → local rehearsal) | final plan 0 verification failures, rehearsal 16/16 incl. exact rollback |
 
 Hand-deployed files on Hetzner (`/root/hiddenbag-v2`, never `git pull`): copy LF blobs with
