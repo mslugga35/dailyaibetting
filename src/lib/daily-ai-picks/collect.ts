@@ -17,7 +17,7 @@
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getTodayET } from '@/lib/utils/date';
+import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { getConsensusSource, fetchHbConsensus, toConsensusPick } from '@/lib/data/hb-consensus';
 import type { SharedConsensusLite } from '@/lib/ai-picks/consensus-section';
 import {
@@ -90,7 +90,8 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
   try {
     const supabase = await createServerSupabaseClient();
     const today = getTodayET();
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // ET calendar day (a UTC date is already tomorrow after 7/8 PM ET and would drop today's picks).
+    const yesterday = getYesterdayET();
 
     const { data: picks, error } = await supabase
       .from('hb_picks')
