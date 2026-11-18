@@ -114,7 +114,9 @@ old grade (no performance claim).
 ## Stage 6: DailyAI bundle deploy (behaviour unchanged by default; needs Stage 2)
 1. Push `integrate/launch-bundle` to `master` (GitHub Actions deploy). Defaults: `CONSENSUS_SOURCE` unset (legacy), `PRICING_MODE` unset ($20 exactly as today).
 2. **Checks:** `/`, `/pricing`, `/pro`, `/account`, `/results`, `/daily-ai-picks` render; `/api/consensus` 200; checkout starts at $20; admin locked; capper profile loads (uses `stats_excluded`).
-3. Set `CONSENSUS_SOURCE=hb`, restart. **Checks:** DailyAI `/api/consensus` = HB `/consensus`; stop the HB writer 6 min → DailyAI 503 `stale:true`, page "Unable to load picks"; restart writer; then `pm2 stop dailyai-track-record && pm2 save`.
+3. Set `CONSENSUS_SOURCE=hb`, restart. **Checks:** DailyAI `/api/consensus` = HB `/consensus` (count + fire count vs `hb_consensus_live` for today's `et_date`).
+   **Stale behaviour: do NOT stop the production writer to test it.** On 2026-11-18 that test (writer stopped 16:41Z) overlapped a ~90 s PostgREST pool exhaustion on the shared project (16:47:56–16:49:20Z), the writer's first run after restart failed, and DailyAI's consensus was unavailable ~6 min. Evidence that already exists instead: `tests/data/hb-consensus.test.mjs` (stale heartbeat / missing row / read error → 503 `stale:true`, no fallback) and the 2026-11-18 production observation. `CONSENSUS_STALE_SECONDS` is clamped to 120–3600 s and the writer beats every 60 s, so a throwaway instance cannot be forced stale without a code change. If a live check is ever required: 04:00–06:00 ET only, and after restarting the writer wait for its `[CONSENSUS-WRITER] ok` line and a DailyAI 200 before calling it done.
+   `dailyai-track-record`: **keep it running.** In `hb` mode `/history`'s daily summary (`/api/results?view=daily`) and the `monthly`/`sport` views still read `consensus_results` views (`daily_results_summary`, `monthly_performance`, `fire_picks_performance`). Retire it only after those views read `recordTable()`.
 4. **Rollback:** `CONSENSUS_SOURCE=legacy` + restart (restart `dailyai-track-record`), or redeploy `ad8cd80`.
 
 ## Stage 7: daily AI report (paid)
