@@ -30,6 +30,12 @@ export function consensusSection(
   raw: { picks: RawExpertPick[]; capperCount: number } | null | undefined,
 ): string[] {
   const out: string[] = [];
+  // hb mode passes an array (possibly empty when the shared consensus is stale/unavailable):
+  // never rebuild a competing consensus from raw picks in that case.
+  if (Array.isArray(shared) && shared.length === 0) {
+    out.push('## EXPERT CONSENSUS: unavailable right now. Do not state or estimate capper-agreement counts.');
+    return out;
+  }
   if (shared && shared.length > 0) {
     out.push(`## EXPERT CONSENSUS (shared HiddenBag/DailyAI consensus, ${shared.length} groups; independent cappers only)`);
     for (const c of shared.slice(0, 40)) {

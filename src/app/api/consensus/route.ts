@@ -39,6 +39,7 @@ import { rateLimitGuard, parseIntParam, isCronAuthorized } from '@/lib/api-helpe
 import {
   getConsensusSource,
   fetchHbConsensus,
+  HbConsensusStaleError,
   toConsensusPick,
   toNormalizedPicks,
   toLetterResult,
@@ -206,6 +207,14 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof HbConsensusStaleError) {
+      // Never serve an old board as today's: tell the page it is unavailable and since when.
+      logger.error('Consensus API', 'Shared consensus stale:', error.message);
+      return NextResponse.json(
+        { success: false, stale: true, error: 'Consensus is temporarily unavailable. We are refreshing it.', lastUpdated: error.lastSuccessAt },
+        { status: 503, headers: { 'Cache-Control': 'no-store', 'Retry-After': '60' } }
+      );
+    }
     logger.error('Consensus API', 'Request failed:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to build consensus' },

@@ -98,6 +98,9 @@ export function useConsensus(options: UseConsensusOptions = {}): UseConsensusRes
       } else {
         if (isMountedRef.current) {
           setError(err instanceof Error ? err : new Error('Unknown error fetching consensus'));
+          // Today's board must never outlive a failed refresh (e.g. 503 stale): drop it rather
+          // than keep showing an older board as current. Yesterday's graded data is static.
+          if (date === 'today' && currentFetchId === fetchIdRef.current) setData(null);
         }
       }
     } finally {

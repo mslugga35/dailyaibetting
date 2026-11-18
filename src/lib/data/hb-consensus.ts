@@ -107,8 +107,51 @@ function serviceClient(): SupabaseClient {
 }
 
 const cache = new Map<string, { at: number; rows: HbConsensusRow[] }>();
-/** Test hook: drop the 30 s cache (and the memoized client). */
-export function resetHbConsensusCache(): void { cache.clear(); client = null; }
+/** Test hook: drop the 30 s cache, the heartbeat cache and the memoized client. */
+export function resetHbConsensusCache(): void { cache.clear(); client = null; health = null; }
+
+// ---- Writer heartbeat (hb_consensus_meta.last_success_at) ----------------------
+/** Writer runs every 60 s (PM2 restarts it every 5 min); older than this = stale. */
+export function staleAfterSeconds(): number {
+  const n = Number(process.env.CONSENSUS_STALE_SECONDS);
+  return Number.isFinite(n) && n >= 120 && n <= 3600 ? Math.floor(n) : 300;
+}
+
+export class HbConsensusStaleError extends Error {
+  constructor(public lastSuccessAt: string | null, public ageSeconds: number | null) {
+    super(lastSuccessAt ? `shared consensus is stale (last update ${ageSeconds}s ago)` : 'shared consensus heartbeat unavailable');
+    this.name = 'HbConsensusStaleError';
+  }
+}
+
+export interface WriterHealth { fresh: boolean; lastSuccessAt: string | null; ageSeconds: number | null }
+let health: { at: number; h: WriterHealth } | null = null;
+const HEALTH_CACHE_MS = 15_000;
+
+function etDate(d: Date): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+/** Unknown (read error, no row, bad timestamp) counts as NOT fresh. */
+export async function getWriterHealth(db?: SupabaseClient, now: Date = new Date()): Promise<WriterHealth> {
+  if (!db && health && now.getTime() - health.at < HEALTH_CACHE_MS) return health.h;
+  let h: WriterHealth = { fresh: false, lastSuccessAt: null, ageSeconds: null };
+  try {
+    const { data, error } = await (db || serviceClient()).from('hb_consensus_meta').select('last_success_at').eq('id', 1).maybeSingle();
+    const ts = !error && data?.last_success_at ? Date.parse(data.last_success_at as string) : NaN;
+    if (Number.isFinite(ts)) {
+      const age = Math.max(0, Math.round((now.getTime() - ts) / 1000));
+      h = { fresh: age <= staleAfterSeconds(), lastSuccessAt: new Date(ts).toISOString(), ageSeconds: age };
+    }
+  } catch { /* unknown = stale */ }
+  if (!db) health = { at: now.getTime(), h };
+  return h;
+}
+
+export async function assertWriterFresh(db?: SupabaseClient, now?: Date): Promise<void> {
+  const h = await getWriterHealth(db, now);
+  if (!h.fresh) throw new HbConsensusStaleError(h.lastSuccessAt, h.ageSeconds);
+}
 
 /** Canonical order: identical to hiddenbag consensus-core.compareRows / consensus-live.compareLiveRows. */
 export function compareLiveRows(a: Pick<HbConsensusRow, 'capper_count' | 'agreement_pct' | 'commence_time' | 'group_key'>, b: typeof a): number {
@@ -156,10 +199,12 @@ async function loadDates(dates: string[], db?: SupabaseClient): Promise<HbConsen
  */
 export async function fetchHbConsensus(
   dates: string[],
-  opts: { sport?: string | null; minCappers?: number; db?: SupabaseClient } = {},
+  opts: { sport?: string | null; minCappers?: number; db?: SupabaseClient; now?: Date } = {},
 ): Promise<HbConsensusRow[]> {
   const valid = dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d));
   if (!valid.length) return [];
+  // A board for today (or later) is only served while the writer is alive: stale = error, never old data.
+  if (valid.some((d) => d >= etDate(opts.now ?? new Date()))) await assertWriterFresh(opts.db, opts.now);
   const min = clampMin(opts.minCappers);
   const sport = opts.sport && opts.sport.toLowerCase() !== 'all' ? opts.sport.toLowerCase() : null;
   return (await loadDates(valid, opts.db))

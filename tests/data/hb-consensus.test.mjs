@@ -42,11 +42,17 @@ const get = (mod, path, opts) => quietly(() => mod.GET(req(path, opts)));
 const cron = { headers: { Authorization: 'Bearer cron-secret-harness' } };
 
 /** Seed the golden rows, re-dated so the fixture's "today"/"yesterday" are the real ones the route uses. */
-function seedRows({ redate = false } = {}) {
+function seedRows({ redate = false, hbAgo = 0 } = {}) {
   const map = redate ? { '2026-11-16': getTodayET(), '2026-11-15': getYesterdayET() } : {};
   const rows = ROWS.map((r, i) => ({ id: i + 1, ...r, et_date: map[r.et_date] || r.et_date }));
   harness().db.seed('hb_consensus_live', rows);
+  if (hbAgo !== null) heartbeat(hbAgo);
   return rows;
+}
+
+/** Writer heartbeat `agoSeconds` before now (hb_consensus_meta id=1). */
+function heartbeat(agoSeconds) {
+  harness().db.seed('hb_consensus_meta', [{ id: 1, last_success_at: new Date(Date.now() - agoSeconds * 1000).toISOString() }]);
 }
 
 beforeEach(() => { setup({ env: { CONSENSUS_SOURCE: 'hb' } }); hb.resetHbConsensusCache(); });
@@ -145,6 +151,7 @@ test('/api/consensus (hb): entitlement outage → labelled unknown, free slice o
 });
 
 test('/api/consensus (hb): shared table unreadable → 500, no silent fallback to DailyAI\'s own consensus', async () => {
+  heartbeat(0);
   harness().db.fail({ table: 'hb_consensus_live', op: 'select' });
   const res = await get(consensusRoute, '/api/consensus', cron);
   assert.equal(res.status, 500);
@@ -208,4 +215,53 @@ test('/api/results in hb mode: recent lists fire rows only (shared record also h
   ]);
   const recent = await body(await get(resultsRoute, '/api/results?view=recent'));
   assert.deepEqual(recent.data.map((r) => r.id), ['f']);
+});
+
+// ---- Stale writer: never show an old board as today's ------------------------------
+test('stale writer heartbeat → /api/consensus 503 stale, no picks in the body, no fallback', async () => {
+  seedRows({ redate: true, hbAgo: 600 }); // 10 min > 300 s default
+  const res = await get(consensusRoute, '/api/consensus', cron);
+  assert.equal(res.status, 503);
+  const b = await body(res);
+  assert.equal(b.stale, true);
+  assert.equal(b.success, false);
+  assert.equal(b.consensus, undefined);
+  assert.ok(b.lastUpdated);
+  assert.ok(!harness().db.log.some((l) => l.table === 'hb_picks'), 'no raw-pick fallback');
+});
+
+test('missing heartbeat row (writer never ran) → 503, not an empty "no picks" board', async () => {
+  harness().db.seed('hb_consensus_live', ROWS.map((r, i) => ({ id: i + 1, ...r, et_date: getTodayET() })));
+  const res = await get(consensusRoute, '/api/consensus', cron);
+  assert.equal(res.status, 503);
+});
+
+test('heartbeat read error → treated as stale (503)', async () => {
+  seedRows({ redate: true });
+  harness().db.fail({ table: 'hb_consensus_meta', op: 'select' });
+  const res = await get(consensusRoute, '/api/consensus', cron);
+  assert.equal(res.status, 503);
+});
+
+test('heartbeat within CONSENSUS_STALE_SECONDS → served; threshold is configurable and clamped', async () => {
+  seedRows({ redate: true, hbAgo: 200 });
+  assert.equal((await get(consensusRoute, '/api/consensus', cron)).status, 200);
+  setup({ env: { CONSENSUS_SOURCE: 'hb', CONSENSUS_STALE_SECONDS: '150' } }); hb.resetHbConsensusCache();
+  seedRows({ redate: true, hbAgo: 200 });
+  assert.equal((await get(consensusRoute, '/api/consensus', cron)).status, 503);
+  setup({ env: { CONSENSUS_SOURCE: 'hb', CONSENSUS_STALE_SECONDS: '5' } });
+  assert.equal(hb.staleAfterSeconds(), 300, 'below 120 s falls back to the default');
+});
+
+test("yesterday's graded board is history: served even when the writer is stale", async () => {
+  seedRows({ redate: true, hbAgo: 7200 });
+  assert.equal((await get(consensusRoute, '/api/consensus?date=yesterday', cron)).status, 200);
+});
+
+test('AI prompt in hb mode with no shared consensus: says unavailable, never rebuilds one from raw picks', () => {
+  const raw = { picks: [{ sport: 'nba', team: 'Heat', pick_type: 'spread', line: '+2', odds: -110, capper_name: 'A' }, { sport: 'nba', team: 'Heat', pick_type: 'spread', line: '+2', odds: -110, capper_name: 'B' }], capperCount: 2 };
+  const out = consensusSection([], raw).join(' | ');
+  assert.match(out, /unavailable/);
+  assert.doesNotMatch(out, /Heat/);
+  assert.match(consensusSection(null, raw).join(' | '), /heat/i, 'legacy mode (null) keeps the raw section');
 });

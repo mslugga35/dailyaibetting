@@ -14,7 +14,7 @@
   "tests/data/daily-ai-report-season.test.mjs": 13,
   "tests/data/grade-picks-cron.test.mjs": 4,
   "tests/data/grading.test.mjs": 12,
-  "tests/data/hb-consensus.test.mjs": 17,
+  "tests/data/hb-consensus.test.mjs": 23,
   "tests/data/metrics.test.mjs": 11,
   "tests/data/performance.test.mjs": 8,
   "tests/harness-selftest.test.mjs": 27,

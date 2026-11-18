@@ -396,7 +396,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ]).finally(() => clearTimeout(timer));
 }
 
-/** Today's shared consensus (no LLM, no paid API). Null when not in hb mode or unreadable. */
+/** Today's shared consensus (no LLM, no paid API). Null when not in hb mode; [] when stale/unreadable. */
 async function collectSharedConsensus(): Promise<SharedConsensusLite[] | null> {
   if (getConsensusSource() !== 'hb') return null;
   try {
@@ -405,7 +405,7 @@ async function collectSharedConsensus(): Promise<SharedConsensusLite[] | null> {
       sport: c.sport, bet: c.bet, capperCount: c.capperCount, cappers: c.cappers, opposingCount: c.opposingCount, tier: c.tier,
     }));
   } catch {
-    return null;
+    return []; // hb mode: unavailable = no consensus section, never a raw-pick fallback
   }
 }
 
