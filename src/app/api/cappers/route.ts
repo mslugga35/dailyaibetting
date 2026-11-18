@@ -164,7 +164,9 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     .from('hb_picks')
     .select('sport, result')
     .eq('capper_id', capper.capper_id)
-    .neq('result', 'pending');
+    .neq('result', 'pending')
+    // grades the 2026-11-18 re-grade could not verify are never counted (hb_picks.stats_excluded)
+    .eq('stats_excluded', false);
 
   if (sportError) {
     throw new Error(`Failed to fetch capper sport stats: ${sportError.message}`);
@@ -193,7 +195,8 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
   }).sort((a, b) => b.total - a.total);
 
   // Calculate recent form (last 10 picks)
-  const recentPicks = (picks || []).filter((p: any) => p.result !== 'pending').slice(0, 10);
+  // stats_excluded = a grade the re-grade could not verify: listed, never counted.
+  const recentPicks = (picks || []).filter((p: any) => p.result !== 'pending' && p.stats_excluded !== true).slice(0, 10);
   const recentWins = recentPicks.filter((p: any) => p.result === 'win').length;
   const recentTotal = recentPicks.length;
   const recentForm = recentPicks.map((p: any) => p.result === 'win' ? 'W' : p.result === 'loss' ? 'L' : 'P').join('');
