@@ -25,7 +25,7 @@ This policy explains how cancelling and refunds work for DailyAI Pro subscriptio
 ## 2. Free trial
 - New members may receive a free trial (currently 7 days). One free trial per customer: the trial
   is for first-time members only, and a payment card that was already used for a DailyAI free trial
-  is charged from the first day.
+  cannot start another one: that new trial is cancelled right away, without any charge, and we email you.
 - Your first charge happens when the trial ends; the date is shown before you start the trial.
   Cancel before the trial ends and you will not be charged.
 

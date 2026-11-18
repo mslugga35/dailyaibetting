@@ -10,8 +10,9 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   setup, harness, req, body, quietly, bearerUser, seedSubscription,
-  checkoutCompletedEvent, subscriptionEvent, stripeEvent, signedWebhookRequest, DAILYAI_PRICE_ID,
+  checkoutCompletedEvent, subscriptionEvent, stripeEvent, signedWebhookRequest, DAILYAI_PRICE_ID, captureEmails,
 } from '../harness/helpers.mjs';
+import { readFileSync } from 'node:fs';
 
 const FOUNDING = 'price_test_dailyai_founding_999';
 const REGULAR = 'price_test_dailyai_regular_1999';
@@ -473,17 +474,45 @@ function trialingFoundingSubWithCard(fingerprint) {
   return h.stripe.addSubscription({ customer: customer.id, status: 'trialing', priceId: FOUNDING, default_payment_method: 'pm_1', metadata: { user_id: 'u_card', founding_seat_id: '41' } });
 }
 
-test('one trial per card: a card already used for a trial by another customer → trial ended at once (charged from day one)', async () => {
+test('one trial per card: a reused card never gets charged — the new trial is cancelled without an invoice, access ends, seat released, customer emailed', async () => {
   setup({ env: FOUNDING_ENV });
   seatRpc();
+  const emails = captureEmails();
   harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
   const sub = trialingFoundingSubWithCard('fp_used');
-  await deliver(checkoutCompletedEvent({ sub, userId: 'u_card' }));
-  const [up] = harness().stripe.callsTo('subscriptions.update');
-  assert.equal(up?.args.id, sub.id);
-  assert.equal(up?.args.params.trial_end, 'now');
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_card', customerEmail: 'card@example.test' }));
+  const st = harness().stripe;
+  // never converted to a paid subscription
+  assert.equal(st.callsTo('subscriptions.update').filter((c) => c.args.params?.trial_end === 'now').length, 0);
+  const [cancel] = st.callsTo('subscriptions.cancel');
+  assert.equal(cancel?.args.id, sub.id);
+  assert.equal(cancel.args.params.invoice_now, false);
+  assert.equal(cancel.args.params.prorate, false);
+  assert.equal(st.subscriptions.find((s) => s.id === sub.id).status, 'canceled');
+  // access row reflects the cancellation now
+  const row = harness().db.rows('user_subscriptions').find((r) => r.stripe_subscription_id === sub.id);
+  assert.equal(row?.status, 'canceled');
+  // the seat is ended (the database releases an unpaid trialing seat)
+  assert.ok(rpcCalls('dailyai_founding_transition').some((c) => c.p_event === 'ended'), 'seat transitioned to ended');
+  // one "no charge" email, no "access is active" email
+  assert.equal(emails.length, 1);
+  assert.match(emails[0].subject, /no charge/i);
+  assert.match(emails[0].html, /have not been charged/);
+  assert.deepEqual(emails[0].to, ['card@example.test']);
   const [claim] = rpcCalls('dailyai_claim_trial_fingerprint');
   assert.deepEqual([claim.p_fingerprint, claim.p_subscription], ['fp_used', sub.id]);
+
+  // redelivery: subscription is no longer trialing → nothing cancelled or emailed twice
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_card', customerEmail: 'card@example.test' }));
+  assert.equal(st.callsTo('subscriptions.cancel').length, 1);
+  assert.equal(emails.length, 1);
+});
+
+test('trial-reuse disclosure says no charge (never "charged from the first day")', () => {
+  for (const f of ['src/lib/pricing/plans.ts', 'docs/legal-drafts/cancellation-refund-policy.md']) {
+    const t = readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(t, /charged from the first day|charged from day one/i, f);
+  }
 });
 
 test('one trial per card: a first-time card keeps its trial; legacy mode never checks (no migration needed)', async () => {

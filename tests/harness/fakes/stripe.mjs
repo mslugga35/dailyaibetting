@@ -44,6 +44,14 @@ const fakeStripe = {
       if (params?.trial_end === 'now' && s.status === 'trialing') s.status = 'active';
       return JSON.parse(JSON.stringify(s));
     },
+    async cancel(subId, params) {
+      st().record('subscriptions.cancel', { id: subId, params });
+      const s = st().subscriptions.find((x) => x.id === subId);
+      if (!s) throw Object.assign(new Error(`No such subscription: '${subId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      s.status = 'canceled';
+      s.canceled_at = Math.floor(Date.now() / 1000);
+      return JSON.parse(JSON.stringify(s));
+    },
     async retrieve(subId) {
       st().record('subscriptions.retrieve', { id: subId });
       const s = st().subscriptions.find((x) => x.id === subId);

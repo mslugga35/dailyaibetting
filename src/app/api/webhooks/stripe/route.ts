@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
-import { provisionGuestAndMagicLink, sendGuestAccessEmail, isGuestCheckoutEnabled } from '@/lib/guest-checkout';
+import { provisionGuestAndMagicLink, sendGuestAccessEmail, sendTrialNotAvailableEmail, isGuestCheckoutEnabled } from '@/lib/guest-checkout';
 import { allowedPriceIds, hasDailyAiPrice } from '@/lib/stripe-prices';
 import { transitionFoundingSeat, type SeatEvent } from '@/lib/pricing/offer';
 
@@ -165,6 +165,10 @@ async function updateBySubscription(subscription: Stripe.Subscription) {
   if (error) throw error;
 }
 
+function sessionEmail(session: Stripe.Checkout.Session): string | null {
+  return (session.customer_details?.email || session.customer_email || session.metadata?.guest_email || '').toLowerCase().trim() || null;
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Only handle subscription checkouts (not one-time payments)
   if (session.mode !== 'subscription' || !session.subscription) {
@@ -188,7 +192,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (await rowForSubscription(subscriptionId)) {
     await updateBySubscription(subscription);
     await syncFoundingSeat(subscription, session.metadata?.user_id || null);
-    await enforceOneTrialPerCard(subscription);
+    await enforceOneTrialPerCard(subscription, sessionEmail(session));
     return;
   }
 
@@ -275,7 +279,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     throw error;
   }
   await syncFoundingSeat(subscription, userId);
-  await enforceOneTrialPerCard(subscription);
+  // A cancelled reused-card trial gets the "no charge" email instead of the access email.
+  if (await enforceOneTrialPerCard(subscription, guestEmail || sessionEmail(session))) return;
 
   // Guest: access is now granted — email them the magic link to sign in.
   // Failure here must NOT throw: payment + access already succeeded, and the
@@ -419,28 +424,48 @@ function billingTablesEnabled(): boolean {
 /**
  * One free trial per payment card. Email checks at checkout catch the same person with
  * the same email; a different email with the same card is only visible here, once the
- * card is known. A trial on a card that already had a DailyAI trial under another
- * customer is ended at once (charged from day one, as disclosed). Idempotent: a
- * redelivery finds the subscription no longer trialing, or the fingerprint as 'same'.
+ * card is known. Checkout showed this customer "$0 due today", so a trial on a card that
+ * already had a DailyAI trial under another customer is CANCELLED at once, without an
+ * invoice: the customer is never charged for a trial they were shown as free. Access
+ * ends now, the founding seat is released, and the customer is emailed that nothing was
+ * charged and how to subscribe without a trial. Returns true when it cancelled.
+ * Idempotent: a redelivery finds the subscription no longer trialing.
  */
-async function enforceOneTrialPerCard(subscription: Stripe.Subscription) {
-  if (!billingTablesEnabled() || subscription.status !== 'trialing') return;
+async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: string | null): Promise<boolean> {
+  if (!billingTablesEnabled() || subscription.status !== 'trialing') return false;
   // Only the new plans: a legacy $20 subscription is never modified automatically.
   const newPrices = [process.env.STRIPE_PRICE_FOUNDING, process.env.STRIPE_PRICE_PRO].map((v) => (v || '').trim()).filter(Boolean);
-  if (!subscription.items.data.some((i) => newPrices.includes(i.price?.id))) return;
+  if (!subscription.items.data.some((i) => newPrices.includes(i.price?.id))) return false;
   const pmRef = subscription.default_payment_method;
-  if (!pmRef) return;
+  if (!pmRef) return false;
   const pm = typeof pmRef === 'string' ? await stripe.paymentMethods.retrieve(pmRef) : pmRef;
   const fingerprint = pm.card?.fingerprint;
-  if (!fingerprint) return; // not a card (e.g. a wallet without a fingerprint): cannot check
+  if (!fingerprint) return false; // not a card (e.g. a wallet without a fingerprint): cannot check
   const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
   const { data, error } = await supabaseAdmin.rpc('dailyai_claim_trial_fingerprint', {
     p_fingerprint: fingerprint, p_customer: customer, p_subscription: subscription.id,
   });
   if (error) throw error;
-  if (data !== 'reused') return;
-  await stripe.subscriptions.update(subscription.id, { trial_end: 'now', proration_behavior: 'none' });
-  console.warn(`[Stripe Webhook] Trial ended for ${subscription.id}: card already used for a DailyAI trial by another customer`);
+  if (data !== 'reused') return false;
+  // invoice_now:false + prorate:false: no final invoice, no charge, no credit.
+  const cancelled = await stripe.subscriptions.cancel(subscription.id, {
+    invoice_now: false,
+    prorate: false,
+    cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' },
+  });
+  await updateBySubscription(cancelled); // access ends now, not when the deletion event arrives
+  if (isFoundingSubscription(cancelled)) await transitionSeat('ended', cancelled, null); // trialing -> released
+  console.warn(`[Stripe Webhook] Trial cancelled without charge for ${subscription.id}: card already used for a DailyAI trial by another customer`);
+  if (email) {
+    try {
+      await sendTrialNotAvailableEmail(email);
+    } catch (e) {
+      logError('Failed to send trial-not-available email', e);
+    }
+  } else {
+    console.error(`[Stripe Webhook] MANUAL FOLLOW-UP: trial ${subscription.id} cancelled (card reuse) but no email to notify`);
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------- refunds and disputes

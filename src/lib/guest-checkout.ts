@@ -131,11 +131,48 @@ export async function sendGuestAccessEmail(email: string, actionLink: string): P
       html: `
         <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto">
           <h2>You're in. Welcome to DailyAI Pro.</h2>
-          <p>Your payment went through — tap below to access your picks. No password needed.</p>
+          <p>Your DailyAI Pro access is active. Tap below to see your picks. No password needed.</p>
           <p style="margin:28px 0">
             <a href="${actionLink}" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Access your picks</a>
           </p>
           <p style="color:#666;font-size:13px">This link signs you in automatically and expires soon. If it expires, just request a new one from the sign-in page.</p>
+        </div>`,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Resend send failed (${res.status}): ${await res.text()}`);
+  }
+}
+
+/**
+ * Sent when a new free trial was cancelled because its card already had a DailyAI free
+ * trial. Checkout showed "$0 due today", so nothing was charged; this says so plainly and
+ * points to subscribing without a trial. Wording is a draft for owner/counsel review.
+ */
+export async function sendTrialNotAvailableEmail(email: string): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY not set');
+  const from = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from: `DailyAI Betting <${from}>`,
+      to: [email],
+      subject: 'Your DailyAI free trial could not be started (no charge)',
+      html: `
+        <div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto">
+          <h2>Your free trial was not started</h2>
+          <p>The payment card you used has already been used for a DailyAI free trial, and each card can start one free trial.</p>
+          <p><strong>We cancelled the new trial and you have not been charged.</strong> No future charge is scheduled.</p>
+          <p>You can still subscribe to DailyAI Pro without a trial:</p>
+          <p style="margin:28px 0">
+            <a href="${baseUrl}/pricing" style="background:#10b981;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">See plans</a>
+          </p>
+          <p style="color:#666;font-size:13px">Questions? Email support@dailyaibetting.com.</p>
         </div>`,
     }),
   });
