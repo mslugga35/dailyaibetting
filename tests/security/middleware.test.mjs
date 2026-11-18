@@ -46,3 +46,26 @@ test('matcher: runs on pages and tier-gated APIs, not on static assets', () => {
   for (const p of ['/', '/pricing', '/api/consensus', '/api/picks', '/api/daily-bets', '/admin/grading']) assert.ok(re.test(p), `should match ${p}`);
   for (const p of ['/_next/static/chunk.js', '/_next/image', '/favicon.ico', '/robots.txt', '/sitemap.xml', '/logo.png']) assert.ok(!re.test(p), `should skip ${p}`);
 });
+
+for (const path of ['/blog/%E0%A4%A', '/cappers/%zz', '/picks/%']) {
+  test(`${path}: malformed percent-escape → plain 404, no session work`, async () => {
+    const res = await call(path);
+    assert.equal(res.status, 404);
+    assert.equal(harness().ssrGetUserCalls, 0);
+  });
+}
+
+test('a valid encoded path still passes through with the session refreshed', async () => {
+  harness().refreshCookies = ROTATED;
+  const res = await call('/blog/caf%C3%A9-picks');
+  assert.notEqual(res.status, 404);
+  assert.equal(harness().ssrGetUserCalls, 1);
+});
+
+test('next.config: blog-linked short paths redirect permanently to real pages', async () => {
+  const { default: cfg } = await import('../../next.config.ts');
+  const r = await cfg.redirects();
+  const find = (s) => r.find((x) => x.source === s);
+  assert.deepEqual([find('/ncaab-picks')?.destination, find('/ncaab-picks')?.permanent], ['/picks/ncaab', true]);
+  assert.deepEqual([find('/consensus-picks')?.destination, find('/consensus-picks')?.permanent], ['/consensus', true]);
+});

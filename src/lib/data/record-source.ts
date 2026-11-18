@@ -16,3 +16,25 @@ import { getConsensusSource } from './hb-consensus';
 export function recordTable(): 'hb_consensus_record' | 'consensus_results' {
   return getConsensusSource() === 'hb' ? 'hb_consensus_record' : 'consensus_results';
 }
+
+/**
+ * Display text for a recorded bet or line. Some upstream picks were stored with a stray
+ * "##" parser artifact (e.g. MLB run lines "Dodgers -1.5##"); '#' never belongs in a
+ * bet, so drop it and tidy the spacing. Display-only: stored rows are not changed.
+ */
+export function cleanPickText<T extends string | null | undefined>(s: T): T {
+  if (typeof s !== 'string') return s;
+  return s.replace(/#+/g, ' ').replace(/\s+/g, ' ').trim() as T;
+}
+
+/** cleanPickText on the bet/line fields of record rows (other fields untouched). */
+export function cleanRecordRows<T>(rows: T): T {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map((r) => {
+    if (!r || typeof r !== 'object') return r;
+    const o = { ...(r as Record<string, unknown>) };
+    if ('bet' in o) o.bet = cleanPickText(o.bet as string | null);
+    if ('line' in o) o.line = cleanPickText(o.line as string | null);
+    return o;
+  }) as T;
+}

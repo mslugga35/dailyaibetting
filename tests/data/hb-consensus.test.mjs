@@ -265,3 +265,14 @@ test('AI prompt in hb mode with no shared consensus: says unavailable, never reb
   assert.doesNotMatch(out, /Heat/);
   assert.match(consensusSection(null, raw).join(' | '), /heat/i, 'legacy mode (null) keeps the raw section');
 });
+
+test('/api/results: stray "##" never reaches bet/line; other fields and view=stats untouched', async () => {
+  harness().db.seed('hb_consensus_record', [
+    { id: 'h', pick_date: getYesterdayET(), sport: 'MLB', bet: 'Los Angeles Dodgers -1.5##', line: '-1.5##', capper_count: 3, is_fire: true, result: 'WIN', final_score: '5-2' },
+  ]);
+  const recent = await body(await get(resultsRoute, '/api/results?view=recent'));
+  assert.deepEqual(recent.data.map((r) => [r.bet, r.line, r.final_score, r.id]), [['Los Angeles Dodgers -1.5', '-1.5', '5-2', 'h']]);
+  const stats = await body(await get(resultsRoute, '/api/results?view=stats'));
+  assert.equal(stats.data.allTime.wins, 1);
+  assert.ok(!Array.isArray(stats.data));
+});

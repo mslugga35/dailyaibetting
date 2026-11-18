@@ -164,8 +164,9 @@ export default async function BlogPostPage({ params }: PageProps) {
       {/* Article Header */}
       <article>
         <header className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Badge className="bg-primary">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            {/* Some posts store a long category; let it wrap instead of widening the page. */}
+            <Badge className="bg-primary h-auto min-w-0 max-w-full shrink whitespace-normal text-left [overflow-wrap:anywhere]">
               {categoryLabels[post.category] || post.category}
             </Badge>
             {(post as any).sport && (
@@ -173,7 +174,7 @@ export default async function BlogPostPage({ params }: PageProps) {
             )}
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 [overflow-wrap:anywhere]">
             {displayTitle(post.slug, post.title)}
           </h1>
 
@@ -192,9 +193,10 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         </header>
 
-        {/* Article Content */}
+        {/* Article Content. Wide tables, code and long URLs scroll or wrap inside the
+            article so a post never pushes the page sideways on a phone. */}
         <div
-          className="prose prose-invert max-w-none mb-8"
+          className="prose prose-invert max-w-none mb-8 min-w-0 [overflow-wrap:anywhere] [&_table]:block [&_table]:max-w-full [&_table]:overflow-x-auto [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_img]:h-auto [&_img]:max-w-full [&_iframe]:max-w-full"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
         />
 
@@ -202,7 +204,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         {post.tags && post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
             {post.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
+              <Badge key={tag} variant="outline" className="h-auto min-w-0 max-w-full shrink whitespace-normal text-left text-xs [overflow-wrap:anywhere]">
                 {tag}
               </Badge>
             ))}

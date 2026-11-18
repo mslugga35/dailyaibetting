@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { windowStartET } from '@/lib/utils/date';
-import { recordTable } from '@/lib/data/record-source';
+import { recordTable, cleanRecordRows } from '@/lib/data/record-source';
 
 /**
  * Verified performance, computed ONLY from graded rows in consensus_results
@@ -137,6 +137,6 @@ export async function getVerifiedPerformance(db: SupabaseClient | null = service
     byCapperCount: buckets,
     firstGradedDate: (first.data?.[0] as { pick_date?: string } | undefined)?.pick_date ?? null,
     lastGradedDate: (last.data?.[0] as { pick_date?: string } | undefined)?.pick_date ?? null,
-    recent: (recent.data ?? []) as GradedPick[],
+    recent: cleanRecordRows((recent.data ?? []) as GradedPick[]),
   };
 }

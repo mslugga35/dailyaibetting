@@ -82,7 +82,8 @@ export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusRep
     <div className="font-mono text-sm space-y-4">
       {/* Header with Copy Button */}
       <div className="flex items-center justify-between border-b border-border pb-4">
-        <h2 className="text-lg font-bold">
+        {/* The clock can tick a minute between server render and hydration. */}
+        <h2 className="text-lg font-bold" suppressHydrationWarning>
           🎯 CONSENSUS REPORT — {displayTime}
         </h2>
         <Button

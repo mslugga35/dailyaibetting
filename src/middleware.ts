@@ -4,6 +4,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // A malformed percent-escape (e.g. /blog/%E0%A4%A) makes route decoding throw, which
+  // surfaces as a 500 (Cloudflare 520). Answer a plain 404 instead.
+  try {
+    decodeURIComponent(pathname);
+  } catch {
+    return new NextResponse('Not Found', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
+
   // Skip public routes and routes that handle their own auth/cookies
   if (
     pathname === '/api/webhooks/stripe' ||

@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 dropped container centering; every page used `container` expecting it. */
+@utility container {
+  margin-inline: auto;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

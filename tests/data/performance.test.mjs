@@ -96,3 +96,21 @@ test('getAllTimeRecord (homepage badge) equals the full report all-time record',
   const { getAllTimeRecord } = await import('../../src/lib/data/performance.ts');
   assert.deepEqual(await getAllTimeRecord(), (await getVerifiedPerformance(db())).allTime);
 });
+
+test('recent: stray "##" parser artifacts never reach the displayed bet or line', async () => {
+  harness().db.seed('consensus_results', [
+    { pick_date: day(0), sport: 'MLB', bet: 'Los Angeles Dodgers -1.5##', line: '-1.5##', is_fire: true, capper_count: 3, result: 'WIN' },
+    { pick_date: day(0), sport: 'NBA', bet: 'Knicks -4.5', line: '-4.5', is_fire: true, capper_count: 3, result: 'LOSS' },
+  ]);
+  const p = await getVerifiedPerformance(db());
+  const bets = p.recent.map((r) => r.bet).sort();
+  assert.deepEqual(bets, ['Knicks -4.5', 'Los Angeles Dodgers -1.5']);
+  assert.ok(p.recent.every((r) => !String(r.line).includes('#')));
+});
+
+test('cleanPickText: drops # and tidies spacing; leaves null alone', async () => {
+  const { cleanPickText } = await import('../../src/lib/data/record-source.ts');
+  assert.equal(cleanPickText('Spurs -9.5##'), 'Spurs -9.5');
+  assert.equal(cleanPickText('Over ## 8.5'), 'Over 8.5');
+  assert.equal(cleanPickText(null), null);
+});

@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { rateLimitGuard, parseIntParam, cronAuthGuard, isCronAuthorized, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { isAdminUser } from '@/lib/auth/admin';
-import { recordTable } from '@/lib/data/record-source';
+import { recordTable, cleanRecordRows } from '@/lib/data/record-source';
 import { getConsensusSource } from '@/lib/data/hb-consensus';
 
 // Lazy initialization to avoid build errors
@@ -208,7 +208,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       view,
-      data
+      data: cleanRecordRows(data)
     });
   } catch (error) {
     const e = error as { code?: string; message?: string } | null;

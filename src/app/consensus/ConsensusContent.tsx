@@ -196,11 +196,13 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
     if (tab === 'yesterday') setActiveTab('yesterday');
   }, []);
 
+  // Pinned to ET (the site's day boundary) so server and browser render the same date.
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone: 'America/New_York',
   });
 
   return (
@@ -216,7 +218,7 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
               {activeTab === 'today' ? "Today\u0027s Consensus Plays" : "Yesterday\u0027s Results"}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground" suppressHydrationWarning>
               {today} &middot; Picks where 2+ cappers agree
             </p>
           </div>

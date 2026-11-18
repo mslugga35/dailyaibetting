@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
         destination: '/blog',
         permanent: true,
       },
+      // Short paths Harbor blog posts link to; they never existed as pages.
+      { source: '/ncaab-picks', destination: '/picks/ncaab', permanent: true },
+      { source: '/consensus-picks', destination: '/consensus', permanent: true },
     ];
   },
 };
