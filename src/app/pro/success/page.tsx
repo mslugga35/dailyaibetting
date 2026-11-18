@@ -7,6 +7,7 @@ import { Crown, ArrowRight, Mail, CircleSlash } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CANCEL_POLICY } from '@/lib/pricing/plans';
+import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 type CheckoutState = 'checking' | 'pending' | 'trialing' | 'active' | 'trial_not_started' | 'unknown';
 
@@ -72,7 +73,7 @@ function TrialNotStarted() {
         <Button className="w-full bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
           <Link href="/pricing">Subscribe without a trial</Link>
         </Button>
-        <p className="text-xs text-muted-foreground mt-4">Questions? Email support@dailyaibetting.com.</p>
+        <p className="text-xs text-muted-foreground mt-4">Questions? Email <EmailSafeText text="support@dailyaibetting.com" />.</p>
       </CardContent>
     </Card>
   );

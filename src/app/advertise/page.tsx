@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Mail, Zap, MessageSquare } from 'lucide-react';
+import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 export const metadata: Metadata = {
   title: 'Advertise With Us - DailyAI Betting',
@@ -96,7 +97,7 @@ export default function AdvertisePage() {
             </a>
           </Button>
           <p className="text-sm text-muted-foreground mt-4">
-            advertise@dailyaibetting.com
+            <EmailSafeText text="advertise@dailyaibetting.com" />
           </p>
         </CardContent>
       </Card>

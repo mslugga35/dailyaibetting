@@ -10,6 +10,7 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { describeSubscriptionPrice } from '@/lib/pricing/subscription-price';
 import { offerCopy, CANCEL_POLICY, REFUND_NOTE, PLANS } from '@/lib/pricing/plans';
+import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 export const metadata = { title: 'Account – DailyAI Betting' };
 export const dynamic = 'force-dynamic';
@@ -82,7 +83,7 @@ export default async function AccountPage({
         <CardContent className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Email</span>
-            <span>{user.email}</span>
+            <span><EmailSafeText text={user.email} /></span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Member since</span>
@@ -146,7 +147,7 @@ export default async function AccountPage({
                 {billed?.amount && !sub.cancelAtPeriodEnd
                   ? `Renews every month at ${billed.amount} until you cancel${sub.status === 'trialing' ? ' (first charge when the free trial ends)' : ''}. `
                   : ''}
-                {CANCEL_POLICY} {REFUND_NOTE}
+                {CANCEL_POLICY} <EmailSafeText text={REFUND_NOTE} />
               </p>
               <ManageSubscriptionButton />
             </>

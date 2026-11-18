@@ -8,6 +8,7 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { getCurrentOffer, personalizeOffer } from '@/lib/pricing/offer';
 import { offerCopy, REFUND_NOTE } from '@/lib/pricing/plans';
+import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 // Price and seat count change at runtime (founding seats sell out -> $19.99): never prerender.
 export const dynamic = 'force-dynamic';
@@ -188,7 +189,7 @@ export default async function PricingPage() {
                 {q}
                 <span className="text-muted-foreground transition-transform group-open:rotate-45" aria-hidden="true">+</span>
               </summary>
-              <p className="mt-2 text-sm text-muted-foreground">{a}</p>
+              <p className="mt-2 text-sm text-muted-foreground"><EmailSafeText text={a} /></p>
             </details>
           ))}
         </div>
@@ -198,7 +199,7 @@ export default async function PricingPage() {
       <p className="text-center text-sm text-muted-foreground mt-8">
         Questions? Email us at{' '}
         <a href="mailto:support@dailyaibetting.com" className="text-primary hover:underline">
-          support@dailyaibetting.com
+          <EmailSafeText text="support@dailyaibetting.com" />
         </a>
       </p>
     </div>
