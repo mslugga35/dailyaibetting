@@ -75,7 +75,8 @@ export const CANCEL_POLICY =
  * cancellation and refund policy (draft for legal review: docs/legal-drafts/) and the law.
  */
 export const REFUND_NOTE =
-  'Refund questions are handled under our cancellation and refund policy; email support@dailyaibetting.com.';
+  // Until the reviewed policy page is published, do not point at a page that does not exist.
+  'Questions about a charge or a refund? Email support@dailyaibetting.com and we will review your request.';
 
 /** "November 24, 2026" (US Eastern). */
 export function formatChargeDate(d: Date): string {
