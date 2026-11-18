@@ -170,6 +170,7 @@ function walk(dir, out = []) {
 const PUBLIC_BY_DESIGN = new Set([
   'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SITE_URL',
   'NEXT_PUBLIC_BASE_URL', 'NEXT_PUBLIC_GA_ID', 'NEXT_PUBLIC_GUEST_CHECKOUT_ENABLED',
+  'NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED', // on/off flag for the Google button, not a secret
 ]);
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'src');
 
