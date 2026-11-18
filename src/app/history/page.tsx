@@ -292,6 +292,7 @@ export default function HistoryPage() {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
+                            timeZone: 'UTC', // pick_date is a calendar date; parse/format as UTC so it isn't shown a day early
                           })}
                         </div>
                         <div className="text-sm">
@@ -366,6 +367,7 @@ export default function HistoryPage() {
                           month: 'long',
                           day: 'numeric',
                           year: 'numeric',
+                          timeZone: 'UTC', // pick_date is a calendar date; parse/format as UTC so it isn't shown a day early
                         })}
                       </div>
                       <div className="text-sm text-muted-foreground">

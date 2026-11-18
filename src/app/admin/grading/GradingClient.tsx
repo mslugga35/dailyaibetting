@@ -192,6 +192,7 @@ export function GradingClient() {
                   {new Date(pick.pick_date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
+                    timeZone: 'UTC', // pick_date is a calendar date; parse/format as UTC so it isn't shown a day early
                   })}
                 </td>
                 <td className="px-4 py-3 text-sm">{pick.sport}</td>
