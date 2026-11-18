@@ -553,3 +553,15 @@ test('card check never touches a legacy $20 trialing subscription, even in found
   assert.equal(rpcCalls('dailyai_claim_trial_fingerprint').length, 0);
   assert.equal(h.stripe.callsTo('subscriptions.update').length, 0);
 });
+
+test('owner rule: at most 100 founding seats, paid seats are permanent (no setting can raise or free them)', async () => {
+  const { pricingConfig } = await import('../../src/lib/pricing/offer.ts');
+  setup({ env: { ...FOUNDING_ENV, FOUNDING_SEAT_CAP: '101' } });
+  assert.throws(() => pricingConfig(), /FOUNDING_SEAT_CAP/);
+  setup({ env: { ...FOUNDING_ENV, FOUNDING_SEAT_CAP: '100', FOUNDING_SEAT_COUNT: 'live' } });
+  const cfg = pricingConfig();
+  assert.equal(cfg.seatCap, 100);
+  assert.equal(cfg.countEnded, true, 'FOUNDING_SEAT_COUNT=live is ignored');
+  setup({ env: { ...FOUNDING_ENV } });
+  assert.equal(pricingConfig().seatCap, 100, 'default is 100');
+});

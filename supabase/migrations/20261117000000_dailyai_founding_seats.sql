@@ -134,7 +134,7 @@ begin
   end if;
 
   select st.taken into v_taken from public.dailyai_founding_stats(p_count_ended) st;
-  if v_taken >= p_cap then
+  if v_taken >= least(p_cap, 100) then  -- owner rule: never more than 100 founding seats
     return query select null::bigint, 'sold_out'::text, v_taken;
     return;
   end if;

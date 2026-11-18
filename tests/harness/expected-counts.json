@@ -4,7 +4,7 @@
   "tests/billing/checkout.test.mjs": 18,
   "tests/billing/entitlement-client.test.mjs": 6,
   "tests/billing/entitlement.test.mjs": 15,
-  "tests/billing/founding-pricing.test.mjs": 37,
+  "tests/billing/founding-pricing.test.mjs": 38,
   "tests/billing/openrouter-budget.test.mjs": 9,
   "tests/billing/stripe-webhook.test.mjs": 42,
   "tests/data/bot-record.test.mjs": 1,

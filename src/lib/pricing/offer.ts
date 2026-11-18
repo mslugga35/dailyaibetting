@@ -9,11 +9,11 @@
  *   STRIPE_PRICE_FOUNDING        $9.99/mo founding price (required for PRICING_MODE=founding)
  *   STRIPE_PRICE_PRO             $19.99/mo regular price (required for PRICING_MODE=founding and
  *                                regular: once the founding seats are used, new customers get it)
- *   FOUNDING_SEAT_CAP            default 100
+ *   FOUNDING_SEAT_CAP            default 100, hard maximum 100 (owner rule: never more than 100 founders)
  *   FOUNDING_MAX_OPEN_HOLDS      default 20: at most this many unpaid founding checkouts may
  *                                hold a seat at once (limits seat squatting)
- *   FOUNDING_SEAT_COUNT          historical (default: a paid founding member who later leaves
- *                                still uses a seat) | live (their seat is freed)
+ *   (A founding member who paid keeps their seat permanently, even after cancelling: owner
+ *    rule 2026-11-17. There is no setting that frees a paid seat.)
  *   FOUNDING_TRIAL_DAYS          default 7 (first-time members only; 0 = no trial)
  *   (When the founding seats are used up, $19.99 is sold automatically: Pro never closes.)
  *   FOUNDING_RETURNING           regular (default: a former paying founding member is offered
@@ -64,9 +64,9 @@ export function pricingConfig(): PricingConfig {
   const cfg: PricingConfig = {
     mode,
     prices: { legacy: env('STRIPE_PRICE_ID'), founding: env('STRIPE_PRICE_FOUNDING'), regular: env('STRIPE_PRICE_PRO') },
-    seatCap: intEnv('FOUNDING_SEAT_CAP', 100, 0, 100000),
+    seatCap: intEnv('FOUNDING_SEAT_CAP', 100, 0, 100),
     maxHolds: intEnv('FOUNDING_MAX_OPEN_HOLDS', 20, 1, 100000),
-    countEnded: env('FOUNDING_SEAT_COUNT').toLowerCase() !== 'live',
+    countEnded: true, // paid seats are permanent (no 'live' mode)
     foundingTrialDays: intEnv('FOUNDING_TRIAL_DAYS', TRIAL_DAYS, 0, 30),
     returningGetsFounding: env('FOUNDING_RETURNING').toLowerCase() === 'founding',
   };
