@@ -594,3 +594,31 @@ test('owner rule: at most 100 founding seats, paid seats are permanent (no setti
   setup({ env: { ...FOUNDING_ENV } });
   assert.equal(pricingConfig().seatCap, 100, 'default is 100');
 });
+
+test('/api/checkout/status: tells the success page the truth (trial cancelled for card reuse / trialing / pending), nothing else', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const { GET: statusGET } = await import('../../src/app/api/checkout/status/route.ts');
+  const h = harness();
+  const ask = async (id) => { const r = await quietly(() => statusGET(req(`/api/checkout/status?session_id=${id}`))); return { status: r.status, json: await r.json() }; };
+  const sub = trialingFoundingSubWithCard('fp_x');
+  const sess = (extra) => { const s = { id: `cs_test_${'a'.repeat(12)}${h.stripe.sessions.length}`, mode: 'subscription', status: 'complete', subscription: sub.id, ...extra }; h.stripe.sessions.push(s); return s.id; };
+  const done = sess();
+  assert.deepEqual((await ask(done)).json, { state: 'trialing' });
+  // the webhook cancels it for card reuse
+  Object.assign(h.stripe.subscriptions.find((s) => s.id === sub.id), { status: 'canceled', cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
+  const r = await ask(done);
+  assert.deepEqual(r.json, { state: 'trial_not_started' });
+  assert.deepEqual(Object.keys(r.json), ['state'], 'no personal data');
+  // an ordinary cancellation is NOT reported as a trial refusal
+  h.stripe.subscriptions.find((s) => s.id === sub.id).cancellation_details = { comment: null };
+  assert.deepEqual((await ask(done)).json, { state: 'pending' });
+  assert.deepEqual((await ask(sess({ status: 'open' }))).json, { state: 'pending' });
+  // malformed / unknown ids
+  assert.equal((await ask('nope')).status, 400);
+  assert.deepEqual((await ask('cs_test_doesnotexist1234')).json, { state: 'unknown' });
+  // a session for another product on the shared Stripe account says nothing
+  const other = h.stripe.addSubscription({ customer: sub.customer, status: 'trialing', priceId: 'price_someone_else' });
+  const otherId = `cs_test_${'b'.repeat(14)}`; h.stripe.sessions.push({ id: otherId, mode: 'subscription', status: 'complete', subscription: other.id });
+  assert.deepEqual((await ask(otherId)).json, { state: 'unknown' });
+});

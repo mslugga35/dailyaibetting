@@ -106,6 +106,17 @@ const fakeStripe = {
         st().sessions.push(s);
         return s;
       },
+      async retrieve(id, params) {
+        st().record('checkout.sessions.retrieve', { id, params });
+        const s = st().sessions.find((x) => x.id === id);
+        if (!s) throw Object.assign(new Error(`No such checkout.session: '${id}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+        const out = JSON.parse(JSON.stringify(s));
+        if (params?.expand?.includes('subscription') && typeof out.subscription === 'string') {
+          const sub = st().subscriptions.find((x) => x.id === out.subscription);
+          out.subscription = sub ? JSON.parse(JSON.stringify(sub)) : null;
+        }
+        return out;
+      },
     },
   },
   billingPortal: {
