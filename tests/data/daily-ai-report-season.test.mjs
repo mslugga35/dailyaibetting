@@ -189,6 +189,11 @@ test('no BallparkPal/Statcast cache reads remain in the report or engine sources
   assert.ok(gen.indexOf('validateParlayMath(rawReport)') < gen.indexOf('await cacheReport(report'), 'parlay fix before store');
   assert.match(gen, /getTodaysStoredReport\(\)/, 'skip-if-exists kept');
   assert.match(gen, /getServiceRoleClient\(\)\.from\('daily_ai_report'\)\.upsert/, 'service-role write kept');
+  // HiddenBag paywall (2026-11-18): the public key only sees graded picks, so the collector must read
+  // today's expert picks with the service role, never the anon/session client.
+  const col = readFileSync(new URL('../../src/lib/daily-ai-picks/collect.ts', import.meta.url), 'utf8');
+  assert.match(col, /const supabase = getSupabaseAdmin\(\);/, 'expert picks read with the service role');
+  assert.doesNotMatch(col, /createServerSupabaseClient/, 'no anon/session client in the collector');
 });
 
 // ── ported HB guards ─────────────────────────────────────────────────────────

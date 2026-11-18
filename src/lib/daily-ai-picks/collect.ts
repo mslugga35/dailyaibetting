@@ -16,7 +16,7 @@
  * @created 2026-03-27
  */
 
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { getSupabaseAdmin } from '@/lib/api-helpers';
 import { getTodayET, getYesterdayET } from '@/lib/utils/date';
 import { getConsensusSource, fetchHbConsensus, toConsensusPick } from '@/lib/data/hb-consensus';
 import type { SharedConsensusLite } from '@/lib/ai-picks/consensus-section';
@@ -88,7 +88,9 @@ export interface ESPNGame {
 
 async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
   try {
-    const supabase = await createServerSupabaseClient();
+    // Service role: since the HiddenBag paywall (2026-11-18) the public key only sees GRADED picks,
+    // and this server-side cron needs today's pending expert picks.
+    const supabase = getSupabaseAdmin();
     const today = getTodayET();
     // ET calendar day (a UTC date is already tomorrow after 7/8 PM ET and would drop today's picks).
     const yesterday = getYesterdayET();
@@ -114,6 +116,9 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
 
     const enriched = picks.map(p => ({
       ...p,
+      // hb_picks.odds is numeric; the prompt only interpolates it, so the text is unchanged
+      odds: p.odds == null ? null : String(p.odds),
+      posted_at: p.posted_at ?? '', // never null here: the query filters on a posted_at range
       capper_name: capperMap[p.capper_id] || `Capper ${p.capper_id}`,
     }));
 
