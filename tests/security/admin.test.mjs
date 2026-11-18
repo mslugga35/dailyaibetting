@@ -82,10 +82,11 @@ test('adminGuard: an auth outage never yields admin', async () => {
   assert.ok(res && [401, 503].includes(res.status), `got ${res?.status}`);
 });
 
-test('admin page: a non-admin (anonymous, member, or admin email without the admin id) gets notFound, never the UI', async () => {
+test('admin page: signed out → login (returns here); a signed-in non-admin (member, or admin email without the admin id) gets notFound, never the UI', async () => {
   const page = await import('../../src/app/admin/grading/page.tsx');
   const isNotFound = (e) => /NEXT_(HTTP_ERROR_FALLBACK;404|NOT_FOUND)/.test(String(e?.digest ?? e?.message ?? e));
-  await assert.rejects(page.default(), isNotFound);
+  const isLoginRedirect = (e) => /NEXT_REDIRECT.*\/login\?redirect=\/admin\/grading/.test(String(e?.digest ?? e?.message ?? e));
+  await assert.rejects(page.default(), isLoginRedirect);
   cookieUser('u_member', 'member@example.test', CONFIRMED);
   await assert.rejects(page.default(), isNotFound);
   cookieUser('u_not_listed', 'boss@example.test', CONFIRMED);

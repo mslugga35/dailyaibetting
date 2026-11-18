@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, Mail, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
+import { safeNext } from '@/lib/auth/safe-next';
 
 export default function LoginPage() {
   return (
@@ -22,6 +23,8 @@ function LoginContent() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [usePassword, setUsePassword] = useState(false);
+  const [password, setPassword] = useState('');
   const searchParams = useSearchParams();
   // Shown only once the Google provider is configured in Supabase (build-time flag).
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === 'true';
@@ -42,7 +45,10 @@ function LoginContent() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { auth: { flowType: 'implicit' } }
     );
-  const callbackUrl = () => `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`;
+  // ?redirect=/admin/grading (or /account) comes back after sign-in; same-site paths only.
+  const next = safeNext(searchParams.get('redirect'));
+  const callbackUrl = () =>
+    `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`;
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
@@ -58,10 +64,28 @@ function LoginContent() {
     }
   };
 
+  // Password sign-in for accounts that have a password set (no sign-up here: an unknown
+  // email or wrong password gets the same generic error). Uses the cookie-backed client so
+  // the server sees the session immediately.
+  const handlePassword = async () => {
+    const { createClient: createSSRClient } = await import('@/lib/supabase/client');
+    const { error } = await createSSRClient().auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (error) {
+      setError('Email or password is incorrect.');
+      return;
+    }
+    window.location.href = next;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    if (usePassword) {
+      await handlePassword();
+      return;
+    }
 
     const supabase = authClient();
     const { error } = await supabase.auth.signInWithOtp({
@@ -160,6 +184,23 @@ function LoginContent() {
                 />
               </div>
 
+              {usePassword && (
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-2">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
+                  />
+                </div>
+              )}
+
               {error && (
                 <p className="text-sm text-red-400">{error}</p>
               )}
@@ -172,16 +213,27 @@ function LoginContent() {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending...
+                    {usePassword ? 'Signing in...' : 'Sending...'}
                   </>
+                ) : usePassword ? (
+                  'Sign in'
                 ) : (
                   'Continue with Email'
                 )}
               </Button>
 
               <p className="text-sm text-muted-foreground text-center">
-                We&apos;ll send you a secure sign-in link. No password required.
+                {usePassword
+                  ? 'Signing in with the password set on your account.'
+                  : "We'll send you a secure sign-in link. No password required."}
               </p>
+              <button
+                type="button"
+                onClick={() => { setUsePassword(!usePassword); setError(''); }}
+                className="block mx-auto text-sm text-primary hover:underline"
+              >
+                {usePassword ? 'Email me a sign-in link instead' : 'Sign in with a password instead'}
+              </button>
             </form>
           )}
 

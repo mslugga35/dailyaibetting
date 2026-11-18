@@ -74,7 +74,7 @@ export function Header() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden xl:flex items-center gap-1">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-1">
@@ -122,7 +122,7 @@ export function Header() {
                       ) : (
                         <User className="h-4 w-4" />
                       )}
-                      <span className="hidden md:inline text-xs truncate max-w-[120px]">
+                      <span className="hidden xl:inline text-xs truncate max-w-[120px]">
                         {user.email}
                       </span>
                       <ChevronDown className="h-3 w-3" />
@@ -159,8 +159,8 @@ export function Header() {
                   <Button size="sm" className="hidden sm:flex gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
                     <Link href="/pro">
                       <Crown className="h-4 w-4" />
-                      <span className="hidden md:inline text-white">Go Pro</span>
-                      <span className="md:hidden text-white">Pro</span>
+                      <span className="hidden xl:inline text-white">Go Pro</span>
+                      <span className="xl:hidden text-white">Pro</span>
                     </Link>
                   </Button>
                 </>
@@ -170,7 +170,7 @@ export function Header() {
 
           {/* Mobile Menu */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild className="xl:hidden">
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Toggle menu</span>

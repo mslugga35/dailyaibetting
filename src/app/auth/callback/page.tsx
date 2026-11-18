@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { safeNext } from '@/lib/auth/safe-next';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     async function handleCallback() {
       const hash = window.location.hash;
+      // Page to return to after sign-in (same-site paths only).
+      const next = safeNext(new URLSearchParams(window.location.search).get('next'));
 
       if (!hash || !hash.includes('access_token')) {
         router.replace('/login?error=no_auth_data');
@@ -41,7 +44,7 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      router.replace('/');
+      router.replace(next);
     }
 
     handleCallback();

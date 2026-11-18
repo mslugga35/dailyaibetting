@@ -15,7 +15,7 @@ export function Footer() {
           </Link>
 
           {/* Links */}
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <Link
               href="/daily-bets"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -49,7 +49,7 @@ export function Footer() {
           </div>
 
           {/* Copyright */}
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground whitespace-nowrap">
             &copy; {new Date().getFullYear()} DailyAI Betting
           </p>
         </div>
