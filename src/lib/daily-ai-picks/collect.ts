@@ -103,7 +103,11 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
       .order('posted_at', { ascending: false })
       .limit(500);
 
-    if (error || !picks) return { picks: [], capperCount: 0 };
+    if (error || !picks) {
+      // Logged so an RLS/auth failure is not mistaken for a quiet day (skipReason 'no_expert_picks').
+      console.error('[daily-ai-picks] hb_picks read failed:', error?.message ?? 'no data');
+      return { picks: [], capperCount: 0 };
+    }
 
     // Get capper names
     const capperIds = [...new Set(picks.map(p => p.capper_id).filter(Boolean))];
@@ -123,7 +127,9 @@ async function collectExpertPicks(): Promise<ReportContext['expertPicks']> {
     }));
 
     return { picks: enriched, capperCount: capperIds.length };
-  } catch {
+  } catch (err) {
+    // e.g. SUPABASE_SERVICE_ROLE_KEY missing in the cron env: fail closed, but loudly.
+    console.error('[daily-ai-picks] expert picks unavailable:', err instanceof Error ? err.message : err);
     return { picks: [], capperCount: 0 };
   }
 }
