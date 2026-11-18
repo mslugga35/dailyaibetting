@@ -428,44 +428,85 @@ function billingTablesEnabled(): boolean {
  * already had a DailyAI trial under another customer is CANCELLED at once, without an
  * invoice: the customer is never charged for a trial they were shown as free. Access
  * ends now, the founding seat is released, and the customer is emailed that nothing was
- * charged and how to subscribe without a trial. Returns true when it cancelled.
- * Idempotent: a redelivery finds the subscription no longer trialing.
+ * charged and how to subscribe without a trial. Returns true when the trial was refused.
+ *
+ * Crash-safe and idempotent: the cancellation is marked on the subscription itself
+ * (cancellation_details.comment = trial_reuse...), the email is marked sent with
+ * metadata.trial_reuse_notified, so a redelivery (after any partial failure) finishes
+ * whatever is left: email, access row, seat. A trial that passed the check is stamped
+ * metadata.trial_card_checked so the success page can tell "checked" from "not yet".
  */
+const TRIAL_REUSE_COMMENT = 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge';
+
+function newPlanPrices(): string[] {
+  return [process.env.STRIPE_PRICE_FOUNDING, process.env.STRIPE_PRICE_PRO].map((v) => (v || '').trim()).filter(Boolean);
+}
+
 async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: string | null): Promise<boolean> {
-  if (!billingTablesEnabled() || subscription.status !== 'trialing') return false;
+  if (!billingTablesEnabled()) return false;
   // Only the new plans: a legacy $20 subscription is never modified automatically.
-  const newPrices = [process.env.STRIPE_PRICE_FOUNDING, process.env.STRIPE_PRICE_PRO].map((v) => (v || '').trim()).filter(Boolean);
-  if (!subscription.items.data.some((i) => newPrices.includes(i.price?.id))) return false;
+  if (!subscription.items.data.some((i) => newPlanPrices().includes(i.price?.id))) return false;
+  // Redelivery after a refusal: finish what a failed attempt may have left undone.
+  if (subscription.status === 'canceled' && (subscription.cancellation_details?.comment || '').startsWith('trial_reuse')) {
+    await finishTrialRefusal(subscription, email);
+    return true;
+  }
+  if (subscription.status !== 'trialing') return false;
+  const markChecked = async () => {
+    if (subscription.metadata?.trial_card_checked === '1') return;
+    await stripe.subscriptions.update(subscription.id, { metadata: { trial_card_checked: '1' } });
+  };
   const pmRef = subscription.default_payment_method;
-  if (!pmRef) return false;
-  const pm = typeof pmRef === 'string' ? await stripe.paymentMethods.retrieve(pmRef) : pmRef;
-  const fingerprint = pm.card?.fingerprint;
-  if (!fingerprint) return false; // not a card (e.g. a wallet without a fingerprint): cannot check
+  const pm = !pmRef ? null : typeof pmRef === 'string' ? await stripe.paymentMethods.retrieve(pmRef) : pmRef;
+  const fingerprint = pm?.card?.fingerprint;
+  if (!fingerprint) { await markChecked(); return false; } // no card (e.g. a wallet): cannot check
   const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
   const { data, error } = await supabaseAdmin.rpc('dailyai_claim_trial_fingerprint', {
     p_fingerprint: fingerprint, p_customer: customer, p_subscription: subscription.id,
   });
   if (error) throw error;
-  if (data !== 'reused') return false;
+  if (data !== 'reused') { await markChecked(); return false; }
   // invoice_now:false + prorate:false: no final invoice, no charge, no credit.
-  const cancelled = await stripe.subscriptions.cancel(subscription.id, {
-    invoice_now: false,
-    prorate: false,
-    cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' },
-  });
+  let cancelled: Stripe.Subscription;
+  try {
+    cancelled = await stripe.subscriptions.cancel(subscription.id, {
+      invoice_now: false,
+      prorate: false,
+      cancellation_details: { comment: TRIAL_REUSE_COMMENT },
+    });
+  } catch (err) {
+    // A concurrent delivery may have cancelled it first: carry on from Stripe's state.
+    cancelled = await stripe.subscriptions.retrieve(subscription.id);
+    if (cancelled.status !== 'canceled') throw err;
+  }
+  console.warn(`[Stripe Webhook] Trial cancelled without charge for ${subscription.id}: card already used for a DailyAI trial by another customer`);
+  await finishTrialRefusal(cancelled, email);
+  return true;
+}
+
+/** Email first (marked on the subscription once sent), then access row and seat. Each step is idempotent. */
+async function finishTrialRefusal(cancelled: Stripe.Subscription, email: string | null) {
+  let emailFailed = false;
+  if (cancelled.metadata?.trial_reuse_notified !== '1') {
+    if (email && !process.env.RESEND_API_KEY) {
+      // configuration gap, not a transient failure: do not make Stripe retry for days
+      console.error(`[Stripe Webhook] MANUAL FOLLOW-UP: trial ${cancelled.id} cancelled (card reuse); email not configured, tell the customer nothing was charged`);
+    } else if (email) {
+      try {
+        await sendTrialNotAvailableEmail(email);
+        await stripe.subscriptions.update(cancelled.id, { metadata: { trial_reuse_notified: '1' } });
+      } catch (e) {
+        emailFailed = true;
+        logError('Failed to send trial-not-available email (will retry on redelivery)', e);
+      }
+    } else {
+      console.error(`[Stripe Webhook] MANUAL FOLLOW-UP: trial ${cancelled.id} cancelled (card reuse) but no email to notify`);
+    }
+  }
   await updateBySubscription(cancelled); // access ends now, not when the deletion event arrives
   if (isFoundingSubscription(cancelled)) await transitionSeat('ended', cancelled, null); // trialing -> released
-  console.warn(`[Stripe Webhook] Trial cancelled without charge for ${subscription.id}: card already used for a DailyAI trial by another customer`);
-  if (email) {
-    try {
-      await sendTrialNotAvailableEmail(email);
-    } catch (e) {
-      logError('Failed to send trial-not-available email', e);
-    }
-  } else {
-    console.error(`[Stripe Webhook] MANUAL FOLLOW-UP: trial ${subscription.id} cancelled (card reuse) but no email to notify`);
-  }
-  return true;
+  // Ask Stripe to redeliver so the customer is told nothing was charged.
+  if (emailFailed) throw new RetryableWebhookError(`trial-not-available email not sent for ${cancelled.id}`);
 }
 
 // ---------------------------------------------------------------- refunds and disputes

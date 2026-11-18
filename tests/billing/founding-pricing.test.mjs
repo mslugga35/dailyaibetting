@@ -521,7 +521,10 @@ test('one trial per card: a first-time card keeps its trial; legacy mode never c
   harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'first');
   const sub = trialingFoundingSubWithCard('fp_new');
   await deliver(checkoutCompletedEvent({ sub, userId: 'u_card' }));
-  assert.equal(harness().stripe.callsTo('subscriptions.update').length, 0);
+  // the trial is kept: no trial_end change, no cancel; only the "card checked" stamp for the success page
+  const ups = harness().stripe.callsTo('subscriptions.update');
+  assert.deepEqual(ups.map((u) => u.args.params), [{ metadata: { trial_card_checked: '1' } }]);
+  assert.equal(harness().stripe.callsTo('subscriptions.cancel').length, 0);
 
   setup();
   const h = harness();
@@ -595,30 +598,89 @@ test('owner rule: at most 100 founding seats, paid seats are permanent (no setti
   assert.equal(pricingConfig().seatCap, 100, 'default is 100');
 });
 
-test('/api/checkout/status: tells the success page the truth (trial cancelled for card reuse / trialing / pending), nothing else', async () => {
+test('/api/checkout/status: the truth, only once settled (trial refused / trialing only after the card check / pending), nothing else', async () => {
   setup({ env: FOUNDING_ENV });
   seatRpc();
   const { GET: statusGET } = await import('../../src/app/api/checkout/status/route.ts');
   const h = harness();
   const ask = async (id) => { const r = await quietly(() => statusGET(req(`/api/checkout/status?session_id=${id}`))); return { status: r.status, json: await r.json() }; };
   const sub = trialingFoundingSubWithCard('fp_x');
-  const sess = (extra) => { const s = { id: `cs_test_${'a'.repeat(12)}${h.stripe.sessions.length}`, mode: 'subscription', status: 'complete', subscription: sub.id, ...extra }; h.stripe.sessions.push(s); return s.id; };
+  const li = (price) => ({ data: [{ price: { id: price } }] });
+  const sess = (extra) => { const s = { id: `cs_test_${'a'.repeat(12)}${h.stripe.sessions.length}`, mode: 'subscription', status: 'complete', subscription: sub.id, line_items: li(FOUNDING), ...extra }; h.stripe.sessions.push(s); return s.id; };
   const done = sess();
+  const live = () => h.stripe.subscriptions.find((s) => s.id === sub.id);
+  // card check not done yet: a refusal is still possible -> pending, never "trialing"
+  assert.deepEqual((await ask(done)).json, { state: 'pending' });
+  live().metadata = { ...live().metadata, trial_card_checked: '1' };
   assert.deepEqual((await ask(done)).json, { state: 'trialing' });
-  // the webhook cancels it for card reuse
-  Object.assign(h.stripe.subscriptions.find((s) => s.id === sub.id), { status: 'canceled', cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
+  // the webhook refused it for card reuse
+  Object.assign(live(), { status: 'canceled', cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
   const r = await ask(done);
   assert.deepEqual(r.json, { state: 'trial_not_started' });
   assert.deepEqual(Object.keys(r.json), ['state'], 'no personal data');
   // an ordinary cancellation is NOT reported as a trial refusal
-  h.stripe.subscriptions.find((s) => s.id === sub.id).cancellation_details = { comment: null };
+  live().cancellation_details = { comment: null };
   assert.deepEqual((await ask(done)).json, { state: 'pending' });
   assert.deepEqual((await ask(sess({ status: 'open' }))).json, { state: 'pending' });
   // malformed / unknown ids
   assert.equal((await ask('nope')).status, 400);
   assert.deepEqual((await ask('cs_test_doesnotexist1234')).json, { state: 'unknown' });
-  // a session for another product on the shared Stripe account says nothing
+  // sessions of another product on the shared Stripe account: identical answer whatever their state (no oracle)
   const other = h.stripe.addSubscription({ customer: sub.customer, status: 'trialing', priceId: 'price_someone_else' });
-  const otherId = `cs_test_${'b'.repeat(14)}`; h.stripe.sessions.push({ id: otherId, mode: 'subscription', status: 'complete', subscription: other.id });
-  assert.deepEqual((await ask(otherId)).json, { state: 'unknown' });
+  for (const [n, extra] of [['b', { status: 'complete' }], ['c', { status: 'open' }], ['d', { mode: 'payment', subscription: null }]]) {
+    const oid = `cs_test_${n.repeat(14)}`; h.stripe.sessions.push({ id: oid, mode: 'subscription', subscription: other.id, line_items: li('price_someone_else'), ...extra });
+    assert.deepEqual((await ask(oid)).json, { state: 'unknown' }, n);
+  }
+});
+
+test('legacy mode: status reports trialing at once (no card check exists for the $20 plan)', async () => {
+  setup();
+  const { GET: statusGET } = await import('../../src/app/api/checkout/status/route.ts');
+  const h = harness();
+  const c = h.stripe.addCustomer({ email: 'leg@example.test' });
+  const sub = h.stripe.addSubscription({ customer: c.id, status: 'trialing' });
+  const id = `cs_test_${'e'.repeat(14)}`;
+  h.stripe.sessions.push({ id, mode: 'subscription', status: 'complete', subscription: sub.id, line_items: { data: [{ price: { id: DAILYAI_PRICE_ID } }] } });
+  const r = await quietly(() => statusGET(req(`/api/checkout/status?session_id=${id}`)));
+  assert.deepEqual(await r.json(), { state: 'trialing' });
+});
+
+test('refused trial survives a partial failure: email failure -> 503 retry; redelivery sends once and stamps it', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
+  const h = harness();
+  let fail = true; const sent = [];
+  h.fetchRoutes.set('https://api.resend.com/', async (_u, init) => {
+    if (fail) return new Response('{"message":"down"}', { status: 500 });
+    sent.push(JSON.parse(init.body)); return new Response('{"id":"e1"}', { status: 200 });
+  });
+  const sub = trialingFoundingSubWithCard('fp_used');
+  const ev = checkoutCompletedEvent({ sub, userId: 'u_card', customerEmail: 'card@example.test' });
+  const r1 = await deliver(ev);
+  assert.equal(r1.status, 503, 'Stripe is asked to redeliver');
+  const live = h.stripe.subscriptions.find((s) => s.id === sub.id);
+  assert.equal(live.status, 'canceled', 'still cancelled: nothing can be charged');
+  assert.equal(h.db.rows('user_subscriptions').find((r) => r.stripe_subscription_id === sub.id)?.status, 'canceled', 'access ended despite the email failure');
+  assert.equal(sent.length, 0);
+  fail = false;
+  const r2 = await deliver(ev);
+  assert.equal(r2.status, 200);
+  assert.equal(sent.length, 1);
+  assert.equal(live.metadata.trial_reuse_notified, '1');
+  await deliver(ev);
+  assert.equal(sent.length, 1, 'never emailed twice');
+  assert.equal(h.stripe.callsTo('subscriptions.cancel').length, 1, 'cancelled once');
+});
+
+test('refused trial with email not configured: no retry storm, manual follow-up logged', async () => {
+  setup({ env: { ...FOUNDING_ENV, RESEND_API_KEY: undefined } });
+  seatRpc();
+  harness().db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
+  const sub = trialingFoundingSubWithCard('fp_used');
+  const lines = [];
+  const r = await quietly(async (l) => { const x = await webhookPOST(signedWebhookRequest(checkoutCompletedEvent({ sub, userId: 'u_card', customerEmail: 'card@example.test' }))); lines.push(...l); return x; });
+  assert.equal(r.status, 200);
+  assert.ok(lines.some((l) => /MANUAL FOLLOW-UP/.test(l)), lines.join(' | ').slice(0, 300));
+  assert.equal(harness().stripe.subscriptions.find((s) => s.id === sub.id).status, 'canceled');
 });

@@ -42,12 +42,15 @@ const fakeStripe = {
       const s = st().subscriptions.find((x) => x.id === subId);
       if (!s) throw Object.assign(new Error(`No such subscription: '${subId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
       if (params?.trial_end === 'now' && s.status === 'trialing') s.status = 'active';
+      if (params?.metadata) s.metadata = { ...(s.metadata || {}), ...params.metadata };
       return JSON.parse(JSON.stringify(s));
     },
     async cancel(subId, params) {
       st().record('subscriptions.cancel', { id: subId, params });
       const s = st().subscriptions.find((x) => x.id === subId);
       if (!s) throw Object.assign(new Error(`No such subscription: '${subId}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+      if (s.status === 'canceled') throw Object.assign(new Error('A canceled subscription can only update its cancellation_details and metadata.'), { type: 'StripeInvalidRequestError', statusCode: 400 });
+      if (params?.cancellation_details) s.cancellation_details = { ...params.cancellation_details };
       s.status = 'canceled';
       s.canceled_at = Math.floor(Date.now() / 1000);
       return JSON.parse(JSON.stringify(s));

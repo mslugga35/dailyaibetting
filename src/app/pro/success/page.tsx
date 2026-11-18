@@ -12,8 +12,9 @@ type CheckoutState = 'checking' | 'pending' | 'trialing' | 'active' | 'trial_not
 
 /**
  * Ask the server what happened to this checkout. A free trial on a card that already had
- * one is cancelled by the webhook a few seconds after payment details are entered, so poll
- * briefly (up to ~10 s) before showing the welcome.
+ * one is refused by the webhook a few seconds after checkout, so the page only welcomes a
+ * CONFIRMED outcome ("trialing" is only reported once the card check has passed). Anything
+ * still unsettled after ~15 s gets a neutral "still confirming" view, never the welcome.
  */
 function useCheckoutState(sessionId: string | null): CheckoutState {
   const [state, setState] = useState<CheckoutState>(sessionId ? 'checking' : 'unknown');
@@ -22,14 +23,12 @@ function useCheckoutState(sessionId: string | null): CheckoutState {
     let stop = false;
     (async () => {
       let last: CheckoutState = 'unknown';
-      for (let i = 0; i < 6 && !stop; i++) {
+      for (let i = 0; i < 10 && !stop; i++) {
         try {
           const r = await fetch(`/api/checkout/status?session_id=${encodeURIComponent(sessionId)}`, { cache: 'no-store' });
           last = ((await r.json())?.state as CheckoutState) || 'unknown';
         } catch { last = 'unknown'; }
-        if (last === 'trial_not_started' || last === 'active') break;
-        // trialing: wait for the card check (it runs right after checkout) before welcoming
-        if (last === 'trialing' && i >= 3) break;
+        if (last === 'trial_not_started' || last === 'active' || last === 'trialing') break;
         await new Promise((res) => setTimeout(res, 1500));
       }
       if (!stop) setState(last);
@@ -37,6 +36,25 @@ function useCheckoutState(sessionId: string | null): CheckoutState {
     return () => { stop = true; };
   }, [sessionId]);
   return state;
+}
+
+function StillConfirming() {
+  return (
+    <Card className="w-full max-w-md">
+      <CardContent className="p-8 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 mx-auto mb-4">
+          <Mail className="h-8 w-8 text-emerald-400" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">We&apos;re confirming your subscription</h1>
+        <p className="text-muted-foreground mb-6">
+          This can take a minute. We&apos;ll email you as soon as it&apos;s settled, and your Account page always shows your current plan and any charge.
+        </p>
+        <Button variant="outline" className="w-full" asChild>
+          <Link href="/account">Go to my Account</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
 function TrialNotStarted() {
@@ -75,6 +93,7 @@ function SuccessContent() {
     );
   }
   if (state === 'trial_not_started') return <TrialNotStarted />;
+  if (state !== 'trialing' && state !== 'active') return <StillConfirming />;
 
   if (isGuest) {
     // Guest checkout: the webhook creates the account and emails a magic link.
