@@ -299,3 +299,12 @@ export function toNormalizedPicks(rows: HbConsensusRow[]): NormalizedPick[] {
 export function toLetterResult(result: HbConsensusRow['result']): 'W' | 'L' | 'P' | null {
   return result === 'win' ? 'W' : result === 'loss' ? 'L' : result === 'push' ? 'P' : null;
 }
+
+/** True when the request names one sport (not missing / "ALL"). */
+export function sportRequested(sport: string | null): boolean {
+  return !!sport && sport.toUpperCase() !== 'ALL';
+}
+/** Shared rows store lowercase sport codes (nba, ncaab); pages ask for NBA, NCAAB. */
+export function matchesSport(rowSport: string, sport: string | null): boolean {
+  return !sportRequested(sport) || rowSport === sport!.toLowerCase();
+}

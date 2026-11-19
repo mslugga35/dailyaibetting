@@ -10,9 +10,9 @@ import { SportQuickNav } from '@/components/ui/breadcrumbs';
 import Link from 'next/link';
 
 export default function MLBPicksTodayPage() {
-  const { topOverall, isLoading, error, refetch, data } = useConsensus();
+  const { consensus, isLoading, error, refetch, data } = useConsensus();
 
-  const mlbPicks = topOverall.filter(p => p.sport === 'MLB');
+  const mlbPicks = consensus.filter(p => p.sport === 'MLB');
   const firePicks = mlbPicks.filter(p => p.capperCount >= 3);
 
   const today = new Date().toLocaleDateString('en-US', {

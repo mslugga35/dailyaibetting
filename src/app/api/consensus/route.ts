@@ -43,6 +43,8 @@ import {
   toConsensusPick,
   toNormalizedPicks,
   toLetterResult,
+  sportRequested,
+  matchesSport,
 } from '@/lib/data/hb-consensus';
 
 const FREE_TIER_LIMIT = 5;
@@ -232,14 +234,17 @@ async function handleHbToday(sport: string | null, minCappers: number, userIsPre
   const today = getTodayET();
   const rows = await fetchHbConsensus([today], { minCappers: 2 });
   const all = rows.map(toConsensusPick);
-  const formatted = formatConsensusOutput(all);
-  const filtered = rows.filter((r) => r.capper_count >= minCappers && (!sport || sport.toUpperCase() === 'ALL' || r.sport === sport.toLowerCase()));
+  // Free picks are chosen from the WHOLE board, so a pick is free (or Pro) on every page.
+  const formattedAll = formatConsensusOutput(all);
+  const filtered = rows.filter((r) => r.capper_count >= minCappers && matchesSport(r.sport, sport));
   const consensus = filtered.map(toConsensusPick);
+  // Top lists and the sport groups shown on a page come from that page's sport only.
+  const formatted = sportRequested(sport) ? formatConsensusOutput(consensus) : formattedAll;
   const allPicks = toNormalizedPicks(rows);
   const picksByCapper = groupPicksByCapper(allPicks);
   const insights = buildInsights(all, allPicks);
 
-  const freeIds = freePickIds(formatted.filteredConsensus);
+  const freeIds = freePickIds(formattedAll.filteredConsensus);
   const isFree = (p: { id: string }) => freeIds.has(p.id);
   return NextResponse.json({
     success: true,
@@ -278,10 +283,10 @@ async function handleHbYesterday(sport: string | null, minCappers: number, userI
   const rows = await fetchHbConsensus([yesterday], { minCappers: 2 });
   const resultOf = new Map(rows.map((r) => [r.group_key, toLetterResult(r.result)]));
   const all = rows.map(toConsensusPick);
-  const formatted = formatConsensusOutput(all);
-  const gradedConsensus = rows
-    .filter((r) => r.capper_count >= minCappers && (!sport || sport.toUpperCase() === 'ALL' || r.sport === sport.toLowerCase()))
-    .map((r) => ({ ...toConsensusPick(r), result: toLetterResult(r.result) }));
+  const formattedAll = formatConsensusOutput(all);
+  const sportRows = rows.filter((r) => r.capper_count >= minCappers && matchesSport(r.sport, sport));
+  const gradedConsensus = sportRows.map((r) => ({ ...toConsensusPick(r), result: toLetterResult(r.result) }));
+  const formatted = sportRequested(sport) ? formatConsensusOutput(sportRows.map(toConsensusPick)) : formattedAll;
 
   const graded = gradedConsensus.filter((p) => p.result !== null);
   const wins = graded.filter((p) => p.result === 'W').length;
@@ -293,7 +298,7 @@ async function handleHbYesterday(sport: string | null, minCappers: number, userI
   const fireLosses = fireGraded.filter((p) => p.result === 'L').length;
   const fireWinRate = fireWins + fireLosses > 0 ? Math.round((fireWins / (fireWins + fireLosses)) * 100) : 0;
 
-  const freeIds = freePickIds(formatted.filteredConsensus);
+  const freeIds = freePickIds(formattedAll.filteredConsensus);
   const isFree = (p: { id: string }) => userIsPremium || freeIds.has(p.id);
   const withResult = <T extends { id: string }>(p: T) => ({ ...p, result: resultOf.get(p.id) ?? null });
 

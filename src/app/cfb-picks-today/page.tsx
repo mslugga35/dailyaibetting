@@ -10,10 +10,10 @@ import { SportQuickNav } from '@/components/ui/breadcrumbs';
 import Link from 'next/link';
 
 export default function CFBPicksTodayPage() {
-  const { topOverall, isLoading, error, refetch, data } = useConsensus();
+  const { consensus, isLoading, error, refetch, data } = useConsensus();
 
   // CFB can be labeled as CFB, NCAAF, or College Football
-  const cfbPicks = topOverall.filter(p =>
+  const cfbPicks = consensus.filter(p =>
     p.sport === 'CFB' ||
     p.sport === 'NCAAF' ||
     p.sport.toLowerCase().includes('college football')

@@ -10,9 +10,9 @@ import { SportQuickNav } from '@/components/ui/breadcrumbs';
 import Link from 'next/link';
 
 export default function NHLPicksTodayPage() {
-  const { topOverall, isLoading, error, refetch, data } = useConsensus();
+  const { consensus, isLoading, error, refetch, data } = useConsensus();
 
-  const nhlPicks = topOverall.filter(p => p.sport === 'NHL');
+  const nhlPicks = consensus.filter(p => p.sport === 'NHL');
   const firePicks = nhlPicks.filter(p => p.capperCount >= 3);
 
   const today = new Date().toLocaleDateString('en-US', {

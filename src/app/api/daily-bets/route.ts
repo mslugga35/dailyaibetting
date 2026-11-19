@@ -17,6 +17,7 @@ import { filterToTodaysGamesAsync } from '@/lib/consensus/game-schedule';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayAIPicks } from '@/lib/ai-picks/engine';
 import { getTodayET } from '@/lib/utils/date';
+import { getConsensusSource, fetchHbConsensus, toConsensusPick, toNormalizedPicks } from '@/lib/data/hb-consensus';
 import { logger } from '@/lib/utils/logger';
 import { rateLimitGuard, isCronAuthorized } from '@/lib/api-helpers';
 import { getCurrentUser, isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
@@ -107,24 +108,23 @@ export async function GET(request: Request) {
     if (limited) return limited;
     const entitlement = await resolveEntitlement(request);
     // Fire independent network calls in parallel
-    const [rawPicks, aiReportResult, botData] = await Promise.all([
-      getAllPicksFromSources(),
-      fetchAiReport(),
-      fetchBotData(),
-    ]);
+    const [aiReportResult, botData] = await Promise.all([fetchAiReport(), fetchBotData()]);
 
-    // Normalize picks
-    const normalizedPicks = normalizePicks(rawPicks);
-
-    // CRITICAL: Filter picks using ESPN API BEFORE building consensus
-    const { filtered: todaysPicks } = await filterToTodaysGamesAsync(normalizedPicks);
-    logger.debug('Daily Bets API', `ESPN filtered: ${normalizedPicks.length} -> ${todaysPicks.length} picks`);
-
-    // Build consensus from ESPN-filtered picks only
-    const consensus = buildConsensus(todaysPicks);
-
-    // Format consensus output
-    const formatted = formatConsensusOutput(consensus);
+    // One definition of consensus for every page: with CONSENSUS_SOURCE=hb this is the
+    // same shared hb_consensus_live set /api/consensus serves (homepage, /consensus,
+    // /picks). The local rebuild below is only the legacy/rollback path.
+    let todaysPicks: ReturnType<typeof normalizePicks>;
+    let formatted: ReturnType<typeof formatConsensusOutput>;
+    if (getConsensusSource() === 'hb') {
+      const rows = await fetchHbConsensus([getTodayET()], { minCappers: 2 });
+      todaysPicks = toNormalizedPicks(rows);
+      formatted = formatConsensusOutput(rows.map(toConsensusPick));
+    } else {
+      const normalizedPicks = normalizePicks(await getAllPicksFromSources());
+      // CRITICAL: Filter picks using ESPN API BEFORE building consensus
+      ({ filtered: todaysPicks } = await filterToTodaysGamesAsync(normalizedPicks));
+      formatted = formatConsensusOutput(buildConsensus(todaysPicks));
+    }
 
     // Build daily bets with enhanced analysis
     const dailyBets = buildDailyBets(

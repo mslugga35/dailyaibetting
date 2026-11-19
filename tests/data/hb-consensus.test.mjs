@@ -21,6 +21,7 @@ const { consensusSection } = await import('../../src/lib/ai-picks/consensus-sect
 const { recordTable } = await import('../../src/lib/data/record-source.ts');
 const consensusRoute = await import('../../src/app/api/consensus/route.ts');
 const resultsRoute = await import('../../src/app/api/results/route.ts');
+const dailyBetsRoute = await import('../../src/app/api/daily-bets/route.ts');
 const { getTodayET, getYesterdayET } = await import('../../src/lib/utils/date.ts');
 const { createClient } = await import('@supabase/supabase-js');
 
@@ -275,4 +276,53 @@ test('/api/results: stray "##" never reaches bet/line; other fields and view=sta
   const stats = await body(await get(resultsRoute, '/api/results?view=stats'));
   assert.equal(stats.data.allTime.wins, 1);
   assert.ok(!Array.isArray(stats.data));
+});
+
+// ── Nov 19 break-test: pages disagreed; sport pages showed other sports ──
+
+test('/api/consensus?sport=X (hb): topOverall and bySport hold only that sport, today and yesterday', async () => {
+  seedRows({ redate: true });
+  for (const qs of ['?sport=NBA', '?sport=NFL', '?sport=NBA&date=yesterday', '?sport=NHL&date=yesterday']) {
+    const sport = qs.match(/sport=(\w+)/)[1];
+    const b = await body(await get(consensusRoute, `/api/consensus${qs}`, cron));
+    assert.ok(b.topOverall.every((p) => p.sport === sport), `${qs} topOverall`);
+    assert.deepEqual(Object.keys(b.bySport).filter((k) => b.bySport[k].length), b.consensus.length ? [sport] : [], `${qs} bySport`);
+  }
+  const all = await body(await get(consensusRoute, '/api/consensus', cron));
+  assert.ok(Object.keys(all.bySport).length > 1, 'unfiltered board still spans sports');
+});
+
+test('/api/consensus?sport=X (hb): free picks are the same picks on the sport page as on the full board', async () => {
+  seedRows({ redate: true });
+  const freeAll = new Set((await body(await get(consensusRoute, '/api/consensus'))).consensus.map((p) => p.id));
+  const nba = await body(await get(consensusRoute, '/api/consensus?sport=NBA'));
+  assert.ok(nba.consensus.every((p) => freeAll.has(p.id)));
+});
+
+test('/api/daily-bets (hb): same shared consensus as /api/consensus, never rebuilt from hb_picks', async () => {
+  seedRows({ redate: true });
+  const cons = await body(await get(consensusRoute, '/api/consensus', cron));
+  harness().db.log.length = 0;
+  hb.resetHbConsensusCache(); // force a real read so the table log shows the source
+  const db = await body(await get(dailyBetsRoute, '/api/daily-bets', cron));
+  assert.equal(db.success, true);
+  const tables = new Set(harness().db.log.map((l) => l.table));
+  assert.ok(tables.has('hb_consensus_live'));
+  assert.ok(!tables.has('hb_picks'), 'daily-bets must not build its own consensus in hb mode');
+  // Top 5 = the first five of the shared ranking the homepage shows (topOverall order).
+  assert.deepEqual(db.topPicks.map((p) => p.capperCount), cons.topOverall.slice(0, 5).map((p) => p.capperCount));
+  assert.deepEqual(db.topPicks.map((p) => p.team), cons.topOverall.slice(0, 5).map((p) => p.team));
+});
+
+test('sport pages filter the whole board and keep their sport on client refresh', () => {
+  const src = (p) => fs.readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', p), 'utf8');
+  for (const s of ['mlb', 'nhl', 'cbb', 'cfb']) {
+    const page = src(`src/app/${s}-picks-today/page.tsx`);
+    assert.match(page, /Picks = consensus\.filter\(/, s);
+    assert.doesNotMatch(page, /topOverall\.filter\(/, s);
+  }
+  assert.match(src('src/app/consensus/[sport]/page.tsx'), /<ConsensusContent [^>]*sport=\{meta\.upper\}/);
+  const cc = src('src/app/consensus/ConsensusContent.tsx');
+  assert.match(cc, /useConsensus\(\{ date: 'today', sport,/);
+  assert.match(cc, /useConsensus\(\{ date: 'yesterday', sport,/);
 });

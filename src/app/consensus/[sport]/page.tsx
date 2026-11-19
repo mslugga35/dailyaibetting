@@ -163,7 +163,7 @@ export default async function SportConsensusPage({ params }: PageProps) {
         </div>
       </div>
 
-      <ConsensusContent initialData={todayData} initialYesterdayData={yesterdayData} />
+      <ConsensusContent initialData={todayData} initialYesterdayData={yesterdayData} sport={meta.upper} />
     </>
   );
 }

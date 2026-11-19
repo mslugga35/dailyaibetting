@@ -10,10 +10,10 @@ import { SportQuickNav } from '@/components/ui/breadcrumbs';
 import Link from 'next/link';
 
 export default function CBBPicksTodayPage() {
-  const { topOverall, isLoading, error, refetch, data } = useConsensus();
+  const { consensus, isLoading, error, refetch, data } = useConsensus();
 
   // CBB can be labeled as CBB, NCAAB, or College Basketball
-  const cbbPicks = topOverall.filter(p =>
+  const cbbPicks = consensus.filter(p =>
     p.sport === 'CBB' ||
     p.sport === 'NCAAB' ||
     p.sport.toLowerCase().includes('college basketball')

@@ -13,8 +13,8 @@ import { FadeThePublic } from '@/components/picks/FadeThePublic';
 import { HiddenBagCTA } from '@/components/monetization/HiddenBagCTA';
 import { ComparisonTable } from '@/components/monetization/ComparisonTable';
 
-function TodayTab({ initialData }: { initialData: unknown }) {
-  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus({ date: 'today', initialData: initialData as never });
+function TodayTab({ initialData, sport }: { initialData: unknown; sport?: string }) {
+  const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus({ date: 'today', sport, initialData: initialData as never });
 
   const totalPicks = data?.totalPicks || 0;
   const consensusCount = data?.consensus?.length || 0;
@@ -157,8 +157,8 @@ function TodayTab({ initialData }: { initialData: unknown }) {
   );
 }
 
-function YesterdayTab({ initialData }: { initialData: unknown }) {
-  const { consensus, bySport, isLoading, error, refetch, data, yesterdayStats } = useConsensus({ date: 'yesterday', initialData: initialData as never });
+function YesterdayTab({ initialData, sport }: { initialData: unknown; sport?: string }) {
+  const { consensus, bySport, isLoading, error, refetch, data, yesterdayStats } = useConsensus({ date: 'yesterday', sport, initialData: initialData as never });
 
   if (isLoading) {
     return (
@@ -191,7 +191,8 @@ function YesterdayTab({ initialData }: { initialData: unknown }) {
   );
 }
 
-export function ConsensusContent({ initialData, initialYesterdayData }: { initialData: unknown; initialYesterdayData: unknown }) {
+/** `sport` (e.g. "NBA") keeps a sport page on that sport when the client refreshes the data. */
+export function ConsensusContent({ initialData, initialYesterdayData, sport }: { initialData: unknown; initialYesterdayData: unknown; sport?: string }) {
   const [activeTab, setActiveTab] = useState('today');
 
   // Read ?tab= from URL on mount
@@ -247,11 +248,11 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
         </TabsList>
 
         <TabsContent value="today" className="mt-6">
-          <TodayTab initialData={initialData} />
+          <TodayTab initialData={initialData} sport={sport} />
         </TabsContent>
 
         <TabsContent value="yesterday" className="mt-6">
-          <YesterdayTab initialData={initialYesterdayData} />
+          <YesterdayTab initialData={initialYesterdayData} sport={sport} />
         </TabsContent>
       </Tabs>
 
