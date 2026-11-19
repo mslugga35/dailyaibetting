@@ -103,7 +103,8 @@ export default function StatsPage() {
       tier.roi = tier.totalPicks > 0 ? Math.round((tier.unitsWon / tier.totalPicks) * 100) : 0;
     }
 
-    return [tiers.lock, tiers.strong, tiers.lean].filter(t => t.totalPicks > 0 || true);
+    // The graded record holds fire picks (3+ cappers) only, so an empty tier (Lean) is hidden, not shown as 0-0.
+    return [tiers.lock, tiers.strong, tiers.lean].filter(t => t.totalPicks > 0);
   }, [picks]);
 
   // Calculate sport stats
@@ -174,11 +175,17 @@ export default function StatsPage() {
       ) : (
         <>
           {/* Overall Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-3xl font-bold">{picks.length}</div>
-                <div className="text-xs text-muted-foreground">Total Picks</div>
+                <div className="text-xs text-muted-foreground">Graded Fire Picks</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="text-3xl font-bold text-yellow-400">{totalPushes}</div>
+                <div className="text-xs text-muted-foreground">Pushes</div>
               </CardContent>
             </Card>
             <Card>
@@ -323,7 +330,8 @@ export default function StatsPage() {
               <ul className="text-sm text-muted-foreground space-y-1">
                 <li>• <strong>💎 Top consensus (4+ cappers)</strong> - Four or more cappers back the same pick</li>
                 <li>• <strong>🔥 Strong (3 cappers)</strong> - Three cappers back the same pick</li>
-                <li>• <strong>📍 Lean (2 cappers)</strong> - Two cappers back the same pick</li>
+                <li>• The graded record tracks fire picks (3+ cappers) only; 2-capper consensus picks are not graded here</li>
+                <li>• Win rate = wins ÷ (wins + losses); pushes are counted in the total but not in the win rate</li>
                 <li>• ROI estimated at -110 odds (standard juice); no outcome is guaranteed</li>
                 <li>• Stats update automatically after games complete</li>
               </ul>

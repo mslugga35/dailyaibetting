@@ -144,7 +144,7 @@ export default function HistoryPage() {
         </div>
         <h1 className="text-3xl md:text-4xl font-bold mb-2">Pick History</h1>
         <p className="text-muted-foreground">
-          Browse our complete archive of consensus picks and results
+          The most recent 50 graded fire picks (3+ cappers). The full record is on the Stats page.
         </p>
       </div>
 
@@ -153,7 +153,7 @@ export default function HistoryPage() {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-3xl font-bold">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">Total Picks</div>
+            <div className="text-sm text-muted-foreground">Recent Picks Shown</div>
           </CardContent>
         </Card>
         <Card>
@@ -278,7 +278,7 @@ export default function HistoryPage() {
                             </Badge>
                           </div>
                           <div className="font-medium">
-                            {pick.team} {pick.line}
+                            {pick.team} {/^\d/.test(String(pick.line ?? '')) && /spread/i.test(pick.bet_type) ? `+${pick.line}` : pick.line}
                           </div>
                           <div className="text-sm text-muted-foreground">
                             vs {pick.opponent || 'TBD'} • {pick.bet_type}
