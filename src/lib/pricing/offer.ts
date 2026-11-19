@@ -192,14 +192,19 @@ async function computeOffer(): Promise<PublicOffer> {
     return { mode: 'regular', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: TRIAL_DAYS, founding: null };
   }
   let remaining: number | null = null;
+  let paid: number | null = null;
   try {
     const s = await foundingSeatStats(cfg.countEnded);
+    // Availability (what checkout enforces) counts live checkout holds and trials too,
+    // so the cap can never be oversold.
     remaining = Math.max(0, cfg.seatCap - s.taken);
+    // The public counter counts only seats that were actually paid for.
+    paid = s.converted + (cfg.countEnded ? s.ended : 0);
   } catch (err) {
     console.error('[pricing] founding seat count unavailable:', (err as Error).message);
   }
   const soldOut = remaining === 0;
-  const founding = { cap: cfg.seatCap, remaining, soldOut };
+  const founding = { cap: cfg.seatCap, remaining, soldOut, paid };
   if (!soldOut) {
     return { mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: cfg.foundingTrialDays, founding };
   }

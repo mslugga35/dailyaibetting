@@ -2,7 +2,7 @@ import { getCurrentUser, getUserSubscription, EntitlementUnavailableError, type 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Lock, Brain, TrendingUp, Bell, Trophy, BarChart } from 'lucide-react';
+import { Check, Zap, Lock, Brain, TrendingUp, Trophy, BarChart } from 'lucide-react';
 import Link from 'next/link';
 import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
@@ -17,7 +17,7 @@ export async function generateMetadata() {
   const c = offerCopy(await getCurrentOffer());
   return {
     title: 'Pricing – DailyAI Betting Pro',
-    description: `Get all consensus picks, MEGA/NUCLEAR alerts, and individual capper pick detail${c.price ? ` for ${c.price}` : ''}.${c.trialLabel ? ` ${c.trialLabel} for first-time members.` : ''}`,
+    description: `Get every consensus pick, individual capper pick detail and fade-the-public flags${c.price ? ` for ${c.price}` : ''}.${c.trialLabel ? ` ${c.trialLabel} for first-time members.` : ''}`,
   };
 }
 
@@ -77,9 +77,9 @@ export default async function PricingPage() {
             ))}
             {[
               'All consensus picks',
-              'MEGA/NUCLEAR alerts',
               'Individual capper pick detail',
-              'Full pick-by-pick history',
+              'Fade-the-public flags on crowded picks',
+              'Pick-by-pick results, latest 50 graded fire picks',
             ].map(f => (
               <div key={f} className="flex items-start gap-2 text-sm">
                 <Lock className="h-4 w-4 text-muted-foreground/70 mt-0.5 shrink-0" />
@@ -129,10 +129,9 @@ export default async function PricingPage() {
           <CardContent className="space-y-3">
             {[
               { icon: Zap, text: 'All consensus picks, updated throughout the day' },
-              { icon: Bell, text: 'MEGA and NUCLEAR alerts for the strongest consensus picks' },
               { icon: Trophy, text: 'Individual capper pick detail' },
-              { icon: BarChart, text: 'Full pick-by-pick history with graded results' },
-              { icon: TrendingUp, text: 'Fade-the-public alerts' },
+              { icon: BarChart, text: 'Pick-by-pick graded results for the latest 50 fire picks' },
+              { icon: TrendingUp, text: 'Fade-the-public flags when 7+ cappers pile onto one side' },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-start gap-2 text-sm">
                 <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
@@ -180,7 +179,7 @@ export default async function PricingPage() {
             ...(copy.lock ? [['What is the Founding Member price?', `${copy.lock}${offer.founding ? ` It is limited to the first ${offer.founding.cap} paying members; a spot is held while you check out or are on the free trial, and counts once your first payment goes through.` : ''}`]] : []),
             ['How do I cancel?', 'Open Account and choose Manage Subscription. Billing and cancellation are handled in the secure Stripe customer portal. Cancelling stops future charges; you keep Pro until the end of the period you already paid for.'],
             ['Can I get a refund?', REFUND_NOTE],
-            ['What do I get that free users do not?', 'Every consensus pick each day instead of the top 5, the strongest MEGA/NUCLEAR consensus alerts, individual capper pick detail and the full pick-by-pick history. (The graded consensus track record on /results is free for everyone.)'],
+            ['What do I get that free users do not?', 'Every consensus pick each day instead of the top 5, individual capper pick detail, fade-the-public flags on picks with 7+ cappers, and pick-by-pick graded results for the latest 50 fire picks. (The graded consensus track record on /results is free for everyone.) There are no push, email or text alerts.'],
             ['Is this betting advice? Do you guarantee wins?', 'No. We aggregate and grade picks from third-party cappers. Consensus means several cappers chose the same bet; it does not guarantee any outcome. Please bet responsibly.'],
             ['How is the track record calculated?', 'Every fire pick is graded win, loss or push from the final score. Win rate excludes pushes. Nothing is estimated; the full method is on the Results page.'],
           ].map(([q, a]) => (

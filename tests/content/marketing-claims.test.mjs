@@ -61,3 +61,22 @@ test('free vs Pro comparison table matches code gating (no delay/early-access ro
   const t = read(join(ROOT, 'src/components/monetization/ComparisonTable.tsx'));
   assert.doesNotMatch(t, /Pick delay|Early access|Full grades/);
 });
+
+test('Nov 19: no advertised Pro feature that does not exist (MEGA/NUCLEAR alerts, alerts, full history)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const files = ['src/app/pricing/page.tsx', 'src/app/account/page.tsx', 'src/app/page.tsx',
+    'src/components/picks/YesterdayResults.tsx', 'src/components/monetization/ComparisonTable.tsx'];
+  for (const f of files) {
+    const s = readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(s, /MEGA|NUCLEAR/, f);
+    assert.doesNotMatch(s, /Fade-the-public alerts/i, f);
+    assert.doesNotMatch(s, /full pick-by-pick|Full pick-by-pick|full pick history/i, f);
+  }
+});
+
+test('Nov 19: daily-bets promises no player props / MLB analysis and explains missing parlay odds', () => {
+  const s = read(join(ROOT, 'src/app/daily-bets/DailyBetsContent.tsx'));
+  assert.doesNotMatch(s, /player props and MLB analysis/);
+  assert.match(s, /data-testid="parlay-odds-note"/);
+  assert.match(s, /Odds and payouts are not shown/);
+});

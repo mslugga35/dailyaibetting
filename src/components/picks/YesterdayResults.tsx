@@ -148,10 +148,10 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
           <CardContent className="p-6 text-center">
             <div className="flex items-center justify-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-emerald-400" />
-              <span className="font-semibold">Want full pick history and capper grades?</span>
+              <span className="font-semibold">Want every pick and capper-level detail?</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              DailyAI Pro unlocks individual capper pick detail and the full pick-by-pick history.
+              DailyAI Pro unlocks individual capper pick detail and pick-by-pick results for the latest graded fire picks.
             </p>
             <Link
               href="/pro"

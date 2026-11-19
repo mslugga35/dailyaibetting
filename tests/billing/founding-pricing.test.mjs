@@ -83,7 +83,7 @@ test('founding offer reads the seat count; sold out = $19.99 automatically (Pro 
   let o = await offerMod.getCurrentOffer();
   assert.equal(o.plan, 'founding');
   assert.equal(o.amountCents, 999);
-  assert.deepEqual(o.founding, { cap: 3, remaining: 2, soldOut: false });
+  assert.deepEqual(o.founding, { cap: 3, remaining: 2, soldOut: false, paid: 1 });
 
   offerMod.resetOfferCache(); seatRpc({ taken: 3 });
   o = await offerMod.getCurrentOffer();
@@ -683,4 +683,19 @@ test('refused trial with email not configured: no retry storm, manual follow-up 
   assert.equal(r.status, 200);
   assert.ok(lines.some((l) => /MANUAL FOLLOW-UP/.test(l)), lines.join(' | ').slice(0, 300));
   assert.equal(harness().stripe.subscriptions.find((s) => s.id === sub.id).status, 'canceled');
+});
+
+test('Nov 19: seat counter counts only PAID founding memberships; checkout holds and trials are named, never counted as sold', async () => {
+  setup({ env: { ...FOUNDING_ENV, FOUNDING_SEAT_CAP: '100' } });
+  seatRpc();
+  harness().db.rpcHandlers.set('dailyai_founding_stats', async () => [{ reserved: 2, trialing: 1, converted: 0, ended: 0, released: 4, taken: 3 }]);
+  const o = await offerMod.getCurrentOffer();
+  assert.deepEqual(o.founding, { cap: 100, remaining: 97, soldOut: false, paid: 0 });
+  const c = offerCopy(o);
+  assert.equal(c.seats, '100 of 100 Founding Member spots left (limited to the first 100 paying members). 3 of these are held by members in checkout or in their free trial.');
+  const { foundingSeatsCopy } = await import('../../src/lib/pricing/plans.ts');
+  assert.equal(foundingSeatsCopy({ cap: 100, remaining: 63, soldOut: false, paid: 37 }), '63 of 100 Founding Member spots left (limited to the first 100 paying members).');
+  assert.match(foundingSeatsCopy({ cap: 3, remaining: 0, soldOut: true, paid: 1 }), /^2 of 3 Founding Member spots left .* All of them are held right now/);
+  assert.equal(foundingSeatsCopy({ cap: 3, remaining: 0, soldOut: true, paid: 3 }), 'All 3 Founding Member spots are taken.');
+  assert.equal(foundingSeatsCopy({ cap: 3, remaining: null, soldOut: false, paid: null }), 'Limited to the first 3 paying members.');
 });

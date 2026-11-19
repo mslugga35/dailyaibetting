@@ -226,7 +226,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
             <div className="p-4 rounded-lg border border-primary/30 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-sm">
                 <span className="font-semibold">Free view:</span> today&apos;s top {(data as { freeTierLimit?: number }).freeTierLimit ?? 5} consensus picks.
-                Pro unlocks every pick, parlays built from the full slate, player props and MLB analysis.
+                Pro unlocks every pick and parlays built from the full slate.
               </p>
               <Link href="/pricing" className="shrink-0 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
                 {priceCopy.ctaReturning}
@@ -342,6 +342,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
 
             {/* Parlays Tab */}
             <Section value="parlays" viewAll={viewAll} className="space-y-6 mt-6">
+              <p className="text-xs text-muted-foreground" data-testid="parlay-odds-note">
+                Parlays combine today&apos;s strongest consensus picks. Odds and payouts are not shown:
+                prices differ by sportsbook and many picks are posted without one, so check your book.
+              </p>
               <div className="grid md:grid-cols-2 gap-6">
                 {/* 2-Leg Parlays */}
                 <Card>

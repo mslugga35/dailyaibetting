@@ -179,7 +179,7 @@ export default async function AccountPage({
             <>
               <p className="text-sm text-muted-foreground">
                 You&apos;re on the free plan. Upgrade to get every consensus pick,
-                MEGA/NUCLEAR alerts, individual capper pick detail and the full pick history.
+                individual capper pick detail and pick-by-pick results for the latest graded fire picks.
               </p>
               <UpgradeButton />
               {/* Portal only for a real (e.g. canceled) subscription, not a checkout placeholder. */}

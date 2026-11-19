@@ -36,7 +36,8 @@ export interface PublicOffer {
   /** Free-trial length for FIRST-TIME subscribers on this plan (0 = no trial). */
   trialDays: number;
   /** Founding mode only. remaining is null when the count could not be read. */
-  founding: { cap: number; remaining: number | null; soldOut: boolean } | null;
+  /** paid = seats paid for (the public counter); remaining = seats still open after live checkout holds and trials. */
+  founding: { cap: number; remaining: number | null; soldOut: boolean; paid?: number | null } | null;
 }
 
 export interface OfferCopy {
@@ -117,13 +118,7 @@ export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): Of
       : 'One free trial per customer: first-time members only. A payment card that was already used for a DailyAI free trial cannot start another: that trial is cancelled right away and nothing is charged.'
     : null;
   const f = offer.founding;
-  const seats = f
-    ? f.soldOut
-      ? `All ${f.cap} Founding Member spots are taken.`
-      : f.remaining == null
-        ? `Limited to the first ${f.cap} paying members.`
-        : `${f.remaining} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`
-    : null;
+  const seats = f ? foundingSeatsCopy(f) : null;
 
   if (!founding) {
     // Price wording kept identical to the pre-founding site for the legacy $20 plan.
@@ -159,4 +154,22 @@ export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): Of
     lock: `Your ${amount}/month Founding Member price stays locked for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment can't be collected after Stripe's retries), the founding price ends with it, and rejoining later is at the regular price.`,
     seats,
   };
+}
+
+/**
+ * Seat counter wording. "Spots left" counts only PAID founding memberships; seats held
+ * by an open checkout or an unpaid free trial are named separately (they are released
+ * if the checkout is abandoned or the trial ends without payment).
+ */
+export function foundingSeatsCopy(f: { cap: number; remaining: number | null; soldOut: boolean; paid?: number | null }): string {
+  // Callers that do not pass `paid` (older shape): every taken seat counts as paid.
+  const paid = f.paid === undefined ? (f.remaining == null ? null : f.cap - f.remaining) : f.paid;
+  if (f.remaining == null || paid == null) return `Limited to the first ${f.cap} paying members.`;
+  const left = Math.max(0, f.cap - paid);
+  if (left === 0) return `All ${f.cap} Founding Member spots are taken.`;
+  const held = Math.max(0, left - f.remaining);
+  const base = `${left} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`;
+  if (held === 0) return base;
+  if (f.soldOut) return `${base} All of them are held right now by members in checkout or in their free trial; a spot reopens if one is not paid.`;
+  return `${base} ${held} of these ${held === 1 ? 'is' : 'are'} held by members in checkout or in their free trial.`;
 }

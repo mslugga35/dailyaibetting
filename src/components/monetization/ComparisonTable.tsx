@@ -17,7 +17,7 @@ export function ComparisonTable() {
   const features = [
     { feature: 'Consensus picks', free: 'Top 5 only', pro: 'Unlimited', freeIcon: 'limited' },
     { feature: 'Individual capper picks', free: false, pro: 'Every tracked capper', freeIcon: 'x' },
-    { feature: 'Pick history', free: 'Summary stats', pro: 'Full pick-by-pick list', freeIcon: 'limited' },
+    { feature: 'Pick history', free: 'Summary stats', pro: 'Latest 50 graded fire picks', freeIcon: 'limited' },
   ];
 
   return (

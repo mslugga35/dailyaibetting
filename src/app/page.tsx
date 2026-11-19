@@ -240,7 +240,7 @@ export default async function HomePage() {
                         {hiddenPicksCount} more consensus picks locked
                       </p>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Upgrade to Pro for access to all picks, MEGA/NUCLEAR alerts, and individual capper pick detail.
+                        Upgrade to Pro for every consensus pick and individual capper pick detail.
                       </p>
                       {offer.plan && priceCopy.price ? (
                         <UpgradeButton label={`See Every Consensus Pick – ${priceCopy.price}`} />
