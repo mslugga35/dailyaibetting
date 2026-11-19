@@ -14,7 +14,8 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
   const { topOverall, bySport, picksByCapper, allPicks, isLoading, error, refetch, data, normalizedCount, capperCount: apiCapperCount } = useConsensus({ initialData: initialData as never });
 
   const totalPicks = data?.totalPicks || 0;
-  const consensusCount = data?.consensus?.length || 0;
+  // Full-board totals from the API (free visitors only receive a preview slice of the list).
+  const consensusCount = data?.consensusCount ?? data?.consensus?.length ?? 0;
   const capperCount = apiCapperCount || Object.keys(picksByCapper).length;
   const firePicks = (data?.consensus || []).filter(p => p.capperCount >= 3);
   const allPicksCount = normalizedCount || allPicks.length;
@@ -85,7 +86,7 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-3xl font-bold text-orange-500">{firePicks.length}</div>
+              <div className="text-3xl font-bold text-orange-500">{data?.firePickCount ?? firePicks.length}</div>
               <div className="text-sm text-muted-foreground">Fire Picks (3+)</div>
             </CardContent>
           </Card>

@@ -6,7 +6,7 @@ import { Mail, Zap, MessageSquare } from 'lucide-react';
 import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 export const metadata: Metadata = {
-  title: 'Advertise With Us - DailyAI Betting',
+  title: 'Advertise With Us',
   description: 'Advertising and sponsorship opportunities on DailyAI Betting, a sports betting consensus picks site.',
 };
 

@@ -14,6 +14,11 @@ export default function AuthCallbackPage() {
       // Page to return to after sign-in (same-site paths only).
       const next = safeNext(new URLSearchParams(window.location.search).get('next'));
 
+      // An expired or already-used email link arrives as #error=...&error_code=otp_expired.
+      if (/[#&](error|error_code)=/.test(hash)) {
+        router.replace('/login?error=link_expired');
+        return;
+      }
       if (!hash || !hash.includes('access_token')) {
         router.replace('/login?error=no_auth_data');
         return;
@@ -40,7 +45,8 @@ export default function AuthCallbackPage() {
 
       if (authError) {
         setError(authError.message);
-        setTimeout(() => router.replace(`/login?error=${encodeURIComponent(authError.message)}`), 2000);
+        // Only fixed codes go in the URL: the login page shows its own wording, never free text.
+        setTimeout(() => router.replace('/login?error=auth'), 2000);
         return;
       }
 

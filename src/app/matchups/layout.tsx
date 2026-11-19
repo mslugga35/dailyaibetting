@@ -3,7 +3,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Today's Matchups - See Where Cappers Stand on Each Game | DailyAI Betting",
+  title: "Today's Matchups - See Where Cappers Stand on Each Game",
   description:
     'View expert betting picks organized by matchup. See which side cappers favor for every NFL, NBA, MLB, NHL, and college game today.',
   keywords: [

@@ -78,7 +78,11 @@ export async function GET(request: Request) {
       query = query.eq('category', category);
     }
 
-    const { data, error, count } = await query;
+    const { data: rows, error: rangeError, count } = await query;
+    // An offset past the last post is "no more posts" (PostgREST PGRST103), not a server error.
+    const pastEnd = rangeError?.code === 'PGRST103';
+    const data = pastEnd ? [] : rows;
+    const error = pastEnd ? null : rangeError;
 
     if (error) {
       console.error('Blog fetch error:', error);

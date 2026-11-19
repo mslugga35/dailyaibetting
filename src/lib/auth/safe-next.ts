@@ -11,7 +11,11 @@ export function safeNext(value: string | null | undefined): string {
   try {
     const u = new URL(value, 'https://dailyaibetting.com');
     if (u.origin !== 'https://dailyaibetting.com') return '/';
-    return u.pathname + u.search;
+    // URL parsing collapses dot-segments ("/..//evil.com" → pathname "//evil.com"), which a
+    // browser would read as a protocol-relative off-site URL. Check the OUTPUT, not just the input.
+    const out = u.pathname + u.search;
+    if (out.startsWith('//')) return '/';
+    return out;
   } catch {
     return '/';
   }

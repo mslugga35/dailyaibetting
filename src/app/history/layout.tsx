@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Pick History - Browse Past Consensus Results | DailyAI Betting',
+  title: 'Pick History - Browse Past Consensus Results',
   description: 'Browse our complete archive of consensus picks and results. Filter by sport, date, and outcome. See our historical track record.',
   keywords: [
     'sports betting history',

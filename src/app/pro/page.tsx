@@ -18,7 +18,7 @@ export default function ProPage() {
   const closed = !!offer && !offer.plan;
   const cta = status === 'canceled' ? copy.ctaReturning : copy.ctaNew;
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [guestEmail, setGuestEmail] = useState('');
   const [guestLoading, setGuestLoading] = useState(false);
   const [guestError, setGuestError] = useState<string | null>(null);
@@ -52,6 +52,7 @@ export default function ProPage() {
 
   const handleCheckout = async () => {
     setCheckoutLoading(true);
+    setCheckoutError(null);
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
@@ -68,37 +69,12 @@ export default function ProPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'Something went wrong');
+        setCheckoutError(data.error || 'Something went wrong. Please try again.');
       }
     } catch {
-      alert('Network error — please try again');
+      setCheckoutError('Network error. Please try again.');
     } finally {
       setCheckoutLoading(false);
-    }
-  };
-
-  const handleManage = async () => {
-    setPortalLoading(true);
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/billing-portal', {
-        method: 'POST',
-        headers: session?.access_token
-          ? { Authorization: `Bearer ${session.access_token}` }
-          : {},
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'Could not open billing portal');
-      }
-    } catch {
-      alert('Network error — please try again');
-    } finally {
-      setPortalLoading(false);
     }
   };
 
@@ -124,11 +100,10 @@ export default function ProPage() {
         <p className="text-sm text-muted-foreground mb-6">
           You have full access to all premium features.
         </p>
-        <Button variant="outline" onClick={handleManage} disabled={portalLoading}>
-          {portalLoading ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : null}
-          Manage Subscription
+        {/* Billing lives on /account: it opens the Stripe portal for paying members and explains
+            complimentary access (no card, no portal) instead of a button that does nothing. */}
+        <Button variant="outline" asChild data-testid="pro-manage-link">
+          <Link href="/account">Manage Subscription</Link>
         </Button>
       </div>
     );
@@ -234,6 +209,9 @@ export default function ProPage() {
                 Sign in to Get Pro
               </Link>
             </Button>
+          )}
+          {checkoutError && (
+            <p role="alert" className="text-sm text-red-400 mt-3" data-testid="checkout-error">{checkoutError}</p>
           )}
         </CardContent>
       </Card>

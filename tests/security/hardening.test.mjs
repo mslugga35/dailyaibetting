@@ -81,14 +81,23 @@ test('guest checkout: plus-address variants of one mailbox share the per-email b
 test('public capper profile never lists an ungraded (live) pick; graded history stays visible', async () => {
   const cappers = await import('../../src/app/api/cappers/route.ts');
   const { harness } = await import('../harness/helpers.mjs');
-  harness().db.seed('hb_capper_stats', [{ capper_id: 'c1', slug: 'sharp-sam', name: 'Sharp Sam', wins: 3, losses: 1, pushes: 0, units_won: 2, current_streak: 2 }]);
+  harness().db.seed('hb_capper_stats', [{ capper_id: 'c1', slug: 'sharp-sam', name: 'Sharp Sam', wins: 3, losses: 1, pushes: 0, units_won: 2, current_streak: 2, sport_records: { nba: '3-1 (75.0%)' }, units_wagered: 4, avg_odds: -110, roi: 12.5 }]);
   harness().db.seed('hb_picks', [
     { id: 'p1', capper_id: 'c1', sport: 'nba', team: 'Lakers', line: '-3', odds: -110, pick_type: 'spread', result: 'win', posted_at: '2026-11-09T15:00:00Z' },
     { id: 'p2', capper_id: 'c1', sport: 'nba', team: 'Knicks', line: null, odds: -120, pick_type: 'moneyline', result: 'pending', posted_at: '2026-11-11T15:00:00Z' },
   ]);
-  const res = await quietly(() => cappers.GET(req('/api/cappers?view=profile&slug=sharp-sam')));
+  // Pick detail is Pro (QA 2026-11-19): read it as a Pro member.
+  const { bearerUser, seedSubscription } = await import('../harness/helpers.mjs');
+  const pro = bearerUser('user_pro_cap');
+  seedSubscription({ userId: pro.id });
+  const res = await quietly(() => cappers.GET(req('/api/cappers?view=profile&slug=sharp-sam', { headers: pro.headers })));
   const b = await res.json();
   const picks = (b.capper ?? b.data ?? b).recent_picks;
   assert.ok(Array.isArray(picks), `profile shape: ${JSON.stringify(b).slice(0, 200)}`);
   assert.deepEqual(picks.map((p) => p.id), ['p1']);
+  // Signed out: the record stays public, the pick-by-pick detail does not reach the client.
+  const anon = (await (await quietly(() => cappers.GET(req('/api/cappers?view=profile&slug=sharp-sam')))).json()).data;
+  assert.equal(anon.record, '3-1');
+  assert.deepEqual([anon.recent_picks, anon.by_sport, anon.recent_form], [[], [], '']);
+  for (const k of ['sport_records', 'units_wagered', 'avg_odds', 'roi']) assert.equal(k in anon, false, `${k} must not reach a non-Pro viewer`);
 });

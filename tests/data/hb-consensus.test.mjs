@@ -271,8 +271,13 @@ test('/api/results: stray "##" never reaches bet/line; other fields and view=sta
   harness().db.seed('hb_consensus_record', [
     { id: 'h', pick_date: getYesterdayET(), sport: 'MLB', bet: 'Los Angeles Dodgers -1.5##', line: '-1.5##', capper_count: 3, is_fire: true, result: 'WIN', final_score: '5-2' },
   ]);
-  const recent = await body(await get(resultsRoute, '/api/results?view=recent'));
+  const recent = await body(await get(resultsRoute, '/api/results?view=recent', cron));
   assert.deepEqual(recent.data.map((r) => [r.bet, r.line, r.final_score, r.id]), [['Los Angeles Dodgers -1.5', '-1.5', '5-2', 'h']]);
+  // Signed out (QA 2026-11-19): sport/date/result only, no bet, line or score.
+  const anon = await body(await get(resultsRoute, '/api/results?view=recent'));
+  assert.deepEqual(anon.data, [{ id: 'h', sport: 'MLB', result: 'WIN', pick_date: getYesterdayET() }]);
+  const anonWindow = await body(await get(resultsRoute, '/api/results?view=recent&days=30'));
+  assert.deepEqual(Object.keys(anonWindow.data[0]).sort(), ['id', 'pick_date', 'result', 'sport']);
   const stats = await body(await get(resultsRoute, '/api/results?view=stats'));
   assert.equal(stats.data.allTime.wins, 1);
   assert.ok(!Array.isArray(stats.data));

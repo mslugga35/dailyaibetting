@@ -104,13 +104,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!post) {
     return {
-      title: 'Article Not Found | DailyAI Betting',
+      title: 'Article Not Found',
       robots: { index: false, follow: false },
     };
   }
 
   return {
-    title: post.seo_title || `${displayTitle(post.slug, post.title)} | DailyAI Betting`,
+    // The root template appends the brand; stored SEO titles already carry it, so strip it once.
+    title: (post.seo_title || displayTitle(post.slug, post.title)).replace(/\s*[|–-]\s*DailyAI Betting\s*$/, ''),
     description: post.seo_description || post.excerpt,
     keywords: post.tags?.join(', '),
     alternates: {

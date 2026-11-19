@@ -12,7 +12,7 @@ import { describeSubscriptionPrice } from '@/lib/pricing/subscription-price';
 import { offerCopy, CANCEL_POLICY, REFUND_NOTE, PLANS } from '@/lib/pricing/plans';
 import { EmailSafeText } from '@/components/ui/email-safe-text';
 
-export const metadata = { title: 'Account – DailyAI Betting' };
+export const metadata = { title: 'Account' };
 export const dynamic = 'force-dynamic';
 
 export default async function AccountPage({

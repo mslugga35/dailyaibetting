@@ -14,6 +14,11 @@ import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { getCurrentOffer } from '@/lib/pricing/offer';
 import { offerCopy } from '@/lib/pricing/plans';
 import { getAllTimeRecord, MIN_SAMPLE, estRoiAt110 } from '@/lib/data/performance';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+};
 
 // Server-side data fetching
 async function getConsensusData() {
@@ -143,7 +148,7 @@ export default async function HomePage() {
           </Button>
           {/* Members never see the trial pitch; an unverifiable plan sees neither. */}
           {!entitlementUnknown && (
-            <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
+            <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 max-w-full h-auto min-h-11 whitespace-normal text-center" asChild>
               <Link href={isPremium ? '/account' : '/pro'}>
                 <Crown className="h-5 w-5 mr-2" />
                 {isPremium ? 'Your Pro Account' : offer.plan ? priceCopy.ctaNew : 'See Pro'}

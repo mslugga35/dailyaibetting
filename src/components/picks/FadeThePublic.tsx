@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, TrendingDown, Users } from 'lucide-react';
 import { ConsensusPick } from '@/types';
+import { fadeSide } from '@/lib/consensus/fade';
 
 interface FadeThePublicProps {
   picks: ConsensusPick[];
@@ -35,33 +36,6 @@ export function FadeThePublic({ picks }: FadeThePublicProps) {
     return { emoji: '⚠️', label: 'Watch', color: 'text-yellow-500', bg: 'bg-yellow-500/10' };
   };
 
-  const getContrarian = (bet: string): string => {
-    // Try to identify the contrarian play
-    const lower = bet.toLowerCase();
-    
-    // Spread contrarian
-    if (lower.includes('+')) {
-      return bet.replace(/\+/g, '-').replace('–', '+');
-    }
-    if (lower.includes('-') && !lower.includes('ml')) {
-      const match = bet.match(/-(\d+\.?\d*)/);
-      if (match) {
-        return bet.replace(`-${match[1]}`, `+${match[1]}`);
-      }
-    }
-    
-    // Over/Under contrarian
-    if (lower.includes('over')) {
-      return bet.replace(/over/i, 'Under');
-    }
-    if (lower.includes('under')) {
-      return bet.replace(/under/i, 'Over');
-    }
-    
-    // ML - can't easily determine contrarian without knowing opponent
-    return 'Opponent ML';
-  };
-
   return (
     <Card className="border-yellow-500/30 bg-yellow-500/5">
       <CardHeader className="pb-3">
@@ -76,7 +50,8 @@ export function FadeThePublic({ picks }: FadeThePublicProps) {
       <CardContent className="space-y-3">
         {fadeCandidates.slice(0, 5).map((pick, i) => {
           const fade = getFadeLevel(pick.capperCount);
-          const contrarian = getContrarian(pick.bet);
+          // The opponent at the opposite line, or the other total; never a guessed side.
+          const contrarian = fadeSide(pick) ?? 'the other side';
           
           return (
             <div 

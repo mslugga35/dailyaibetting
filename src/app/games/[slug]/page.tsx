@@ -85,13 +85,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!gameInfo) {
     return {
-      title: 'Game Not Found | DailyAI Betting',
+      title: 'Game Not Found',
       robots: { index: false, follow: false },
     };
   }
 
   return {
-    title: `${gameInfo.team1} vs ${gameInfo.team2} - Expert Betting Picks | DailyAI Betting`,
+    title: `${gameInfo.team1} vs ${gameInfo.team2} - Expert Betting Picks`,
     description: `Get free expert betting picks for ${gameInfo.team1} vs ${gameInfo.team2}. See which cappers agree on spreads, moneylines, and totals.`,
     keywords: `${gameInfo.team1} vs ${gameInfo.team2} picks, ${gameInfo.team1} ${gameInfo.team2} predictions, betting picks, spread picks`,
     alternates: {

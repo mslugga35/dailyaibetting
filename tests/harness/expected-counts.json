@@ -31,5 +31,6 @@
   "tests/security/hardening.test.mjs": 6,
   "tests/security/internal-url.test.mjs": 12,
   "tests/security/middleware.test.mjs": 18,
-  "tests/security/safe-next.test.mjs": 2
+  "tests/security/safe-next.test.mjs": 3,
+  "tests/content/qa-nov19-fixes.test.mjs": 7
 }

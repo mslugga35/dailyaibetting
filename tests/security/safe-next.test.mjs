@@ -14,3 +14,10 @@ test('anything off-site or malformed falls back to /', () => {
     assert.equal(safeNext(bad), '/', String(bad));
   }
 });
+
+test('dot-segments cannot collapse into a protocol-relative off-site URL (QA 2026-11-19)', () => {
+  for (const bad of ['/..//evil.com', '/.//evil.com', '/a/../..//evil.com', '/./..//evil.com/x?y=1', '/%2e%2e//evil.com']) {
+    assert.equal(safeNext(bad), '/', bad);
+  }
+  assert.equal(safeNext('/a/../account'), '/account');
+});

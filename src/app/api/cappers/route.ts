@@ -4,7 +4,27 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { rateLimitGuard, parseIntParam } from '@/lib/api-helpers';
+import { rateLimitGuard, parseIntParam, resolveUser } from '@/lib/api-helpers';
+import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
+import { isAdminUser } from '@/lib/auth/admin';
+import { estRoiAt110 } from '@/lib/data/performance';
+
+/**
+ * A capper's pick-by-pick detail (recent picks, form, sport split) is Pro. The page's
+ * ProGateSection is client-side, so the data itself must not reach other viewers.
+ * Fails closed when the plan can't be read.
+ */
+async function viewerIsPro(request: Request): Promise<boolean> {
+  const user = await resolveUser(request);
+  if (!user) return false;
+  if (isAdminUser(user)) return true;
+  try {
+    return await isPremium(user.id);
+  } catch (err) {
+    if (err instanceof EntitlementUnavailableError) return false;
+    throw err;
+  }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -115,7 +135,7 @@ async function getLeaderboard(db: SupabaseClient, sport?: string, limit: number 
       id: c.capper_id,
       total_units: c.units_won,
       win_pct: Math.round((c.win_rate ?? 0) * 10) / 10,
-      roi_pct: Math.round((c.roi ?? 0) * 10) / 10,
+      roi_pct: flatRoi(c),
       record: `${c.wins}-${c.losses}${c.pushes > 0 ? `-${c.pushes}` : ''}`,
       streak,
       streak_type: streakType,
@@ -126,7 +146,32 @@ async function getLeaderboard(db: SupabaseClient, sport?: string, limit: number 
   });
 }
 
+/**
+ * ROI shown on the leaderboard and profiles: 1 unit per graded pick at -110, the method the
+ * page states. The stored `roi` column comes from the subset of picks with a recorded price,
+ * so it contradicted the record (a 38-17 capper showed -59%; QA 2026-11-19).
+ */
+function flatRoi(c: { wins?: number | null; losses?: number | null; pushes?: number | null }): number {
+  return estRoiAt110({ wins: c.wins ?? 0, losses: c.losses ?? 0, pushes: c.pushes ?? 0 }) ?? 0;
+}
+
+/**
+ * Profile for a non-Pro viewer: the overall record stays, every per-sport / per-pick /
+ * pricing detail goes. sport_records (from select('*')) is the same per-sport W-L split
+ * as by_sport; units_wagered/avg_odds/roi are raw stats columns.
+ */
+function withoutProDetail<T extends Record<string, unknown>>(data: T) {
+  const { sport_records: _sr, units_wagered: _uw, avg_odds: _ao, roi: _roi, ...rest } = data;
+  return { ...rest, recent_form: '', recent_win_pct: 0, by_sport: [], recent_picks: [] };
+}
+
+/** Real slugs are lowercase words joined by hyphens; anything else can't exist (404, no DB call). */
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,99}$/i;
+
 async function getCapperProfile(db: SupabaseClient, slug: string) {
+  // Junk like "' OR 1=1" was forwarded to Supabase, whose edge firewall answered with an
+  // HTML block page that surfaced as a 500 (QA 2026-11-19). Reject it up front.
+  if (!SLUG_RE.test(slug)) return null;
   // Get capper info
   const { data: capper, error: capperError } = await db
     .from('hb_capper_stats')   // not `cappers` - see getLeaderboard note
@@ -205,7 +250,7 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     ...capper,
     // Already percentages in hb_capper_stats - do not rescale. See getLeaderboard.
     win_pct: Math.round((capper.win_rate ?? 0) * 10) / 10,
-    roi_pct: Math.round((capper.roi ?? 0) * 10) / 10,
+    roi_pct: flatRoi(capper),
     id: capper.capper_id,
     total_units: capper.units_won,
     streak: Math.abs(capper.current_streak || 0),
@@ -306,10 +351,12 @@ export async function GET(request: NextRequest) {
             error: 'Capper not found',
           }, { status: 404 });
         }
+        const pro = await viewerIsPro(request);
         return NextResponse.json({
           success: true,
-          data,
-        });
+          data: pro ? data : withoutProDetail(data),
+          detail: pro ? 'full' : 'pro_only',
+        }, { headers: { 'Cache-Control': 'private, no-store' } });
       }
 
       case 'hot-streaks': {

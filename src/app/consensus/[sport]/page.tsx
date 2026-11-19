@@ -66,11 +66,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const slug = (await params).sport.toLowerCase() as SportSlug;
   if (!SPORTS.includes(slug)) {
-    return { title: 'Consensus Not Found | DailyAI Betting' };
+    return { title: 'Consensus Not Found' };
   }
   const meta = SPORT_META[slug];
   return {
-    title: `${meta.label} Consensus Picks Today | DailyAI Betting`,
+    title: `${meta.label} Consensus Picks Today`,
     description: meta.description,
     keywords: meta.keywords,
     openGraph: {

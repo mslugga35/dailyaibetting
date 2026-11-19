@@ -9,6 +9,18 @@ import { Brain, Mail, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { safeNext } from '@/lib/auth/safe-next';
 
+/**
+ * Fixed messages for the ?error= codes the auth flow sends here. Anything else shows the
+ * generic message: free text from the URL is never displayed (it could be used to show a
+ * fake warning on our page).
+ */
+const LOGIN_ERRORS: Record<string, string> = {
+  auth: 'Sign-in failed. Please try again.',
+  link_expired: 'That sign-in link has expired or was already used. Enter your email below to get a new one.',
+  no_auth_data: 'That sign-in link was incomplete. Enter your email below to get a new one.',
+  missing_tokens: 'That sign-in link was incomplete. Enter your email below to get a new one.',
+};
+
 export default function LoginPage() {
   return (
     <Suspense>
@@ -47,7 +59,7 @@ function LoginContent() {
   useEffect(() => {
     const callbackError = searchParams.get('error');
     if (callbackError) {
-      setError(callbackError === 'auth' ? 'Sign-in failed. Please try again.' : callbackError);
+      setError(LOGIN_ERRORS[callbackError] ?? LOGIN_ERRORS.auth);
     }
   }, [searchParams]);
 

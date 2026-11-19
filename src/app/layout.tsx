@@ -59,13 +59,11 @@ export const metadata: Metadata = {
   authors: [{ name: "DailyAI Betting" }],
   creator: "DailyAI Betting",
   publisher: "DailyAI Betting",
-  alternates: {
-    canonical: "https://dailyaibetting.com",
-  },
+  // No site-wide canonical/og:url: inherited by every page without its own, they told
+  // search engines that /pricing, /results etc. duplicate the homepage. The homepage sets its own.
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://dailyaibetting.com",
     siteName: "DailyAI Betting",
     title: "DailyAI Betting - Free AI Sports Betting Picks Today",
     description: "Free daily AI-analyzed consensus picks from multiple expert cappers. NFL, NBA, MLB, NHL picks updated throughout the day.",

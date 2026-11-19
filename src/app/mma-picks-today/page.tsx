@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Free MMA Picks Today - Expert Consensus Picks | DailyAI Betting',
+  title: 'Free MMA Picks Today - Expert Consensus Picks',
   description: 'Get free MMA picks today from multiple expert cappers. See where several cappers back the same side. Picks update throughout the day, with UFC moneyline, method of victory, and prop picks.',
   keywords: 'free MMA picks today, MMA betting picks, UFC picks today, MMA consensus picks, MMA expert picks, UFC expert picks',
 }

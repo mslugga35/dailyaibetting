@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Free Soccer Picks Today - Expert Consensus Picks | DailyAI Betting',
+  title: 'Free Soccer Picks Today - Expert Consensus Picks',
   description: 'Get free soccer picks today from multiple expert cappers. See where several cappers back the same side. Picks update throughout the day, with moneyline, spread, and total goals picks.',
   keywords: 'free soccer picks today, soccer betting picks, soccer consensus picks, soccer expert picks, MLS picks, Champions League picks',
 }

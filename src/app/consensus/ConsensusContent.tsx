@@ -17,8 +17,10 @@ function TodayTab({ initialData, sport }: { initialData: unknown; sport?: string
   const { topOverall, bySport, isLoading, error, refetch, data } = useConsensus({ date: 'today', sport, initialData: initialData as never });
 
   const totalPicks = data?.totalPicks || 0;
-  const consensusCount = data?.consensus?.length || 0;
-  const firePicksCount = topOverall.filter(p => p.capperCount >= 3).length;
+  // Counts come from the API's full-board totals: free visitors receive only a preview
+  // slice and topOverall is a short top list, so counting those lists under-reports.
+  const consensusCount = data?.consensusCount ?? data?.consensus?.length ?? 0;
+  const firePicksCount = data?.firePickCount ?? (data?.consensus || []).filter(p => p.capperCount >= 3).length;
   const maxAgreement = topOverall.length > 0
     ? Math.max(...topOverall.map(p => p.capperCount))
     : 0;
@@ -104,7 +106,7 @@ function TodayTab({ initialData, sport }: { initialData: unknown; sport?: string
                   (data?.tier !== 'premium' && data?.entitlement !== 'unknown' && (data?.totalConsensusCount ?? 0) > 0) ? (
                     <div className="text-center py-8">
                       <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
-                      <p className="font-semibold">{data?.totalConsensusCount} consensus picks today are Pro</p>
+                      <p className="font-semibold">{data?.totalConsensusCount} consensus {data?.totalConsensusCount === 1 ? 'pick today is' : 'picks today are'} Pro</p>
                       <p className="text-sm text-muted-foreground mt-1 mb-4">The free preview shows today&apos;s top 5 across all sports.</p>
                       <Button asChild><a href="/pricing">See Pro</a></Button>
                     </div>
@@ -294,7 +296,7 @@ export function ConsensusContent({ initialData, initialYesterdayData, sport }: {
               <div className="text-4xl font-bold text-primary">3</div>
               <h3 className="font-semibold">Fire Tags</h3>
               <p className="text-sm text-muted-foreground">
-                Picks with 3+ cappers get a fire tag. 10+ cappers may indicate a fade opportunity.
+                Picks with 3+ cappers get a fire tag. 5+ cappers on one side are listed under Fade The Public as possible heavy public action.
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'All Expert Picks Today - Browse by Sport & Capper | DailyAI Betting',
+  title: 'All Expert Picks Today - Browse by Sport & Capper',
   description:
     'Browse all expert sports picks today from multiple expert cappers. Filter by sport, capper, or bet type. NFL, NBA, MLB, NHL, college picks updated throughout the day.',
   keywords: [

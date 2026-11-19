@@ -80,12 +80,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!capper) {
     return {
-      title: 'Capper Not Found | DailyAI Betting',
+      title: 'Capper Not Found',
     };
   }
 
   return {
-    title: `${capper.name} - ${capper.win_pct}% Win Rate | DailyAI Betting`,
+    title: `${capper.name} - ${capper.win_pct}% Win Rate`,
     description: `${capper.name} betting record: ${capper.record}. ${capper.win_pct}% win rate across ${capper.total_picks} picks. See full pick history and performance by sport.`,
     keywords: `${capper.name} picks, ${capper.name} record, betting handicapper, sports betting expert`,
     alternates: {
@@ -125,9 +125,10 @@ export default async function CapperProfilePage({ params }: PageProps) {
             {isCold && <Snowflake className="h-6 w-6 text-blue-400" />}
           </div>
           <p className="text-muted-foreground">
-            Source: {capper.source}
+            {/* The stats view has no source column for most cappers: don't print an empty label. */}
+            {capper.source ? `Source: ${capper.source}` : null}
             {capper.specialties?.length > 0 && (
-              <span> • {capper.specialties.join(', ')}</span>
+              <span>{capper.source ? ' • ' : ''}{capper.specialties.join(', ')}</span>
             )}
           </p>
         </div>
@@ -198,8 +199,9 @@ export default async function CapperProfilePage({ params }: PageProps) {
             <TrendingUp className="h-5 w-5 text-emerald-400" />
             Last 10 Picks
           </h2>
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1">
+          {/* Wraps on phones: 10 boxes + the percentage overflowed 390px (QA 2026-11-19). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-1">
               {capper.recent_form.split('').map((result, i) => (
                 <span
                   key={i}

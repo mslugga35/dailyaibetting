@@ -138,6 +138,8 @@ export interface ConsensusAPIResponse {
   normalizedCount?: number;
   capperCount?: number;
   consensusCount?: number;
+  /** Fire picks (3+ cappers) in the full list, before the free-tier slice. */
+  firePickCount?: number;
   /** Size of the full consensus list before the free-tier slice. */
   totalConsensusCount?: number;
   tier?: 'free' | 'premium';

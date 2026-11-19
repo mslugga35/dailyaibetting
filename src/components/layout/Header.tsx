@@ -27,6 +27,8 @@ import {
   Crown,
   LogOut,
   User,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { useSubscription } from '@/lib/hooks/use-subscription';
 import { createClient } from '@/lib/supabase/client';
@@ -47,6 +49,14 @@ const navItems = [
   { name: 'Stats', href: '/stats', icon: TrendingUp },
   { name: 'All Picks', href: '/picks', icon: Calendar },
   { name: 'Blog', href: '/blog', icon: BarChart3 },
+];
+
+/** Mobile menu only: pages the desktop header reaches through dropdowns or the footer. */
+const mobileExtraItems = [
+  { name: 'Cappers', href: '/cappers', icon: Users },
+  { name: 'History', href: '/history', icon: Calendar },
+  { name: 'Pricing', href: '/pricing', icon: Crown },
+  { name: 'Responsible Gambling', href: '/responsible-gambling', icon: ShieldCheck },
 ];
 
 export function Header() {
@@ -116,7 +126,7 @@ export function Header() {
                 /* Logged in */
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1.5">
+                    <Button variant="ghost" size="sm" className="gap-1.5" aria-label="Account menu">
                       {isPro ? (
                         <Crown className="h-4 w-4 text-emerald-400" />
                       ) : (
@@ -203,7 +213,7 @@ export function Header() {
                 </div>
 
                 <div className="space-y-1 pt-4 border-t">
-                  {navItems.map((item) => (
+                  {[...navItems, ...mobileExtraItems, ...(user ? [{ name: 'Account', href: '/account', icon: User }] : [])].map((item) => (
                     <Button
                       key={item.name}
                       variant="ghost"

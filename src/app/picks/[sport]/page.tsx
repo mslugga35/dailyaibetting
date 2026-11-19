@@ -72,11 +72,11 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const slug = (await params).sport.toLowerCase() as SportSlug;
   if (!SPORTS.includes(slug)) {
-    return { title: 'Picks Not Found | DailyAI Betting' };
+    return { title: 'Picks Not Found' };
   }
   const meta = SPORT_META[slug];
   return {
-    title: `Free ${meta.label} Picks Today — Expert Predictions | DailyAI Betting`,
+    title: `Free ${meta.label} Picks Today — Expert Predictions`,
     description: meta.description,
     keywords: meta.keywords,
     openGraph: {

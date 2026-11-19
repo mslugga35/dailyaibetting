@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Daily Bets - AI Consensus Sports Picks Today | DailyAI Betting',
+  title: 'Daily Bets - AI Consensus Sports Picks Today',
   description:
     'Today\'s daily bets from AI consensus across multiple expert cappers. Picks for NFL, NBA, MLB, NHL, and college sports update throughout the day. Spreads, moneylines, and totals.',
   keywords: [

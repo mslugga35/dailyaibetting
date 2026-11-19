@@ -5,6 +5,7 @@ import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription'
 import { isAdminUser } from '@/lib/auth/admin';
 import { recordTable, cleanRecordRows } from '@/lib/data/record-source';
 import { getConsensusSource } from '@/lib/data/hb-consensus';
+import { redactResultRows } from '@/lib/data/result-redaction';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -58,6 +59,23 @@ async function countRecord(db: SupabaseClient, sinceDate: string | null) {
   return { wins, losses, total, winPct: total > 0 ? Math.round((wins / total) * 1000) / 10 : 0 };
 }
 
+/**
+ * The pick-by-pick list (team, line, score, cappers) is Pro. Signed-out and free visitors
+ * still get each graded pick's sport, date and result so the public record on /stats can
+ * be counted, but nothing that identifies the pick. Fails closed if the plan can't be read.
+ */
+async function viewerSeesPickDetail(request: Request): Promise<boolean> {
+  if (isCronAuthorized(request)) return true;
+  const user = await resolveUser(request);
+  if (!user) return false;
+  if (isAdminUser(user)) return true;
+  try {
+    return await isPremium(user.id);
+  } catch (err) {
+    if (err instanceof EntitlementUnavailableError) return false;
+    throw err;
+  }
+}
 // GET - Fetch results and performance stats
 export async function GET(request: Request) {
   try {
@@ -108,6 +126,7 @@ export async function GET(request: Request) {
             .limit(50);
           if (sport) query = query.eq('sport', sport);
           ({ data, error } = await query);
+          if (!error && !(await viewerSeesPickDetail(request))) data = redactResultRows(data || []);
           break;
         }
         const rows: unknown[] = [];
@@ -127,7 +146,7 @@ export async function GET(request: Request) {
           rows.push(...(res.data || []));
           if (!res.data || res.data.length < PAGE) break;
         }
-        data = rows;
+        data = (await viewerSeesPickDetail(request)) ? rows : redactResultRows(rows);
         break;
       }
 
