@@ -77,6 +77,7 @@ export async function sendLinkEmail(email: string, actionLink: string, isNew: bo
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: `DailyAI Betting <${from}>`, to: [email], subject, html, text }),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}`);
 }

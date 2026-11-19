@@ -71,12 +71,12 @@ test('route rejects bad input and limits per address before touching Supabase', 
     method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
   });
   assert.equal((await POST(req({ email: 'nope' }, '10.0.0.1'))).status, 400);
-  // 3 per address per hour: the 4th request (from different IPs) is refused without a send.
+  // 3 per address per hour: the 4th request (from different IPs) sends nothing.
   // The first three get past the limit and fail at Supabase (network is blocked in tests) → 502.
   const statuses = [];
   for (const ip of ['10.0.0.2', '10.0.0.3', '10.0.0.4', '10.0.0.5']) statuses.push((await POST(req({ email: 'limit@example.com' }, ip))).status);
-  assert.deepEqual(statuses.slice(0, 3).map((s) => s !== 429), [true, true, true]);
-  assert.equal(statuses[3], 429);
+  // Over the limit the route answers ok without trying to send (no 502 from the blocked network).
+  assert.deepEqual(statuses, [502, 502, 502, 200]);
   // 5 per IP per 15 minutes.
   const ipStatuses = [];
   for (let i = 0; i < 6; i++) ipStatuses.push((await POST(req({ email: `ip${i}@example.com` }, '10.0.0.9'))).status);
