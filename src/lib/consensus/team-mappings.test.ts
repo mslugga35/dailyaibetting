@@ -220,3 +220,13 @@ describe('team-mappings: identifySport', () => {
       `Result is '${result}' (valid either way)`);
   });
 });
+
+describe('team-mappings: "St" abbreviation', () => {
+  test('standardizeTeamName: "Oregon St Beavers" is Oregon State, never Oregon (2026-11-19 daily-bets mix-up)', () => {
+    assert.equal(standardizeTeamName('Oregon St Beavers', 'NCAAB'), 'Oregon State');
+    assert.equal(standardizeTeamName('Oregon Ducks', 'NCAAB'), 'Oregon');
+    assert.equal(standardizeTeamName('Michigan St', 'NCAAB'), 'Michigan State');
+    assert.equal(standardizeTeamName('St Johns', 'NCAAB'), "St. John's", 'a leading "St" is Saint');
+    assert.equal(standardizeTeamName('Mount St Marys', 'NCAAB'), "Mount St. Mary's");
+  });
+});

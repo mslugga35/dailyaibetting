@@ -83,7 +83,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
     if (data.top5MostCommon.length > 0) {
       text += `📊 **MOST COMMON PICKS**\n`;
       data.top5MostCommon.slice(0, 3).forEach((pick) => {
-        text += `• ${pick.sport} | ${pick.bet} — ${pick.frequency}x picked ${pick.isFire ? '🔥' : ''}\n`;
+        text += `• ${pick.sport} | ${pick.bet} — ${pick.frequency} ${pick.frequency === 1 ? 'pick' : 'picks'} from ${pick.capperCount} ${pick.capperCount === 1 ? 'capper' : 'cappers'} ${pick.isFire ? '🔥' : ''}\n`;
       });
       text += `\n`;
     }
@@ -91,7 +91,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
     if (data.twoLegParlays[0]) {
       text += `🎲 **2-LEG PARLAY**\n`;
       data.twoLegParlays[0].forEach(pick => {
-        text += `• ${pick.sport} | ${pick.bet} (${pick.capperCount})\n`;
+        text += `• ${pick.sport} | ${pick.bet} (${pick.capperCount} ${pick.capperCount === 1 ? 'capper' : 'cappers'})\n`;
       });
       text += `\n`;
     }
@@ -324,8 +324,9 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="font-bold">{pick.frequency}x</div>
-                              <div className="text-xs text-muted-foreground">{pick.capperCount} cappers</div>
+                              {/* frequency counts every posting; capperCount counts distinct cappers */}
+                              <div className="font-bold">{pick.frequency} {pick.frequency === 1 ? 'pick' : 'picks'}</div>
+                              <div className="text-xs text-muted-foreground">from {pick.capperCount} {pick.capperCount === 1 ? 'capper' : 'cappers'}</div>
                             </div>
                             {pick.isFire && <span className="text-lg">🔥</span>}
                           </div>

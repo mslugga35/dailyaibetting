@@ -1,6 +1,6 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
-  "src/lib/consensus/team-mappings.test.ts": 35,
+  "src/lib/consensus/team-mappings.test.ts": 36,
   "tests/billing/checkout.test.mjs": 18,
   "tests/billing/entitlement-client.test.mjs": 6,
   "tests/billing/entitlement.test.mjs": 15,

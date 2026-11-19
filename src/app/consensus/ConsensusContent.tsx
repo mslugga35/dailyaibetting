@@ -86,17 +86,22 @@ function TodayTab({ initialData }: { initialData: unknown }) {
                     <Target className="h-5 w-5 text-primary" />
                     Consensus Picks
                   </span>
-                  <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
-                    <Lock className="h-3 w-3" />
-                    Free Preview
-                  </Badge>
+                  {/* Plan unverifiable (outage): no Free/Pro label and no upsell; they may be paying. */}
+                  {data?.entitlement === 'unknown' ? null : data?.tier === 'premium' ? (
+                    <Badge className="gap-1.5 bg-primary/20 text-primary border-primary/30">Pro</Badge>
+                  ) : (
+                    <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-400">
+                      <Lock className="h-3 w-3" />
+                      Free Preview
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {topOverall.length > 0 ? (
                   <ConsensusReport topOverall={topOverall} bySport={bySport} />
                 ) : (
-                  (data?.tier !== 'premium' && (data?.totalConsensusCount ?? 0) > 0) ? (
+                  (data?.tier !== 'premium' && data?.entitlement !== 'unknown' && (data?.totalConsensusCount ?? 0) > 0) ? (
                     <div className="text-center py-8">
                       <Lock className="h-6 w-6 text-primary mx-auto mb-2" />
                       <p className="font-semibold">{data?.totalConsensusCount} consensus picks today are Pro</p>
@@ -197,13 +202,16 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
   }, []);
 
   // Pinned to ET (the site's day boundary) so server and browser render the same date.
-  const today = new Date().toLocaleDateString('en-US', {
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     timeZone: 'America/New_York',
   });
+  const today = fmt(new Date());
+  // The yesterday tab shows yesterday's date (ET), not today's.
+  const yesterday = fmt(new Date(Date.now() - 24 * 60 * 60 * 1000));
 
   return (
     <div className="container px-4 py-8">
@@ -219,7 +227,7 @@ export function ConsensusContent({ initialData, initialYesterdayData }: { initia
               {activeTab === 'today' ? "Today\u0027s Consensus Plays" : "Yesterday\u0027s Results"}
             </h1>
             <p className="text-muted-foreground" suppressHydrationWarning>
-              {today} &middot; Picks where 2+ cappers agree
+              {activeTab === 'today' ? today : yesterday} &middot; Picks where 2+ cappers agree
             </p>
           </div>
         </div>

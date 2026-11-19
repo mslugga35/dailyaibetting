@@ -136,12 +136,15 @@ export default async function HomePage() {
               View All Picks
             </Link>
           </Button>
-          <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
-            <Link href="/pro">
-              <Crown className="h-5 w-5 mr-2" />
-              {offer.plan ? priceCopy.ctaNew : 'See Pro'}
-            </Link>
-          </Button>
+          {/* Members never see the trial pitch; an unverifiable plan sees neither. */}
+          {!entitlementUnknown && (
+            <Button size="lg" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10" asChild>
+              <Link href={isPremium ? '/account' : '/pro'}>
+                <Crown className="h-5 w-5 mr-2" />
+                {isPremium ? 'Your Pro Account' : offer.plan ? priceCopy.ctaNew : 'See Pro'}
+              </Link>
+            </Button>
+          )}
         </div>
         <div className="mt-8 flex flex-col items-center gap-3">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Place your bets at</span>

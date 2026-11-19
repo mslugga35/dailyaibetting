@@ -21,7 +21,7 @@ export default function NBAPicksToday() {
           Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>
         <a 
-          href="/consensus?sport=NBA" 
+          href="/consensus/nba" 
           className="inline-block bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-800"
         >
           View NBA Consensus Picks →

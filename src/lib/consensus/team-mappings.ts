@@ -480,7 +480,21 @@ export function standardizeTeamName(input: string, sport?: string): string {
   const cleanedInput = cleanTeamName(input);
   const cleanInput = normalizeForMatch(cleanedInput);
   const inputWords = cleanInput.split(/\s+/);
-  
+
+  // "Oregon St Beavers" must resolve to Oregon State, not prefix-match "Oregon".
+  // Expand a non-leading "St" to "State" and accept only a "... State" canonical that
+  // the expanded name starts with (leaves "St. John's" / "Mount St. Mary's" alone).
+  const expanded = cleanInput.replace(/(\S)\s+st(?=\s|$)/g, '$1 state');
+  if (expanded !== cleanInput) {
+    for (const sportKey of (sport ? [sport.toUpperCase()] : Object.keys(teamMappings))) {
+      const hit = Object.keys(teamMappings[sportKey] || {})
+        .map((c) => [c, normalizeForMatch(c)] as const)
+        .filter(([, n]) => n.endsWith(' state') && (expanded === n || expanded.startsWith(n + ' ')))
+        .sort((a, b) => b[1].length - a[1].length)[0];
+      if (hit) return hit[0];
+    }
+  }
+
   // Filter to only search relevant sport(s)
   const sportsToSearch = sport ? [sport.toUpperCase()] : Object.keys(teamMappings);
   
