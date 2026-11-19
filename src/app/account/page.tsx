@@ -50,6 +50,9 @@ export default async function AccountPage({
   // Stripe is still billing a past_due customer (retrying the card): not "Free",
   // and the fix is updating the card in the portal, not a second subscription.
   const paymentProblem = !isPremium && sub?.status === 'past_due';
+  // Pro granted by hand (test/comp accounts): no Stripe subscription, so nothing bills,
+  // nothing renews and there is no billing portal to open.
+  const complimentary = isPremium && !sub?.stripeSubscriptionId;
   const justUpgraded = searchParams.upgraded === '1';
   // The plan and amount this subscriber is actually billed (their Stripe Price), not today's offer.
   const billed = sub?.stripeSubscriptionId && (isPremium || paymentProblem)
@@ -130,7 +133,7 @@ export default async function AccountPage({
                 {sub.currentPeriodEnd && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      {sub.cancelAtPeriodEnd ? 'Cancels on' : 'Renews on'}
+                      {complimentary ? 'Access until' : sub.cancelAtPeriodEnd ? 'Cancels on' : 'Renews on'}
                     </span>
                     <span>{new Date(sub.currentPeriodEnd).toLocaleDateString()}</span>
                   </div>
@@ -143,6 +146,13 @@ export default async function AccountPage({
                     : lockTerms}
                 </p>
               )}
+              {complimentary ? (
+                <p className="text-xs text-muted-foreground" data-testid="complimentary-access">
+                  Complimentary Pro access. No card is on file and nothing will be charged, so there
+                  is no billing portal for this account.
+                </p>
+              ) : (
+              <>
               <p className="text-xs text-muted-foreground">
                 {billed?.amount && !sub.cancelAtPeriodEnd
                   ? `Renews every month at ${billed.amount} until you cancel${sub.status === 'trialing' ? ' (first charge when the free trial ends)' : ''}. `
@@ -150,6 +160,8 @@ export default async function AccountPage({
                 {CANCEL_POLICY} <EmailSafeText text={REFUND_NOTE} />
               </p>
               <ManageSubscriptionButton />
+              </>
+              )}
             </>
           ) : paymentProblem ? (
             <>

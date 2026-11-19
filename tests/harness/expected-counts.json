@@ -6,16 +6,18 @@
   "tests/billing/entitlement.test.mjs": 15,
   "tests/billing/founding-pricing.test.mjs": 43,
   "tests/billing/openrouter-budget.test.mjs": 9,
+  "tests/billing/portal-button.test.mjs": 3,
   "tests/billing/stripe-webhook.test.mjs": 42,
   "tests/content/ai-report-status.test.mjs": 6,
   "tests/content/blog-content.test.mjs": 9,
+  "tests/content/email-safe-text.test.mjs": 1,
   "tests/content/marketing-claims.test.mjs": 15,
   "tests/data/bot-record.test.mjs": 1,
+  "tests/data/capper-stats-excluded.test.mjs": 1,
   "tests/data/daily-ai-report-season.test.mjs": 13,
   "tests/data/grade-picks-cron.test.mjs": 4,
   "tests/data/grading.test.mjs": 12,
   "tests/data/hb-consensus.test.mjs": 24,
-  "tests/data/capper-stats-excluded.test.mjs": 1,
   "tests/data/metrics.test.mjs": 11,
   "tests/data/performance.test.mjs": 10,
   "tests/harness-selftest.test.mjs": 27,
@@ -27,6 +29,5 @@
   "tests/security/hardening.test.mjs": 6,
   "tests/security/internal-url.test.mjs": 12,
   "tests/security/middleware.test.mjs": 18,
-  "tests/security/safe-next.test.mjs": 2,
-  "tests/content/email-safe-text.test.mjs": 1
+  "tests/security/safe-next.test.mjs": 2
 }
