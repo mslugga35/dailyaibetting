@@ -88,7 +88,8 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
           <Card>
             <CardContent className="p-4">
               <div className="text-3xl font-bold">
-                {nhlPicks.length > 0 ? Math.max(...nhlPicks.map(p => p.capperCount)) : 0}
+                {/* Only known from visible picks: a dash, not 0, when this sport's picks are all Pro. */}
+                {nhlPicks.length > 0 ? Math.max(...nhlPicks.map(p => p.capperCount)) : '—'}
               </div>
               <div className="text-sm text-muted-foreground">Max Agreement</div>
             </CardContent>
