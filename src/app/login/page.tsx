@@ -28,6 +28,8 @@ function LoginContent() {
   const searchParams = useSearchParams();
   // Shown only once the Google provider is configured in Supabase (build-time flag).
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === 'true';
+  // /signup and "Get Started Free" land here with mode=signup: same form, sign-up wording.
+  const signup = searchParams.get('mode') === 'signup';
 
   useEffect(() => {
     const callbackError = searchParams.get('error');
@@ -87,20 +89,21 @@ function LoginContent() {
       return;
     }
 
-    const supabase = authClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: callbackUrl(),
-      },
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setSent(true);
+    // DailyAI sends the link itself (Supabase's mailer does not deliver; see
+    // src/lib/auth/email-link.ts). A new address gets a free account on first use.
+    try {
+      const res = await fetch('/api/auth/email-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setLoading(false);
+      if (res.ok && data.ok) setSent(true);
+      else setError(data.error || 'We could not send the email right now. Please try again.');
+    } catch {
+      setLoading(false);
+      setError('We could not send the email right now. Please try again.');
     }
   };
 
@@ -112,9 +115,11 @@ function LoginContent() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/20 mx-auto mb-4">
               <Brain className="h-6 w-6 text-emerald-400" />
             </div>
-            <h1 className="text-2xl font-bold">Welcome to DailyAI Betting</h1>
+            <h1 className="text-2xl font-bold">{signup ? 'Create your free account' : 'Welcome to DailyAI Betting'}</h1>
             <p className="text-muted-foreground text-sm mt-2">
-              Sign in to access your Pro subscription and picks
+              {signup
+                ? 'Enter your email and we will send a link to confirm it. No password needed.'
+                : 'Sign in, or create a free account with your email.'}
             </p>
           </div>
 
@@ -125,10 +130,11 @@ function LoginContent() {
               </div>
               <h2 className="text-lg font-semibold">Check your inbox</h2>
               <p className="text-sm text-muted-foreground">
-                We sent a sign-in link to <strong className="text-foreground">{email}</strong>
+                We sent a link to <strong className="text-foreground">{email}</strong>. Open it to
+                {signup ? ' confirm your email and finish creating your account.' : ' sign in. New here? The same link creates your free account.'}
               </p>
               <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
-                <p>The link will expire in 1 hour.</p>
+                <p>The link works once and expires in 24 hours.</p>
                 <p>Check your spam folder if you don&apos;t see it.</p>
               </div>
               <button
@@ -217,6 +223,8 @@ function LoginContent() {
                   </>
                 ) : usePassword ? (
                   'Sign in'
+                ) : signup ? (
+                  'Create free account'
                 ) : (
                   'Continue with Email'
                 )}
@@ -225,7 +233,7 @@ function LoginContent() {
               <p className="text-sm text-muted-foreground text-center">
                 {usePassword
                   ? 'Signing in with the password set on your account.'
-                  : "We'll send you a secure sign-in link. No password required."}
+                  : "We'll email you a secure link. New email addresses get a free account."}
               </p>
               <button
                 type="button"

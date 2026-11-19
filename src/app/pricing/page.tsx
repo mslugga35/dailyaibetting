@@ -88,7 +88,7 @@ export default async function PricingPage() {
             ))}
             {unknown ? null : !user ? (
               <Button variant="outline" className="w-full mt-4" asChild>
-                <Link href="/login">Get Started Free</Link>
+                <Link href="/signup">Get Started Free</Link>
               </Button>
             ) : !isPremium && !unknown ? (
               <Button variant="outline" className="w-full mt-4" disabled>
