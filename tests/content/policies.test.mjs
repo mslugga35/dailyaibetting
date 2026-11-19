@@ -75,3 +75,14 @@ test('owner decisions 2026-11-19: 21+, refunds subject to law, price-change noti
   assert.match(terms, /Founding Member pricing is kept for as long as the founding subscription stays active/);
   assert.match(text(P.PRIVACY), /21 and over/);
 });
+
+test('confirmed operator 2026-11-19: individual trading as DailyAI Betting, DAILYAI descriptor', () => {
+  const ind = withEnv({ POLICY_LEGAL_NAME: 'Matthew Morales', POLICY_GOVERNING_STATE: 'Florida', POLICY_OPERATOR_TYPE: 'individual' }, () => text(P.termsPolicy()));
+  assert.match(ind, /operated by Matthew Morales, an individual, under the business name DailyAI Betting/);
+  assert.match(ind, /"We" and "us" in these terms mean Matthew Morales\./);
+  assert.match(ind, /laws of the State of Florida/);
+  // Without the type flag the operator is not described as an individual.
+  const co = withEnv({ ...OP, POLICY_OPERATOR_TYPE: null }, () => text(P.termsPolicy()));
+  assert.doesNotMatch(co, /, an individual,/);
+  assert.match(text(P.TERMS), /Charges appear on your card statement as DAILYAI\./);
+});

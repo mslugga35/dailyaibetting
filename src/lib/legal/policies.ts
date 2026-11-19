@@ -14,10 +14,12 @@ export const SUPPORT_EMAIL = 'support@dailyaibetting.com';
 export const HELPLINE = '1-800-GAMBLER';
 
 /** The operator's legal name and governing state: owner-confirmed values, set on the server. */
-export function legalOperator(): { name: string; state: string } | null {
+export function legalOperator(): { name: string; state: string; individual: boolean } | null {
   const name = (process.env.POLICY_LEGAL_NAME || '').trim();
   const state = (process.env.POLICY_GOVERNING_STATE || '').trim();
-  return name && state ? { name, state } : null;
+  // POLICY_OPERATOR_TYPE=individual: a person trading as DailyAI Betting (not a company).
+  const individual = (process.env.POLICY_OPERATOR_TYPE || '').trim().toLowerCase() === 'individual';
+  return name && state ? { name, state, individual } : null;
 }
 
 /**
@@ -55,7 +57,7 @@ export const TERMS: Policy = {
       'Keep your sign-in email and password secure; you are responsible for activity on your account. One person per account. We may suspend accounts used for abuse, scraping, reselling picks or getting around free-trial limits.',
     ] },
     { heading: 'DailyAI Pro subscription', paragraphs: [
-      `Pro is a monthly subscription billed through Stripe. The first 100 paying members get the Founding Member price of ${founding}; after those spots are gone, new members pay ${regular}. Members who joined before the founding offer keep the price they signed up at.`,
+      `Pro is a monthly subscription billed through Stripe. The first 100 paying members get the Founding Member price of ${founding}; after those spots are gone, new members pay ${regular}. Members who joined before the founding offer keep the price they signed up at. Charges appear on your card statement as DAILYAI.`,
       'First-time members get a 7-day free trial. Your card is charged at the end of the trial unless you cancel before then, and every month after that until you cancel. One free trial per customer: a payment card that was already used for a DailyAI free trial cannot start another, and that second trial is cancelled right away without a charge.',
       'The Founding Member price stays the same for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment cannot be collected after Stripe\'s retries), the founding price ends with it, and rejoining later is at the regular price.',
       'Cancellation and refunds are covered in the Refund and Cancellation Policy.',
@@ -81,7 +83,9 @@ export function termsPolicy(): Policy {
   return {
     ...TERMS,
     sections: [
-      { heading: 'Who we are', paragraphs: [`DailyAI Betting (dailyaibetting.com) is operated by ${op.name}. "We" and "us" in these terms mean ${op.name}.`] },
+      { heading: 'Who we are', paragraphs: [op.individual
+        ? `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}, an individual, under the business name DailyAI Betting. "We" and "us" in these terms mean ${op.name}.`
+        : `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}. "We" and "us" in these terms mean ${op.name}.`] },
       ...TERMS.sections.slice(0, -1),
       { heading: 'Governing law', paragraphs: [`These terms are governed by the laws of the State of ${op.state}, except where the law where you live gives you rights that cannot be waived.`] },
       TERMS.sections[TERMS.sections.length - 1],
