@@ -151,7 +151,7 @@ export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): Of
       : `${price} (Founding Member price), billed monthly until you cancel.`,
     firstCharge, firstChargeRelative, trialRule,
     renewal: `Renews every month at ${amount} until you cancel. ${CANCEL_POLICY}`,
-    lock: `Your ${amount}/month Founding Member price stays locked for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment can't be collected after Stripe's retries), the founding price ends with it, and rejoining later is at the regular price.`,
+    lock: `Your ${amount}/month Founding Member price stays locked for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment can't be collected after Stripe's retries), the founding price ends with it, and rejoining later is at the regular price of ${formatMonthly(PLANS.regular.cents)}. Once the Founding Member spots are gone, new members pay the regular ${formatMonthly(PLANS.regular.cents)}.`,
     seats,
   };
 }

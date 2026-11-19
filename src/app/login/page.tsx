@@ -31,6 +31,16 @@ function LoginContent() {
   // /signup and "Get Started Free" land here with mode=signup: same form, sign-up wording.
   const signup = searchParams.get('mode') === 'signup';
 
+  // Already signed in: go where the visitor was headed instead of showing the form.
+  useEffect(() => {
+    let cancelled = false;
+    import('@/lib/supabase/client').then(async ({ createClient }) => {
+      const { data } = await createClient().auth.getUser();
+      if (!cancelled && data?.user) window.location.replace(safeNext(searchParams.get('redirect')));
+    }).catch(() => { /* stay on the form */ });
+    return () => { cancelled = true; };
+  }, [searchParams]);
+
   useEffect(() => {
     const callbackError = searchParams.get('error');
     if (callbackError) {

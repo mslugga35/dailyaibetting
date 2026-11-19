@@ -113,7 +113,7 @@ export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusRep
         </section>
       )}
 
-      {/* BY SPORT - Top 3 per sport, skip empty */}
+      {/* BY SPORT - every pick the viewer can see (Free: the free picks; Pro: all), skip empty */}
       {sortedSports.map((sport) => {
         const picks = bySport[sport] || [];
 
@@ -121,7 +121,7 @@ export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusRep
           <section key={sport}>
             <h3 className="font-bold text-accent mb-2">{sport}</h3>
             <div className="space-y-1">
-              {picks.slice(0, 3).map((pick, i) => (
+              {picks.map((pick, i) => (
                 <div key={pick.id || i}>
                   <span className={pick.capperCount >= 3 ? 'text-primary font-medium' : 'text-muted-foreground'}>
                     {formatPick(pick)}
@@ -198,7 +198,7 @@ export function generateConsensusText(
       lines.push('');
       lines.push(sport);
       lines.push('');
-      picks.slice(0, 3).forEach(pick => {
+      picks.forEach(pick => {
         lines.push(formatPick(pick));
       });
     }

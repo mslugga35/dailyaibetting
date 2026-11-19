@@ -224,7 +224,17 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
 
             {/* All Picks Tab */}
             <TabsContent value="all-picks" className="space-y-6">
-              {Object.keys(picksByCapper).length === 0 ? (
+              {Object.keys(picksByCapper).length === 0 && data?.tier === 'free' && totalPicks > 0 ? (
+                // Free tier: the individual picks exist but are Pro-only. Say so instead of
+                // "refresh", which would never show them.
+                <Card className="p-8 text-center" data-testid="all-picks-pro-gate">
+                  <p className="font-medium">Individual capper picks are a Pro feature.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {`${totalPicks.toLocaleString()} picks from today's cappers are in. Free members see the top 5 consensus picks on the Consensus tab.`}
+                  </p>
+                  <Button asChild className="mt-4"><Link href="/pricing">See Pro</Link></Button>
+                </Card>
+              ) : Object.keys(picksByCapper).length === 0 ? (
                 <Card className="p-8 text-center">
                   <p className="text-muted-foreground">No individual picks available yet.</p>
                   <p className="text-sm text-muted-foreground mt-2">

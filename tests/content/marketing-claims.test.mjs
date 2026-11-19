@@ -80,3 +80,26 @@ test('Nov 19: daily-bets promises no player props / MLB analysis and explains mi
   assert.match(s, /data-testid="parlay-odds-note"/);
   assert.match(s, /Odds and payouts are not shown/);
 });
+
+test('Nov 19 Muse follow-ups: $19.99 disclosed, Free All Picks explains the gate, admin text matches the shared writer, /admin resolves', () => {
+  const plans = read(join(ROOT, 'src/lib/pricing/plans.ts'));
+  assert.match(plans, /new members pay the regular \$\{formatMonthly\(PLANS\.regular\.cents\)\}/);
+  assert.match(read(join(ROOT, 'src/app/picks/PicksContent.tsx')), /Individual capper picks are a Pro feature/);
+  const admin = read(join(ROOT, 'src/app/admin/grading/GradingClient.tsx'));
+  assert.doesNotMatch(admin, /Vercel Cron/);
+  assert.match(read(join(ROOT, 'src/app/admin/page.tsx')), /redirect\('\/admin\/grading'\)/);
+  assert.doesNotMatch(read(join(ROOT, 'src/components/picks/ConsensusReport.tsx')), /picks\.slice\(0, 3\)/);
+  assert.match(read(join(ROOT, 'src/app/stats/page.tsx')), /data-testid="overall-roi"/);
+  const bc = read(join(ROOT, 'src/components/ui/breadcrumbs.tsx'));
+  assert.match(bc, /'daily-ai-picks': 'Daily AI Picks'/);
+  assert.match(bc, /'ncaab': 'NCAAB'/);
+});
+
+test('Most Common Bets labels say Over/Under and ML (not one capper\'s raw text)', async () => {
+  const { mostCommonLabel } = await import('../../src/lib/daily-bets/daily-bets-builder.ts');
+  const base = { standardizedTeam: 'Utah Tech Trailblazers/Washington Huskies', team: 'x', originalPick: 'Washington Huskies 156.5' };
+  assert.equal(mostCommonLabel({ ...base, betType: 'UNDER', line: '156.5' }), 'Utah Tech Trailblazers/Washington Huskies Under 156.5');
+  assert.equal(mostCommonLabel({ ...base, standardizedTeam: 'Boston Bruins', betType: 'ML' }), 'Boston Bruins ML');
+  assert.equal(mostCommonLabel({ ...base, standardizedTeam: 'TCU Horned Frogs', betType: 'SPREAD', line: '1.5' }), 'TCU Horned Frogs +1.5');
+  assert.equal(mostCommonLabel({ ...base, standardizedTeam: 'Houston Cougars', betType: 'SPREAD', line: '-1.5' }), 'Houston Cougars -1.5');
+});

@@ -185,7 +185,7 @@ export default function HistoryPage() {
       </div>
 
       {/* Filters & Pick List — Pro only */}
-      <ProGateSection feature="full pick history">
+      <ProGateSection feature="the pick-by-pick list">
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-4">

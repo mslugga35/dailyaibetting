@@ -32,7 +32,7 @@ export function ProGateSection({ children, preview, feature = 'this content' }: 
           </div>
           <h3 className="font-semibold text-lg mb-1">Upgrade to unlock {feature}</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Get full access to detailed stats, the complete pick history, and every consensus pick.
+            Pro adds every consensus pick, results by consensus tier and the pick-by-pick list of the latest 50 graded fire picks.
           </p>
           <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" asChild>
             <Link href={user ? '/pro' : '/login'}>

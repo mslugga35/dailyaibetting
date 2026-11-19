@@ -138,6 +138,17 @@ function byCapperCountDesc(a: ConsensusPick, b: ConsensusPick): number {
 /**
  * Count most common bets (frequency analysis)
  */
+/** "TCU +1.5", "Bruins ML", "Utah Tech/Washington Under 156.5": built from the normalized
+ *  pick, not one capper's raw text (which can omit Over/Under or carry book names). */
+export function mostCommonLabel(pick: NormalizedPick): string {
+  const team = pick.standardizedTeam || pick.team;
+  const bt = String(pick.betType || '').toUpperCase();
+  if (bt === 'ML' || bt === 'MONEYLINE') return `${team} ML`;
+  if (bt === 'OVER' || bt === 'UNDER') return `${team} ${bt === 'OVER' ? 'Over' : 'Under'}${pick.line ? ` ${pick.line}` : ''}`;
+  if (bt === 'SPREAD') return `${team}${pick.line ? ` ${/^\d/.test(pick.line) ? '+' : ''}${pick.line}` : ''}`;
+  return pick.originalPick || team;
+}
+
 export function countMostCommon(normalizedPicks: NormalizedPick[]): MostCommonBet[] {
   const betCounts = new Map<string, {
     count: number;
@@ -155,7 +166,7 @@ export function countMostCommon(normalizedPicks: NormalizedPick[]): MostCommonBe
         count: 0,
         sport: pick.sport,
         matchup: pick.matchup,
-        bet: pick.originalPick,
+        bet: mostCommonLabel(pick),
         cappers: new Set(),
       });
     }

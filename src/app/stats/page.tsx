@@ -135,6 +135,11 @@ export default function StatsPage() {
   const overallWinRate = (totalWins + totalLosses) > 0 
     ? Math.round((totalWins / (totalWins + totalLosses)) * 100) 
     : 0;
+  // Same -110 assumption as the tier ROI: a win pays 0.91u, a loss costs 1u, a push 0.
+  // At -110 the break-even win rate is 52.4%, so a 52% record loses money.
+  const overallRoi = picks.length > 0
+    ? Math.round(((totalWins * 0.91 - totalLosses) / picks.length) * 1000) / 10
+    : 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -175,7 +180,7 @@ export default function StatsPage() {
       ) : (
         <>
           {/* Overall Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="text-3xl font-bold">{picks.length}</div>
@@ -202,10 +207,18 @@ export default function StatsPage() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <div className={`text-3xl font-bold ${overallWinRate >= 52 ? 'text-emerald-400' : overallWinRate < 48 ? 'text-red-400' : 'text-yellow-400'}`}>
+                <div className={`text-3xl font-bold ${overallRoi > 0 ? 'text-emerald-400' : overallWinRate < 48 ? 'text-red-400' : 'text-yellow-400'}`}>
                   {overallWinRate}%
                 </div>
                 <div className="text-xs text-muted-foreground">Win Rate</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center" data-testid="overall-roi">
+                <div className={`text-3xl font-bold ${overallRoi > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {overallRoi > 0 ? '+' : ''}{overallRoi.toFixed(1)}%
+                </div>
+                <div className="text-xs text-muted-foreground">ROI at -110 (est.; break-even 52.4%)</div>
               </CardContent>
             </Card>
           </div>

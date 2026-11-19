@@ -239,11 +239,9 @@ export function GradingClient() {
       <div className="mt-8 p-4 bg-muted/30 rounded-lg text-sm text-muted-foreground">
         <h3 className="font-semibold text-foreground mb-2">How Auto-Grading Works</h3>
         <ul className="list-disc list-inside space-y-1">
-          <li>Fetches completed game scores from ESPN API (free, no auth required)</li>
-          <li>Matches pending picks to games by team name</li>
-          <li>Grades as WIN/LOSS/PUSH based on bet type (ML, Spread, O/U)</li>
-          <li>Runs automatically every 3 hours via Vercel Cron</li>
-          <li>Click "Run Auto-Grader" to manually trigger grading</li>
+          <li>The consensus rows on this page are graded by the shared consensus writer on the server, about once a minute, from final scores (WIN/LOSS/PUSH by bet type).</li>
+          <li>It re-checks a pending row for 14 days; anything older that is still pending needs a reviewed correction (usually a game whose final score was stored on a duplicate game record).</li>
+          <li>&quot;Run Auto-Grader&quot; grades the AI picks and the legacy pick tables. It does not change the rows on this page.</li>
         </ul>
       </div>
     </main>

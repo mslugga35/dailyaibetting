@@ -30,6 +30,13 @@ const routeLabels: Record<string, string> = {
   'advertise': 'Advertise',
   'games': 'Games',
   'blog': 'Blog',
+  'daily-ai-picks': 'Daily AI Picks',
+  'admin': 'Admin',
+  'grading': 'Grading',
+  'stats': 'Stats',
+  'pricing': 'Pricing',
+  'account': 'Account',
+  'nba': 'NBA', 'nfl': 'NFL', 'nhl': 'NHL', 'mlb': 'MLB', 'ncaab': 'NCAAB', 'ncaaf': 'NCAAF', 'wnba': 'WNBA',
 };
 
 interface BreadcrumbsProps {
