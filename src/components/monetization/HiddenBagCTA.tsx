@@ -24,7 +24,7 @@ export function HiddenBagCTA() {
           </div>
           <h3 className="text-2xl font-bold mb-2">Unlock DailyAI Pro</h3>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Get access to individual capper pick detail, the full pick history, and every consensus pick.
+            Get individual capper pick detail, every consensus pick, and graded results for the latest fire picks.
             Join serious bettors who demand more than just consensus.
           </p>
         </div>
@@ -52,9 +52,9 @@ export function HiddenBagCTA() {
             <div className="h-12 w-12 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-3">
               <Clock className="h-6 w-6 text-purple-400" />
             </div>
-            <h4 className="font-semibold mb-1">Full Pick History</h4>
+            <h4 className="font-semibold mb-1">Recent Pick History</h4>
             <p className="text-sm text-muted-foreground">
-              Browse the complete pick-by-pick graded list
+              Graded results for the latest 50 fire picks
             </p>
           </div>
         </div>

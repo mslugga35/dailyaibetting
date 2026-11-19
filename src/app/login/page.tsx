@@ -25,6 +25,9 @@ function LoginContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
   const [password, setPassword] = useState('');
+  // Bot checks for the email-link route: a field people never see, and time on the form.
+  const [website, setWebsite] = useState('');
+  const [shownAt] = useState(() => Date.now());
   const searchParams = useSearchParams();
   // Shown only once the Google provider is configured in Supabase (build-time flag).
   const googleEnabled = process.env.NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED === 'true';
@@ -105,7 +108,7 @@ function LoginContent() {
       const res = await fetch('/api/auth/email-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, next }),
+        body: JSON.stringify({ email, next, website, elapsedMs: Date.now() - shownAt }),
       });
       const data = await res.json().catch(() => ({}));
       setLoading(false);
@@ -198,6 +201,11 @@ function LoginContent() {
                   autoFocus
                   className="w-full px-4 py-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-colors"
                 />
+              </div>
+
+              <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+                <label htmlFor="website">Website</label>
+                <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} />
               </div>
 
               {usePassword && (

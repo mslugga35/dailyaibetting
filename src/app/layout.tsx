@@ -29,6 +29,9 @@ const sairaCondensed = Saira_Condensed({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for per-page opengraph-image files (without this, Next resolved them
+  // against localhost and link previews on social apps were broken).
+  metadataBase: new URL('https://dailyaibetting.com'),
   title: {
     default: "DailyAI Betting - Free AI Sports Betting Picks & Expert Consensus",
     template: "%s | DailyAI Betting",

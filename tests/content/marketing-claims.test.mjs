@@ -64,7 +64,7 @@ test('free vs Pro comparison table matches code gating (no delay/early-access ro
 
 test('Nov 19: no advertised Pro feature that does not exist (MEGA/NUCLEAR alerts, alerts, full history)', async () => {
   const { readFileSync } = await import('node:fs');
-  const files = ['src/app/pricing/page.tsx', 'src/app/account/page.tsx', 'src/app/page.tsx',
+  const files = ['src/app/pricing/page.tsx', 'src/app/account/page.tsx', 'src/app/page.tsx', 'src/app/pro/page.tsx', 'src/app/pro/layout.tsx', 'src/components/monetization/HiddenBagCTA.tsx',
     'src/components/picks/YesterdayResults.tsx', 'src/components/monetization/ComparisonTable.tsx'];
   for (const f of files) {
     const s = readFileSync(new URL(`../../${f}`, import.meta.url), 'utf8');

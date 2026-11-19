@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   description: `Upgrade to DailyAI Pro for unlimited consensus picks, capper pick detail, and the full graded pick history. ${priceLine}`.trim(),
   openGraph: {
     title: 'DailyAI Pro - Premium Betting Picks',
-    description: `Unlimited consensus picks, capper pick detail, and full pick history. ${priceLine}`.trim(),
+    description: `Every consensus pick, capper pick detail, and graded results for the latest fire picks. ${priceLine}`.trim(),
     url: 'https://dailyaibetting.com/pro',
     type: 'website',
     images: [

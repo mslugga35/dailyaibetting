@@ -68,7 +68,7 @@ test('sendLinkEmail posts to Resend and throws on failure or missing config', as
 test('route rejects bad input and limits per address before touching Supabase', async () => {
   const { POST } = await import('../../src/app/api/auth/email-link/route.ts');
   const req = (body, ip) => new Request('https://dailyaibetting.com/api/auth/email-link', {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify({ elapsedMs: 5000, ...body }),
   });
   assert.equal((await POST(req({ email: 'nope' }, '10.0.0.1'))).status, 400);
   // 3 per address per hour: the 4th request (from different IPs) sends nothing.
@@ -81,6 +81,29 @@ test('route rejects bad input and limits per address before touching Supabase', 
   const ipStatuses = [];
   for (let i = 0; i < 6; i++) ipStatuses.push((await POST(req({ email: `ip${i}@example.com` }, '10.0.0.9'))).status);
   assert.equal(ipStatuses[5], 429);
+});
+
+test('bot checks: honeypot or a form filled in under 1.5 s gets ok with no send (never reaches Supabase)', async () => {
+  const { POST } = await import('../../src/app/api/auth/email-link/route.ts');
+  const req = (body, ip) => new Request('https://dailyaibetting.com/api/auth/email-link', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
+  });
+  // A real send attempt fails at Supabase in tests (network blocked) → 502; a bot-trip answers 200 without trying.
+  const cases = [
+    [{ email: 'bot1@example.com', website: 'http://spam', elapsedMs: 9000 }, 200],
+    [{ email: 'bot2@example.com', elapsedMs: 200 }, 200],
+    [{ email: 'bot3@example.com' }, 200],
+    [{ email: 'human@example.com', website: '', elapsedMs: 4000 }, 502],
+  ];
+  let i = 20;
+  for (const [body, want] of cases) {
+    const r = await POST(req(body, `10.1.0.${i++}`));
+    assert.equal(r.status, want, JSON.stringify(body));
+    if (want === 200) assert.deepEqual(await r.json(), { ok: true });
+  }
+  const login = readFileSync(new URL('../../src/app/login/page.tsx', import.meta.url), 'utf8');
+  assert.match(login, /JSON\.stringify\(\{ email, next, website, elapsedMs: Date\.now\(\) - shownAt \}\)/);
+  assert.match(login, /id="website"[^>]*tabIndex=\{-1\}/);
 });
 
 test('login page no longer relies on the Supabase mailer and offers sign-up', () => {

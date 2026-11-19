@@ -30,6 +30,7 @@ const BARE_REDIRECTS = {
 const BARE_REWRITES = {
   'next/server': 'next/server.js',
   'next/navigation': 'next/navigation.js',
+  'next/link': 'next/link.js',
 };
 
 /** Source files replaced by fakes (paths relative to src/, without extension). */

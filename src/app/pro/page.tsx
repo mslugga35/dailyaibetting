@@ -138,7 +138,7 @@ export default function ProPage() {
     { icon: Users, title: 'Individual capper picks', desc: "See each tracked capper's picks and record" },
     { icon: BarChart3, title: 'Detailed stats', desc: 'Tier breakdowns and capper pick detail' },
     { icon: Target, title: 'Unlimited consensus', desc: 'See every consensus pick, not just top 5' },
-    { icon: Clock, title: 'Full pick history', desc: 'Pick-by-pick list with graded results' },
+    { icon: Clock, title: 'Pick history', desc: 'Pick-by-pick graded results for the latest 50 fire picks' },
   ];
 
   return (
@@ -150,7 +150,7 @@ export default function ProPage() {
           Upgrade Your Edge
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          Get the full picture. Unlimited consensus picks, capper pick detail, and the full pick history.
+          Every consensus pick, individual capper pick detail, and graded results for the latest 50 fire picks.
         </p>
       </div>
 
