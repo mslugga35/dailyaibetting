@@ -321,11 +321,18 @@ test('/api/daily-bets (hb): same shared consensus as /api/consensus, never rebui
 
 test('sport pages filter the whole board and keep their sport on client refresh', () => {
   const src = (p) => fs.readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', p), 'utf8');
-  for (const s of ['mlb', 'nhl', 'cbb', 'cfb']) {
-    const page = src(`src/app/${s}-picks-today/page.tsx`);
-    assert.match(page, /Picks = consensus\.filter\(/, s);
-    assert.doesNotMatch(page, /topOverall\.filter\(/, s);
+  for (const [s, U] of [['mlb', 'MLB'], ['cbb', 'NCAAB'], ['cfb', 'NCAAF']]) {
+    assert.match(src(`src/app/${s}-picks-today/page.tsx`), new RegExp(`<SportPicksToday sport="${U}"`), s);
   }
+  // NFL / NBA / NHL use the shared component, which asks the API for its sport (QA 2026-11-19).
+  const shared = src('src/components/picks/SportPicksToday.tsx');
+  assert.match(shared, /useConsensus\(\{ sport \}\)/);
+  assert.match(shared, /consensus\.filter\(p => p\.sport === sport\)/);
+  for (const [s, U] of [['nfl', 'NFL'], ['nba', 'NBA'], ['nhl', 'NHL']]) {
+    assert.match(src(`src/app/${s}-picks-today/page.tsx`), new RegExp(`<SportPicksToday sport="${U}"`), s);
+  }
+  assert.match(src('src/app/picks/[sport]/page.tsx'), /<PicksContent initialData=\{data\} sport=\{meta\.upper\} \/>/);
+  assert.match(src('src/app/picks/PicksContent.tsx'), /useConsensus\(\{ initialData: initialData as never, sport \}\)/);
   assert.match(src('src/app/consensus/[sport]/page.tsx'), /<ConsensusContent [^>]*sport=\{meta\.upper\}/);
   const cc = src('src/app/consensus/ConsensusContent.tsx');
   assert.match(cc, /useConsensus\(\{ date: 'today', sport,/);

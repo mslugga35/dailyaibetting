@@ -11,7 +11,7 @@ import Link from 'next/link';
 export function FreeSportsPicksContent({ initialData }: { initialData: unknown }) {
   const { topOverall, isLoading, error, refetch, data } = useConsensus({ initialData: initialData as never });
 
-  const firePicks = topOverall.filter(p => p.capperCount >= 3);
+  const firePicks = topOverall.filter(p => p.isFire);
   const sportCounts: Record<string, number> = {};
   topOverall.forEach(p => {
     sportCounts[p.sport] = (sportCounts[p.sport] || 0) + 1;

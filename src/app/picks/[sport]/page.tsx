@@ -152,7 +152,7 @@ export default async function SportPicksPage({ params }: PageProps) {
           ))}
         </div>
       </div>
-      <PicksContent initialData={data} />
+      <PicksContent initialData={data} sport={meta.upper} />
     </>
   );
 }

@@ -69,7 +69,7 @@ export default async function HomePage() {
   // server's aggregate, not from the (possibly truncated) list.
   const firePicksCount: number = typeof data?.firePickCount === 'number'
     ? data.firePickCount
-    : topOverall.filter((p: { capperCount: number }) => p.capperCount >= 3).length;
+    : topOverall.filter((p: { isFire: boolean }) => p.isFire).length;
   const isPremium = data?.tier === 'premium';
   // The plan could not be verified (outage): show neither Premium nor an upgrade pitch.
   const entitlementUnknown = data?.entitlement === 'unknown';
@@ -109,7 +109,8 @@ export default async function HomePage() {
             <Trophy className="h-4 w-4 text-emerald-400" aria-hidden="true" />
             <span className="text-sm">
               <span className="font-mono font-bold tabular-nums text-emerald-400">{trackRecord.winPct?.toFixed(1)}% win rate</span>
-              <span className="text-muted-foreground"> on {trackRecord.decided.toLocaleString()} graded fire picks (3+ cappers)</span>
+              {/* "Graded" = W + L + P everywhere (same total as /stats); win rate excludes pushes. */}
+              <span className="text-muted-foreground" data-testid="home-graded"> on {(trackRecord.decided + trackRecord.pushes).toLocaleString()} graded fire picks (3+ cappers): {trackRecord.wins.toLocaleString()}-{trackRecord.losses.toLocaleString()}-{trackRecord.pushes.toLocaleString()}, pushes not counted in the win rate</span>
               {estRoiAt110(trackRecord) != null && (
                 <span className="text-muted-foreground" data-testid="home-roi">
                   {' · '}est. ROI {estRoiAt110(trackRecord)! > 0 ? '+' : ''}{estRoiAt110(trackRecord)!.toFixed(1)}% at -110 odds

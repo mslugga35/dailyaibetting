@@ -46,7 +46,14 @@ async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.consensus || []).filter((p: ConsensusPick) => p.is_fire || p.capper_count >= 3);
+    // /api/consensus returns camelCase picks; isFire already applies the opposite-sides rule.
+    type ApiPick = { bet: string; betType: string; line?: string; sport: string; capperCount: number; cappers: string[]; isFire: boolean };
+    return (data.consensus || [])
+      .filter((p: ApiPick) => p.isFire === true)
+      .map((p: ApiPick): ConsensusPick => ({
+        team: p.line && p.bet.endsWith(p.line) ? p.bet.slice(0, -p.line.length).trim() : p.bet,
+        pick_type: p.betType, line: p.line ?? '', sport: p.sport, capper_count: p.capperCount, cappers: p.cappers || [], is_fire: true,
+      }));
   } catch {
     return [];
   }
@@ -55,7 +62,7 @@ async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
 async function generateRecapPost(picks: ConsensusPick[], dateStr: string): Promise<string> {
 
   const sports = [...new Set(picks.map((p) => p.sport))].join(', ');
-  const fireCount = picks.filter((p) => p.capper_count >= 3).length;
+  const fireCount = picks.filter((p) => p.is_fire).length;
   const topPicks = picks.slice(0, 8);
 
   const picksText = topPicks
@@ -136,7 +143,7 @@ export async function GET(req: NextRequest) {
   }
 
   const sports = [...new Set(picks.map((p) => p.sport))];
-  const fireCount = picks.filter((p) => p.capper_count >= 3).length;
+  const fireCount = picks.filter((p) => p.is_fire).length;
   const title = `AI Sports Picks Today (${dateStr}) — ${fireCount} Fire Consensus Picks`;
   const excerpt = `Today's AI-powered consensus picks: ${fireCount} fire picks where 3+ expert cappers agree across ${sports.join(', ')}. Updated ${dateStr}.`;
   const tags = [

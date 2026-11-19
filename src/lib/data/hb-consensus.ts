@@ -16,6 +16,7 @@
  * DailyAI within writer interval (60 s) + 30 s.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { resolveFireConflicts } from '@/lib/consensus/fire-conflicts';
 import type { BetType, ConsensusPick, NormalizedPick } from '../consensus/consensus-builder';
 
 export type ConsensusSource = 'hb' | 'legacy';
@@ -207,7 +208,9 @@ export async function fetchHbConsensus(
   if (valid.some((d) => d >= etDate(opts.now ?? new Date()))) await assertWriterFresh(opts.db, opts.now);
   const min = clampMin(opts.minCappers);
   const sport = opts.sport && opts.sport.toLowerCase() !== 'all' ? opts.sport.toLowerCase() : null;
-  return (await loadDates(valid, opts.db))
+  // Conflicts are resolved over the whole day BEFORE any sport / minCappers filter, so the
+  // opposite side of a game is always seen (owner decision 2026-11-19).
+  return resolveFireConflicts(await loadDates(valid, opts.db))
     .filter((r) => r.capper_count >= min && (!sport || r.sport === sport))
     .sort(compareLiveRows);
 }
@@ -253,7 +256,8 @@ export function toConsensusPick(r: HbConsensusRow): SharedConsensusPick {
     line,
     capperCount: r.capper_count,
     cappers: [...r.capper_names],
-    isFire: r.capper_count >= 3,
+    // Fire = 3+ cappers AND not out-voted by fire picks on the other side of the same game.
+    isFire: r.is_fire,
     confidence: Math.min(r.capper_count / 10, 1),
     groupKey: r.group_key,
     market: r.market,

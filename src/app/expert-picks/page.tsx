@@ -14,7 +14,7 @@ export default function ExpertPicksPage() {
   // Expert picks = picks with 2+ cappers agreeing, sorted by capper count
   const expertPicks = topOverall.filter(p => p.capperCount >= 2).sort((a, b) => b.capperCount - a.capperCount);
   const premiumPicks = expertPicks.filter(p => p.capperCount >= 4);
-  const firePicks = expertPicks.filter(p => p.capperCount >= 3);
+  const firePicks = expertPicks.filter(p => p.isFire);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

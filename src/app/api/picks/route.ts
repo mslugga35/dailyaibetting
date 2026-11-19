@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllPicksFromSources } from '@/lib/data/google-sheets';
 import { normalizePicks } from '@/lib/consensus/consensus-builder';
+import { cleanFeedPicks } from '@/lib/data/feed-clean';
 import { getTodayET } from '@/lib/utils/date';
 import { rateLimitGuard, parseIntParam, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
@@ -41,7 +42,8 @@ export async function GET(request: Request) {
     const rawPicks = await getAllPicksFromSources();
 
     // Normalize picks
-    let normalizedPicks = normalizePicks(rawPicks);
+    // Strip prices / sportsbook names / status words from team text and drop non-picks.
+    let normalizedPicks = cleanFeedPicks(normalizePicks(rawPicks));
 
     // Apply filters
     if (sport && sport !== 'ALL') {

@@ -45,13 +45,14 @@ export async function body(res) {
 /** A signed-in user, via Bearer token (the implicit-flow path resolveUser supports). */
 export function bearerUser(id = 'user_paid_1', email = `${id}@example.test`, extra = {}) {
   const token = `jwt_${id}`;
-  harness().bearerUsers.set(token, { id, email, ...extra });
+  // Signed-up users have a confirmed email (checkout requires one); pass email_confirmed_at: null to test an unconfirmed account.
+  harness().bearerUsers.set(token, { id, email, email_confirmed_at: '2026-11-01T00:00:00Z', ...extra });
   return { id, email, headers: { Authorization: `Bearer ${token}` } };
 }
 
 /** A signed-in user via the session cookie (createServerSupabaseClient path). */
 export function cookieUser(id = 'user_cookie_1', email = `${id}@example.test`, extra = {}) {
-  harness().cookieUser = { id, email, ...extra };
+  harness().cookieUser = { id, email, email_confirmed_at: '2026-11-01T00:00:00Z', ...extra };
   return { id, email };
 }
 

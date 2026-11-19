@@ -129,45 +129,19 @@ export async function POST(request: Request) {
     const user = await resolveUser(request);
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://dailyaibetting.com';
 
-    // --- Guest checkout: pay first, account created by the webhook afterward ---
+    // Owner decision 2026-11-19: checkout (and with it a Founding seat hold) needs a signed-in
+    // account with a confirmed email. Anonymous "guest" checkout is off regardless of
+    // GUEST_CHECKOUT_ENABLED, so visitors cannot reserve seats without an account.
     if (!user) {
-      if (!isGuestCheckoutEnabled()) {
-        return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-      }
-      // B10: each guest attempt creates/looks up a Stripe customer; cap it per client.
-      const limited = rateLimitGuard(request, 5, 10 * 60_000, 'guest-checkout');
-      if (limited) return limited;
-      const guestEmail = String(body?.guestEmail || '').trim().toLowerCase();
-      if (!isValidGuestEmail(guestEmail)) {
-        return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
-      }
-      // ...and per email, so rotating IPs cannot spray Stripe customers for one address.
-      const emailKey = guestEmail.replace(/\+[^@]*(?=@)/, ''); // a+1@x and a+2@x share one budget
-      if (isRateLimited(`guest-checkout-email:${emailKey}`, 3, 60 * 60_000)) {
-        return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
-      }
-      const customerId = await findOrCreateStripeCustomer(stripe, guestEmail);
-      // Block a repeat checkout on a customer that's already paying — prevents
-      // stacking duplicate subscriptions (double-charge) on the same card.
-      if (await hasActiveSubscription(stripe, customerId)) {
-        return NextResponse.json({ error: 'This email already has an active subscription' }, { status: 400 });
-      }
-      // The free trial is for first-time subscribers only.
-      return await createCheckout({
-        customerId,
-        userId: null,
-        guestEmail,
-        // One trial per person: this customer, and every other customer with this email.
-        trialEligible: !(await hasEverSubscribed(stripe, customerId)) && !(await hasEverSubscribedByEmail(stripe, guestEmail)),
-        successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}&guest=1`,
-        cancelUrl: `${baseUrl}/pro`,
-        expectedCents: parseExpectedCents(body?.expectedCents),
-      });
+      return NextResponse.json({ error: 'Sign in to start your free trial.', signIn: true }, { status: 401 });
+    }
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({ error: 'Confirm your email address before subscribing.' }, { status: 403 });
     }
 
     // Signed-in users: cap checkout attempts per account (each can create a Stripe session).
     if (isRateLimited(`checkout-user:${user.id}`, 10, 10 * 60_000)) {
-      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': '600' } });
     }
 
     const db = getSupabaseAdmin();

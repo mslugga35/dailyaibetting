@@ -104,7 +104,7 @@ export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusRep
           <div className="space-y-1">
             {topOverall.slice(0, 5).map((pick, i) => (
               <div key={pick.id || i}>
-                <span className={pick.capperCount >= 3 ? 'text-primary font-medium' : ''}>
+                <span className={pick.isFire ? 'text-primary font-medium' : ''}>
                   {formatPick(pick)}
                 </span>
               </div>
@@ -123,7 +123,7 @@ export function ConsensusReport({ topOverall, bySport, timestamp }: ConsensusRep
             <div className="space-y-1">
               {picks.map((pick, i) => (
                 <div key={pick.id || i}>
-                  <span className={pick.capperCount >= 3 ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                  <span className={pick.isFire ? 'text-primary font-medium' : 'text-muted-foreground'}>
                     {formatPick(pick)}
                   </span>
                 </div>

@@ -1,7 +1,7 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
   "src/lib/consensus/team-mappings.test.ts": 36,
-  "tests/billing/checkout.test.mjs": 18,
+  "tests/billing/checkout.test.mjs": 14,
   "tests/billing/entitlement-client.test.mjs": 6,
   "tests/billing/entitlement.test.mjs": 15,
   "tests/billing/founding-pricing.test.mjs": 44,
@@ -28,9 +28,10 @@
   "tests/security/daily-bets.test.mjs": 7,
   "tests/security/email-link.test.mjs": 8,
   "tests/security/free-tier-enum.test.mjs": 2,
-  "tests/security/hardening.test.mjs": 6,
+  "tests/security/hardening.test.mjs": 5,
   "tests/security/internal-url.test.mjs": 12,
   "tests/security/middleware.test.mjs": 18,
   "tests/security/safe-next.test.mjs": 3,
-  "tests/content/qa-nov19-fixes.test.mjs": 7
+  "tests/content/qa-nov19-fixes.test.mjs": 7,
+  "tests/content/launch-fixes-nov19b.test.mjs": 9
 }

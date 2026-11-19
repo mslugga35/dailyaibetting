@@ -157,9 +157,10 @@ export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): Of
 }
 
 /**
- * Seat counter wording. "Spots left" counts only PAID founding memberships; seats held
- * by an open checkout or an unpaid free trial are named separately (they are released
- * if the checkout is abandoned or the trial ends without payment).
+ * Seat counter wording. The number shown is the same "remaining" the API and checkout use
+ * (cap minus paid minus live holds), so pages never contradict /api/pricing/offer
+ * (QA 2026-11-19: "100 of 100 left, 1 held" vs remaining 99). Seats held by an open checkout
+ * or an unpaid trial are named separately: they reopen if not paid. Only paid seats are permanent.
  */
 export function foundingSeatsCopy(f: { cap: number; remaining: number | null; soldOut: boolean; paid?: number | null }): string {
   // Callers that do not pass `paid` (older shape): every taken seat counts as paid.
@@ -168,8 +169,9 @@ export function foundingSeatsCopy(f: { cap: number; remaining: number | null; so
   const left = Math.max(0, f.cap - paid);
   if (left === 0) return `All ${f.cap} Founding Member spots are taken.`;
   const held = Math.max(0, left - f.remaining);
-  const base = `${left} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`;
+  const base = `${f.remaining} of ${f.cap} Founding Member spots left (limited to the first ${f.cap} paying members).`;
   if (held === 0) return base;
-  if (f.soldOut) return `${base} All of them are held right now by members in checkout or in their free trial; a spot reopens if one is not paid.`;
-  return `${base} ${held} of these ${held === 1 ? 'is' : 'are'} held by members in checkout or in their free trial.`;
+  const reserved = `${held} ${held === 1 ? 'spot is' : 'spots are'} reserved by members in checkout or a free trial and ${held === 1 ? 'reopens' : 'reopen'} if not paid.`;
+  if (f.remaining === 0) return `No Founding Member spots are open right now. ${reserved}`;
+  return `${base} ${reserved}`;
 }

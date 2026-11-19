@@ -15,6 +15,8 @@ export interface DailyBetPick {
   matchup: string;
   bet: string;
   capperCount: number;
+  /** 3+ cappers and not out-voted on the other side of the same game. */
+  isFire: boolean;
 }
 
 export function toDailyBetPick(pick: ConsensusPick): DailyBetPick {
@@ -24,6 +26,7 @@ export function toDailyBetPick(pick: ConsensusPick): DailyBetPick {
     matchup: pick.matchup,
     bet: pick.bet,
     capperCount: pick.capperCount,
+    isFire: pick.isFire,
   };
 }
 
@@ -286,7 +289,7 @@ export function generateBigMoneyParlays(
   const parlays: BigMoneyParlay[] = [];
 
   // Only show big money parlays on exceptional days
-  const firePicks = consensus.filter(p => p.capperCount >= 3);
+  const firePicks = consensus.filter(p => p.isFire);
   const strongPicks = consensus.filter(p => p.capperCount >= 5);
 
   // Requirements for big money parlays:
@@ -337,7 +340,7 @@ export function generateBigMoneyParlays(
  */
 export function generateLadderPick(consensus: ConsensusPick[]): LadderPick | null {
   const mlPicks = consensus
-    .filter(p => p.betType === 'ML' && p.capperCount >= 3)
+    .filter(p => p.betType === 'ML' && p.isFire)
     .sort(byCapperCountDesc);
 
   if (mlPicks.length === 0) return null;
@@ -436,7 +439,7 @@ export function buildDailyBets(
   const top5MostCommon = countMostCommon(normalizedPicks).slice(0, 5);
 
   // Fire picks: every consensus pick today with 3+ cappers (not just the top five)
-  const firePicks = consensus.filter(p => p.capperCount >= 3);
+  const firePicks = consensus.filter(p => p.isFire);
 
   // 2-leg parlays (multiple combinations)
   const twoLegParlays: DailyBetPick[][] = [];

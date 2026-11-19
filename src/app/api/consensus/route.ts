@@ -188,7 +188,7 @@ export async function GET(request: Request) {
       capperCount,
       consensusCount: consensus.length,
       // Aggregate count only (no pick details), so the free tier can show the true number.
-      firePickCount: consensus.filter(p => p.capperCount >= 3).length,
+      firePickCount: consensus.filter(p => p.isFire).length,
       consensus: responseConsensus,
       topOverall: responseTopOverall,
       bySport: responseBySport,
@@ -240,9 +240,14 @@ async function handleHbToday(sport: string | null, minCappers: number, userIsPre
   const consensus = filtered.map(toConsensusPick);
   // Top lists and the sport groups shown on a page come from that page's sport only.
   const formatted = sportRequested(sport) ? formatConsensusOutput(consensus) : formattedAll;
-  const allPicks = toNormalizedPicks(rows);
+  // A sport page counts that sport's picks and cappers only (QA 2026-11-19: /picks/nba
+  // showed the all-sport pick and capper totals). Insights still read the whole board.
+  const boardPicks = toNormalizedPicks(rows);
+  const allPicks = sportRequested(sport)
+    ? toNormalizedPicks(rows.filter((r) => matchesSport(r.sport, sport)))
+    : boardPicks;
   const picksByCapper = groupPicksByCapper(allPicks);
-  const insights = buildInsights(all, allPicks);
+  const insights = buildInsights(all, boardPicks);
 
   const freeIds = freePickIds(formattedAll.filteredConsensus);
   const isFree = (p: { id: string }) => freeIds.has(p.id);
@@ -255,7 +260,7 @@ async function handleHbToday(sport: string | null, minCappers: number, userIsPre
     normalizedCount: allPicks.length,
     capperCount: Object.keys(picksByCapper).length,
     consensusCount: consensus.length,
-    firePickCount: consensus.filter((p) => p.capperCount >= 3).length,
+    firePickCount: consensus.filter((p) => p.isFire).length,
     consensus: userIsPremium ? consensus : consensus.filter(isFree),
     topOverall: userIsPremium ? formatted.topOverall : formatted.topOverall.filter(isFree),
     bySport: userIsPremium ? formatted.bySport : Object.fromEntries(
@@ -293,7 +298,7 @@ async function handleHbYesterday(sport: string | null, minCappers: number, userI
   const losses = graded.filter((p) => p.result === 'L').length;
   const pushes = graded.filter((p) => p.result === 'P').length;
   const winRate = wins + losses > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
-  const fireGraded = graded.filter((p) => p.capperCount >= 3);
+  const fireGraded = graded.filter((p) => p.isFire);
   const fireWins = fireGraded.filter((p) => p.result === 'W').length;
   const fireLosses = fireGraded.filter((p) => p.result === 'L').length;
   const fireWinRate = fireWins + fireLosses > 0 ? Math.round((fireWins / (fireWins + fireLosses)) * 100) : 0;
@@ -367,7 +372,7 @@ async function handleYesterday(sport: string | null, minCappers: number, userIsP
     const winRate = graded.length > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
 
     // Fire picks stats
-    const fireGraded = gradedConsensus.filter(p => p.result !== null && p.capperCount >= 3);
+    const fireGraded = gradedConsensus.filter(p => p.result !== null && p.isFire);
     const fireWins = fireGraded.filter(p => p.result === 'W').length;
     const fireLosses = fireGraded.filter(p => p.result === 'L').length;
     const fireWinRate = fireGraded.length > 0 ? Math.round((fireWins / (fireWins + fireLosses)) * 100) : 0;

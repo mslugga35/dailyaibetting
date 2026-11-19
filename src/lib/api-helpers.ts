@@ -109,7 +109,23 @@ export function getClientIp(request: Request): string {
  * Returns a 429 JSON response when the client IP exceeds `max` requests per
  * `windowMs`, otherwise null (caller proceeds normally).
  */
-export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, scope = ''): NextResponse | null {
+function tooMany(windowMs: number): NextResponse {
+  return NextResponse.json({ success: false, error: 'Too many requests. Please wait a minute and try again.' }, {
+    status: 429, headers: { 'Retry-After': String(Math.ceil(windowMs / 1000)) },
+  });
+}
+
+/** Per-route bucket name when the caller gives none: "/api/cappers" and "/api/results" no longer share one. */
+function routeScope(request: Request): string {
+  try { return new URL(request.url).pathname.replace(/\/+$/, '') || '/'; } catch { return 'unknown-route'; }
+}
+
+/**
+ * Default: 60 requests per minute per client IP, counted PER ROUTE (QA 2026-11-19: one 30/min
+ * bucket shared by every public API let one visitor, or several people behind one shared IP,
+ * lock themselves out of the whole site's data for a minute).
+ */
+export function rateLimitGuard(request: Request, max = 60, windowMs = 60_000, scope = ''): NextResponse | null {
   // Server-rendered pages call these APIs on the visitor's behalf; that render is
   // not the visitor's own API traffic, so it must not spend the per-IP budget
   // (a crawler or an active reader would otherwise get blank pages / 404s).
@@ -120,17 +136,15 @@ export function rateLimitGuard(request: Request, max = 30, windowMs = 60_000, sc
   // looping page loads cannot drive unbounded upstream (Sheets/ESPN/DB) work.
   if (!scope.includes('checkout') && isInternalSsrRequest(request)) {
     // (no IP at all shares one bucket rather than going unlimited)
-    if (isRateLimited(`ssr:${scope}:${getClientIp(request)}`, Math.max(max * 8, 240), windowMs)) {
-      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    if (isRateLimited(`ssr:${scope || routeScope(request)}:${getClientIp(request)}`, Math.max(max * 8, 240), windowMs)) {
+      return tooMany(windowMs);
     }
     return null;
   }
   // `scope` gives a route its own counter, so a strict limit (e.g. guest checkout)
   // is not consumed by, and does not consume, another route's budget.
-  const key = scope ? `${scope}:${getClientIp(request)}` : getClientIp(request);
-  if (isRateLimited(key, max, windowMs)) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
-  }
+  const key = `${scope || routeScope(request)}:${getClientIp(request)}`;
+  if (isRateLimited(key, max, windowMs)) return tooMany(windowMs);
   return null;
 }
 

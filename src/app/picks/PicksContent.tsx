@@ -10,14 +10,15 @@ import { AllPicksByCapper } from '@/components/picks/AllPicksByCapper';
 import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import Link from 'next/link';
 
-export function PicksContent({ initialData }: { initialData: unknown }) {
-  const { topOverall, bySport, picksByCapper, allPicks, isLoading, error, refetch, data, normalizedCount, capperCount: apiCapperCount } = useConsensus({ initialData: initialData as never });
+/** sport: e.g. "NBA" on /picks/nba, so a client refresh keeps asking for that sport only. */
+export function PicksContent({ initialData, sport }: { initialData: unknown; sport?: string }) {
+  const { topOverall, bySport, picksByCapper, allPicks, isLoading, error, refetch, data, normalizedCount, capperCount: apiCapperCount } = useConsensus({ initialData: initialData as never, sport });
 
   const totalPicks = data?.totalPicks || 0;
   // Full-board totals from the API (free visitors only receive a preview slice of the list).
   const consensusCount = data?.consensusCount ?? data?.consensus?.length ?? 0;
   const capperCount = apiCapperCount || Object.keys(picksByCapper).length;
-  const firePicks = (data?.consensus || []).filter(p => p.capperCount >= 3);
+  const firePicks = (data?.consensus || []).filter(p => p.isFire);
   const allPicksCount = normalizedCount || allPicks.length;
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -186,13 +187,13 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
                       <div
                         key={pick.id || idx}
                         className={`flex items-center justify-between p-4 rounded-lg border ${
-                          pick.capperCount >= 3 ? 'bg-orange-500/5 border-orange-500/30' : 'bg-muted/30'
+                          pick.isFire ? 'bg-orange-500/5 border-orange-500/30' : 'bg-muted/30'
                         }`}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline">{pick.sport}</Badge>
-                            {pick.capperCount >= 3 && (
+                            {pick.isFire && (
                               <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                             )}
                           </div>
@@ -206,7 +207,7 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
                           </div>
                         </div>
                         <div className="text-center">
-                          <div className={`text-2xl font-bold ${pick.capperCount >= 3 ? 'text-orange-500' : 'text-primary'}`}>
+                          <div className={`text-2xl font-bold ${pick.isFire ? 'text-orange-500' : 'text-primary'}`}>
                             {pick.capperCount}
                           </div>
                           <div className="text-xs text-muted-foreground">cappers</div>
@@ -270,20 +271,20 @@ export function PicksContent({ initialData }: { initialData: unknown }) {
                           <div
                             key={pick.id || idx}
                             className={`flex items-center justify-between p-3 rounded-lg ${
-                              pick.capperCount >= 3 ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-muted/50'
+                              pick.isFire ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-muted/50'
                             }`}
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{pick.bet}</span>
-                                {pick.capperCount >= 3 && (
+                                {pick.isFire && (
                                   <span>{getFireEmoji(pick.capperCount)}</span>
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">{pick.matchup}</div>
                             </div>
                             <div className="text-right">
-                              <div className={`text-xl font-bold ${pick.capperCount >= 3 ? 'text-orange-500' : ''}`}>
+                              <div className={`text-xl font-bold ${pick.isFire ? 'text-orange-500' : ''}`}>
                                 {pick.capperCount}
                               </div>
                               <div className="text-xs text-muted-foreground">cappers</div>

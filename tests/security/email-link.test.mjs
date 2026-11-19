@@ -77,10 +77,13 @@ test('route rejects bad input and limits per address before touching Supabase', 
   for (const ip of ['10.0.0.2', '10.0.0.3', '10.0.0.4', '10.0.0.5']) statuses.push((await POST(req({ email: 'limit@example.com' }, ip))).status);
   // Over the limit the route answers ok without trying to send (no 502 from the blocked network).
   assert.deepEqual(statuses, [502, 502, 502, 200]);
-  // 5 per IP per 15 minutes.
+  // 10 per IP per 15 minutes (shared household/office IPs), with Retry-After on the 11th.
   const ipStatuses = [];
-  for (let i = 0; i < 6; i++) ipStatuses.push((await POST(req({ email: `ip${i}@example.com` }, '10.0.0.9'))).status);
-  assert.equal(ipStatuses[5], 429);
+  let last;
+  for (let i = 0; i < 11; i++) { last = await POST(req({ email: `ip${i}@example.com` }, '10.0.0.9')); ipStatuses.push(last.status); }
+  assert.equal(ipStatuses.slice(0, 10).includes(429), false);
+  assert.equal(ipStatuses[10], 429);
+  assert.equal(last.headers.get('Retry-After'), '900');
 });
 
 test('bot checks: honeypot or a form filled in under 1.5 s gets ok with no send (never reaches Supabase)', async () => {

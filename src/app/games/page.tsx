@@ -42,7 +42,7 @@ export default function GamesPage() {
         const existing = gameMap.get(slug);
         if (existing) {
           existing.pickCount++;
-          if (pick.capperCount >= 3) existing.firePickCount++;
+          if (pick.isFire) existing.firePickCount++;
           existing.maxCappers = Math.max(existing.maxCappers, pick.capperCount);
         } else {
           gameMap.set(slug, {
@@ -51,7 +51,7 @@ export default function GamesPage() {
             team2,
             sport: pick.sport,
             pickCount: 1,
-            firePickCount: pick.capperCount >= 3 ? 1 : 0,
+            firePickCount: pick.isFire ? 1 : 0,
             maxCappers: pick.capperCount,
           });
         }

@@ -450,8 +450,8 @@ test('a former $20 subscriber who cancelled may join at $9.99 while seats remain
   assert.equal(s.subscription_data.trial_period_days, undefined, 'already had a trial');
 });
 
-test('one trial per person: another Stripe customer with the same email already subscribed → no trial (signed-in and guest)', async () => {
-  setup({ env: { ...FOUNDING_ENV, GUEST_CHECKOUT_ENABLED: 'true' } });
+test('one trial per person: another Stripe customer with the same email already subscribed → no trial', async () => {
+  setup({ env: FOUNDING_ENV });
   seatRpc();
   const h = harness();
   const old = h.stripe.addCustomer({ email: 'twice@example.test' });
@@ -459,15 +459,6 @@ test('one trial per person: another Stripe customer with the same email already 
   const u = bearerUser('u_twice', 'twice@example.test'); // signed-in path creates a NEW customer
   assert.equal((await checkout({ headers: u.headers })).status, 200);
   assert.equal(h.stripe.sessions[0].subscription_data.trial_period_days, undefined);
-
-  setup({ env: { ...FOUNDING_ENV, GUEST_CHECKOUT_ENABLED: 'true' } });
-  seatRpc();
-  const h2 = harness();
-  h2.stripe.addCustomer({ email: 'g@example.test' }); // first match, never subscribed
-  const second = h2.stripe.addCustomer({ email: 'g@example.test' });
-  h2.stripe.addSubscription({ customer: second.id, status: 'canceled', priceId: FOUNDING });
-  assert.equal((await checkout({ body: { guestEmail: 'g@example.test' } })).status, 200);
-  assert.equal(h2.stripe.sessions[0].subscription_data.trial_period_days, undefined);
 });
 
 function trialingFoundingSubWithCard(fingerprint) {
@@ -695,10 +686,10 @@ test('Nov 19: seat counter counts only PAID founding memberships; checkout holds
   const o = await offerMod.getCurrentOffer();
   assert.deepEqual(o.founding, { cap: 100, remaining: 97, soldOut: false, paid: 0 });
   const c = offerCopy(o);
-  assert.equal(c.seats, '100 of 100 Founding Member spots left (limited to the first 100 paying members). 3 of these are held by members in checkout or in their free trial.');
+  assert.equal(c.seats, '97 of 100 Founding Member spots left (limited to the first 100 paying members). 3 spots are reserved by members in checkout or a free trial and reopen if not paid.');
   const { foundingSeatsCopy } = await import('../../src/lib/pricing/plans.ts');
   assert.equal(foundingSeatsCopy({ cap: 100, remaining: 63, soldOut: false, paid: 37 }), '63 of 100 Founding Member spots left (limited to the first 100 paying members).');
-  assert.match(foundingSeatsCopy({ cap: 3, remaining: 0, soldOut: true, paid: 1 }), /^2 of 3 Founding Member spots left .* All of them are held right now/);
+  assert.match(foundingSeatsCopy({ cap: 3, remaining: 0, soldOut: true, paid: 1 }), /^No Founding Member spots are open right now. 2 spots are reserved/);
   assert.equal(foundingSeatsCopy({ cap: 3, remaining: 0, soldOut: true, paid: 3 }), 'All 3 Founding Member spots are taken.');
   assert.equal(foundingSeatsCopy({ cap: 3, remaining: null, soldOut: false, paid: null }), 'Limited to the first 3 paying members.');
 });

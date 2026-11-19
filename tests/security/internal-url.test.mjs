@@ -71,8 +71,8 @@ test('SSR marker: a valid token skips the per-IP limit; a wrong or missing one d
   const token = internalSsrToken();
   assert.ok(token && token !== process.env.CRON_SECRET, 'token exists and is not the raw cron secret');
   const mk = (h) => new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '198.51.100.7', ...h } });
-  for (let i = 0; i < 30; i++) assert.equal(rateLimitGuard(mk({})), null);
-  assert.equal(rateLimitGuard(mk({}))?.status, 429, 'plain visitor is limited after 30');
+  for (let i = 0; i < 60; i++) assert.equal(rateLimitGuard(mk({})), null);
+  assert.equal(rateLimitGuard(mk({}))?.status, 429, 'plain visitor is limited after 60');
   assert.equal(rateLimitGuard(mk({ [INTERNAL_SSR_HEADER]: 'f'.repeat(64) }))?.status, 429, 'forged token is limited');
   for (let i = 0; i < 50; i++) assert.equal(rateLimitGuard(mk({ [INTERNAL_SSR_HEADER]: token })), null, 'our own render is never limited');
 });
@@ -92,7 +92,7 @@ test('SSR marker: no CRON_SECRET means no token, so nothing can skip the limit',
     process.env.CRON_SECRET = '   ';
     assert.equal(internalSsrToken(), null);
     const r = new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '198.51.100.8', [INTERNAL_SSR_HEADER]: '' } });
-    for (let i = 0; i < 30; i++) rateLimitGuard(r);
+    for (let i = 0; i < 60; i++) rateLimitGuard(r);
     assert.equal(rateLimitGuard(r)?.status, 429);
   } finally { process.env.CRON_SECRET = saved; }
 });
@@ -131,14 +131,14 @@ test('client IP: CF-Connecting-IP is used only when the proxy peer is a Cloudfla
 
 test('two visitors behind the same Cloudflare edge get separate rate-limit buckets', () => {
   const mk = (who) => new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '162.158.9.9', 'cf-connecting-ip': who } });
-  for (let i = 0; i < 30; i++) assert.equal(rateLimitGuard(mk('198.51.100.30')), null);
+  for (let i = 0; i < 60; i++) assert.equal(rateLimitGuard(mk('198.51.100.30')), null);
   assert.equal(rateLimitGuard(mk('198.51.100.30'))?.status, 429, 'first visitor limited');
   assert.equal(rateLimitGuard(mk('198.51.100.31')), null, 'second visitor on the same edge is not');
 });
 
 test('SSR marker: renders get a large per-visitor bucket, not unlimited', () => {
   const mk = () => new Request('https://dailyai.test/api/x', { headers: { 'x-forwarded-for': '198.51.100.40', [INTERNAL_SSR_HEADER]: internalSsrToken() } });
-  for (let i = 0; i < 240; i++) assert.equal(rateLimitGuard(mk()), null);
+  for (let i = 0; i < 480; i++) assert.equal(rateLimitGuard(mk()), null);
   assert.equal(rateLimitGuard(mk())?.status, 429, 'a client looping page loads is eventually limited');
 });
 

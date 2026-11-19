@@ -12,7 +12,7 @@ export default function ParlayPicksPage() {
   const { topOverall, isLoading, error, refetch, data } = useConsensus();
 
   // Fire picks make the best parlay legs
-  const firePicks = topOverall.filter(p => p.capperCount >= 3);
+  const firePicks = topOverall.filter(p => p.isFire);
   const parlayLegs = firePicks.slice(0, 6); // Top 6 for 2-leg to 6-leg parlays
 
   const today = new Date().toLocaleDateString('en-US', {

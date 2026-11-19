@@ -20,7 +20,7 @@ function TodayTab({ initialData, sport }: { initialData: unknown; sport?: string
   // Counts come from the API's full-board totals: free visitors receive only a preview
   // slice and topOverall is a short top list, so counting those lists under-reports.
   const consensusCount = data?.consensusCount ?? data?.consensus?.length ?? 0;
-  const firePicksCount = data?.firePickCount ?? (data?.consensus || []).filter(p => p.capperCount >= 3).length;
+  const firePicksCount = data?.firePickCount ?? (data?.consensus || []).filter(p => p.isFire).length;
   const maxAgreement = topOverall.length > 0
     ? Math.max(...topOverall.map(p => p.capperCount))
     : 0;

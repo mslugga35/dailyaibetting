@@ -21,6 +21,7 @@ interface ConsensusPick {
   bet: string;
   betType: string;
   capperCount: number;
+  isFire: boolean;
   sport: string;
   cappers: string[];
 }
@@ -169,14 +170,14 @@ export default async function GamePage({ params }: PageProps) {
             .map((pick, index) => (
               <Card
                 key={index}
-                className={pick.capperCount >= 3 ? 'border-orange-500/50 bg-orange-500/5' : ''}
+                className={pick.isFire ? 'border-orange-500/50 bg-orange-500/5' : ''}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline">{pick.betType}</Badge>
-                        {pick.capperCount >= 3 && (
+                        {pick.isFire && (
                           <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                         )}
                       </div>

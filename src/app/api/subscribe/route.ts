@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
     if (isRateLimited(ip)) {
-      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429, headers: { 'Retry-After': '60' } });
     }
 
     const body = await request.json().catch(() => null);

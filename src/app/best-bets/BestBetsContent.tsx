@@ -12,7 +12,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
   const { topOverall, isLoading, error, refetch, data } = useConsensus({ initialData: initialData as never });
 
   const bestBets = topOverall
-    .filter(p => p.capperCount >= 3)
+    .filter(p => p.isFire)
     .sort((a, b) => b.capperCount - a.capperCount)
     .slice(0, 10);
 

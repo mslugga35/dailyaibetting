@@ -278,7 +278,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline">{pick.sport}</Badge>
-                              {pick.capperCount >= 3 && (
+                              {pick.isFire && (
                                 <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
                               )}
                             </div>

@@ -8,6 +8,7 @@ import { rateLimitGuard, parseIntParam, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import { isAdminUser } from '@/lib/auth/admin';
 import { estRoiAt110 } from '@/lib/data/performance';
+import { mergeCapperRows, identityKey, isJunkCapperName } from '@/lib/data/capper-identity';
 
 /**
  * A capper's pick-by-pick detail (recent picks, form, sport split) is Pro. The page's
@@ -105,16 +106,20 @@ async function getLeaderboard(db: SupabaseClient, sport?: string, limit: number 
   // graded pick. 231 of 346 cappers clear 10 picks.
   const MIN_PICKS = 10;
 
-  const { data, error } = await db
+  // Read every row (a few hundred) so spelling variants of one capper are merged BEFORE the
+  // pick floor and the ranking; placeholder / multi-capper rows are dropped.
+  const { data: raw, error } = await db
     .from('hb_capper_stats')
     .select('*')
-    .gte('total_picks', MIN_PICKS)
-    .order('win_rate', { ascending: false })
-    .limit(sport ? 200 : limit); // over-fetch when filtering in memory
+    .limit(1000);
 
   if (error) {
     throw new Error(`Failed to fetch leaderboard: ${error.message}`);
   }
+  const data = mergeCapperRows((raw || []) as any[])
+    .filter((c: any) => (c.total_picks ?? 0) >= MIN_PICKS)
+    .sort((a: any, b: any) => (b.win_rate ?? 0) - (a.win_rate ?? 0) || (b.wins ?? 0) - (a.wins ?? 0))
+    .slice(0, sport ? 1000 : limit);
 
   // sport_records is a JSON object keyed by sport, e.g.
   // {"mlb": "6-13 (31.6%)", "nba": "2-3 (40.0%)"} - so filtering by sport is a
@@ -127,7 +132,7 @@ async function getLeaderboard(db: SupabaseClient, sport?: string, limit: number 
       .slice(0, limit);
   }
 
-  return rows.map((c: any) => {
+  return rows.map(({ capper_ids: _ids, ...c }: any) => {
     const streak = Math.abs(c.current_streak || 0);
     const streakType = c.current_streak > 0 ? 'W' : c.current_streak < 0 ? 'L' : null;
     return {
@@ -183,7 +188,22 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
   // surface as a 500 so the profile page shows a retryable error, never "not found"
   // (a 404 on a transient failure gets the URL dropped from search).
   if (capperError) throw new Error(`Failed to fetch capper: ${capperError.message}`);
-  if (!capper) return null;
+  if (!capper || isJunkCapperName(capper.name)) return null;
+
+  // Spelling variants of the same capper ("TailToWin" / "Tail To Win") are one profile.
+  const { data: allStats, error: allError } = await db.from('hb_capper_stats').select('*').limit(1000);
+  if (allError) throw new Error(`Failed to fetch capper: ${allError.message}`);
+  // A name with no ASCII letters/digits has an empty key: never merge on it (it would match
+  // every such capper). capper_ids is internal (pick queries only), not part of the response.
+  const key = identityKey(capper.name);
+  const merged = key
+    ? mergeCapperRows(((allStats || []) as any[]).filter((r) => identityKey(r.name) === key))[0]
+    : undefined;
+  const capperIds: string[] = merged?.capper_ids ?? [capper.capper_id];
+  if (merged) {
+    const { capper_ids: _ids, ...stats } = merged;
+    Object.assign(capper, stats, { slug: capper.slug });
+  }
 
   // Get capper's recent picks
   const { data: picks, error: picksError } = await db
@@ -191,7 +211,7 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
     // (61,748 rows) and its timestamp is posted_at, not date.
     .from('hb_picks')
     .select('*')
-    .eq('capper_id', capper.capper_id)
+    .in('capper_id', capperIds)
     .order('posted_at', { ascending: false })
     .limit(50);
 
@@ -208,7 +228,7 @@ async function getCapperProfile(db: SupabaseClient, slug: string) {
   const { data: sportStats, error: sportError } = await db
     .from('hb_picks')
     .select('sport, result')
-    .eq('capper_id', capper.capper_id)
+    .in('capper_id', capperIds)
     .neq('result', 'pending')
     // grades the 2026-11-18 re-grade could not verify are never counted (hb_picks.stats_excluded)
     .eq('stats_excluded', false);

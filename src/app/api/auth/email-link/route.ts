@@ -16,7 +16,9 @@ export const dynamic = 'force-dynamic';
 const SITE_HOURLY_LINK_CAP = 120;
 const MIN_FORM_MS = 1500;
 export async function POST(request: Request) {
-  const limited = rateLimitGuard(request, 5, 15 * 60_000, 'email-link');
+  // 10 per 15 min per IP (was 5): households and offices share one IP. Per-address (3/h) and
+  // site-wide (120/h) caps below still bound the email volume.
+  const limited = rateLimitGuard(request, 10, 15 * 60_000, 'email-link');
   if (limited) return limited;
 
   const body = await request.json().catch(() => null);

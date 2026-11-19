@@ -50,15 +50,6 @@ test('checkout: a signed-in account is rate-limited (each attempt can create a S
   assert.ok(statuses.slice(10).every((s) => s === 429), statuses.join(','));
 });
 
-test('guest checkout: one email is rate-limited even when the client IP changes', async () => {
-  setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
-  const statuses = [];
-  for (let i = 0; i < 5; i++) {
-    const res = await quietly(() => checkoutRoute.POST(req('/api/checkout', { method: 'POST', body: { guestEmail: 'same@example.test' }, ip: `198.51.100.${i + 20}` })));
-    statuses.push(res.status);
-  }
-  assert.equal(statuses.filter((s) => s === 429).length, 2, statuses.join(','));
-});
 
 test('notifications: a well-formed platform webhook passes URL validation (the allowlist is not reject-everything)', async () => {
   for (const [platform, webhookUrl] of [['discord', `https://${DC}${HOOK}`], ['telegram', `https://${TG}/bot123:abc/sendMessage`]]) {
@@ -68,15 +59,6 @@ test('notifications: a well-formed platform webhook passes URL validation (the a
   }
 });
 
-test('guest checkout: plus-address variants of one mailbox share the per-email budget', async () => {
-  setup({ env: { GUEST_CHECKOUT_ENABLED: 'true' } });
-  const statuses = [];
-  for (let i = 0; i < 4; i++) {
-    const res = await quietly(() => checkoutRoute.POST(req('/api/checkout', { method: 'POST', body: { guestEmail: `box+t${i}@example.test` }, ip: `198.51.100.${i + 60}` })));
-    statuses.push(res.status);
-  }
-  assert.equal(statuses.filter((x) => x === 429).length, 1, statuses.join(','));
-});
 
 test('public capper profile never lists an ungraded (live) pick; graded history stays visible', async () => {
   const cappers = await import('../../src/app/api/cappers/route.ts');
@@ -100,4 +82,16 @@ test('public capper profile never lists an ungraded (live) pick; graded history 
   assert.equal(anon.record, '3-1');
   assert.deepEqual([anon.recent_picks, anon.by_sport, anon.recent_form], [[], [], '']);
   for (const k of ['sport_records', 'units_wagered', 'avg_odds', 'roi']) assert.equal(k in anon, false, `${k} must not reach a non-Pro viewer`);
+});
+
+test('rate limit (QA 2026-11-19): each public API route has its own per-IP bucket, 60/min, with Retry-After', async () => {
+  const { rateLimitGuard } = await import('../../src/lib/api-helpers.ts');
+  const r = (path) => new Request(`https://dailyaibetting.com${path}`, { headers: { 'x-forwarded-for': '203.0.113.77' } });
+  for (let i = 0; i < 60; i++) assert.equal(rateLimitGuard(r('/api/cappers')), null, `cappers #${i + 1}`);
+  const blocked = rateLimitGuard(r('/api/cappers'));
+  assert.equal(blocked?.status, 429);
+  assert.equal(blocked.headers.get('Retry-After'), '60');
+  // Same visitor, another route: not locked out by the first route's traffic.
+  assert.equal(rateLimitGuard(r('/api/results')), null);
+  assert.equal(rateLimitGuard(r('/api/consensus')), null);
 });
