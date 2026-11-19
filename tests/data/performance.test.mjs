@@ -114,3 +114,10 @@ test('cleanPickText: drops # and tidies spacing; leaves null alone', async () =>
   assert.equal(cleanPickText('Over ## 8.5'), 'Over 8.5');
   assert.equal(cleanPickText(null), null);
 });
+
+test('estRoiAt110: the real record (1288-1186-27) is a small loss; empty → null', async () => {
+  const { estRoiAt110 } = await import('../../src/lib/data/performance.ts');
+  assert.equal(estRoiAt110({ wins: 1288, losses: 1186, pushes: 27 }), -0.6);
+  assert.equal(estRoiAt110({ wins: 0, losses: 0, pushes: 0 }), null);
+  assert.equal(estRoiAt110({ wins: 120, losses: 100, pushes: 0 }), 4.2);
+});

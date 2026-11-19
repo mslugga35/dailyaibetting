@@ -62,6 +62,17 @@ function serviceClient(): SupabaseClient | null {
 /** "Last N days" = N ET calendar dates including today (pick_date is an ET date). */
 const daysAgo = windowStartET;
 
+/**
+ * Estimated ROI in percent (one decimal) if every pick were bet at -110: a win pays
+ * 0.91u, a loss costs 1u, a push 0. Same assumption as the Stats page. Odds are not
+ * known for most picks, so this is always labelled an estimate.
+ */
+export function estRoiAt110(r: Pick<Record3, 'wins' | 'losses' | 'pushes'>): number | null {
+  const n = r.wins + r.losses + r.pushes;
+  if (n === 0) return null;
+  return Math.round(((r.wins * 0.91 - r.losses) / n) * 1000) / 10;
+}
+
 export function toRecord(wins: number, losses: number, pushes: number): Record3 {
   const decided = wins + losses;
   return { wins, losses, pushes, decided, winPct: decided > 0 ? Math.round((wins / decided) * 1000) / 10 : null };

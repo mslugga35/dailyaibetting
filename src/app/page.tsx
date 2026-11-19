@@ -13,7 +13,7 @@ import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementU
 import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { getCurrentOffer } from '@/lib/pricing/offer';
 import { offerCopy } from '@/lib/pricing/plans';
-import { getAllTimeRecord, MIN_SAMPLE } from '@/lib/data/performance';
+import { getAllTimeRecord, MIN_SAMPLE, estRoiAt110 } from '@/lib/data/performance';
 
 // Server-side data fetching
 async function getConsensusData() {
@@ -105,6 +105,11 @@ export default async function HomePage() {
             <span className="text-sm">
               <span className="font-mono font-bold tabular-nums text-emerald-400">{trackRecord.winPct?.toFixed(1)}% win rate</span>
               <span className="text-muted-foreground"> on {trackRecord.decided.toLocaleString()} graded fire picks (3+ cappers)</span>
+              {estRoiAt110(trackRecord) != null && (
+                <span className="text-muted-foreground" data-testid="home-roi">
+                  {' · '}est. ROI {estRoiAt110(trackRecord)! > 0 ? '+' : ''}{estRoiAt110(trackRecord)!.toFixed(1)}% at -110 odds
+                </span>
+              )}
             </span>
             <span className="text-sm font-medium text-emerald-400">See every result →</span>
           </Link>

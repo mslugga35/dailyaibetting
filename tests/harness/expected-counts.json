@@ -20,7 +20,7 @@
   "tests/data/grading.test.mjs": 12,
   "tests/data/hb-consensus.test.mjs": 28,
   "tests/data/metrics.test.mjs": 11,
-  "tests/data/performance.test.mjs": 10,
+  "tests/data/performance.test.mjs": 11,
   "tests/harness-selftest.test.mjs": 27,
   "tests/security/admin.test.mjs": 8,
   "tests/security/api-access.test.mjs": 19,
