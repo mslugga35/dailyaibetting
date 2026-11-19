@@ -63,7 +63,8 @@ export function UpgradeButton({ className, variant = 'default', label }: Upgrade
         variant={variant}
         onClick={handleUpgrade}
         disabled={loading}
-        className={cn(className)}
+        // Long price labels wrap instead of pushing a 360px phone sideways (QA 2026-11-19).
+        className={cn('max-w-full h-auto min-h-9 whitespace-normal text-center', className)}
       >
         <Zap className="h-4 w-4 mr-2" />
         {loading ? 'Redirecting…' : (label || copy.ctaReturning)}
