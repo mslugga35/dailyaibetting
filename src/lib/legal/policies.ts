@@ -13,8 +13,20 @@ export const POLICY_LAST_UPDATED = 'November 19, 2026';
 export const SUPPORT_EMAIL = 'support@dailyaibetting.com';
 export const HELPLINE = '1-800-GAMBLER';
 
+/** The operator's legal name and governing state: owner-confirmed values, set on the server. */
+export function legalOperator(): { name: string; state: string } | null {
+  const name = (process.env.POLICY_LEGAL_NAME || '').trim();
+  const state = (process.env.POLICY_GOVERNING_STATE || '').trim();
+  return name && state ? { name, state } : null;
+}
+
+/**
+ * Published only when the owner has approved the wording (POLICY_PAGES_PUBLISHED=true)
+ * AND the legal name and governing state are configured, so the pages can never go
+ * live with those blanks.
+ */
 export function policiesPublished(): boolean {
-  return (process.env.POLICY_PAGES_PUBLISHED || '').trim().toLowerCase() === 'true';
+  return (process.env.POLICY_PAGES_PUBLISHED || '').trim().toLowerCase() === 'true' && legalOperator() !== null;
 }
 
 export interface PolicySection { heading: string; paragraphs: string[] }
@@ -52,7 +64,8 @@ export const TERMS: Policy = {
       'Do not copy or resell Pro content in bulk, scrape the site, try to get around access controls, or interfere with the service. Personal use and sharing an individual pick with friends is fine.',
     ] },
     { heading: 'Changes and availability', paragraphs: [
-      'Features can change. Some features depend on outside services and may be unavailable at times (for example, the AI daily report is not published when its data or model provider is unavailable). If we change the price of an active subscription we will email you before it takes effect, and you can cancel before then.',
+      'Features can change. Some features depend on outside services and may be unavailable at times (for example, the AI daily report is not published when its data or model provider is unavailable).',
+      'If we change the price of a subscription, we will email affected subscribers before the change takes effect, and you can cancel before then. Founding Member pricing is kept for as long as the founding subscription stays active.',
     ] },
     { heading: 'Limits on our responsibility', paragraphs: [
       'The service is provided as is. To the extent the law allows, DailyAI Betting is not responsible for betting losses or for decisions you make based on information on the site.',
@@ -60,6 +73,21 @@ export const TERMS: Policy = {
     { heading: 'Contact', paragraphs: [`Questions about these terms: ${SUPPORT_EMAIL}.`] },
   ],
 };
+
+/** Terms with the operator and governing-law sections filled from the confirmed values. */
+export function termsPolicy(): Policy {
+  const op = legalOperator();
+  if (!op) return TERMS;
+  return {
+    ...TERMS,
+    sections: [
+      { heading: 'Who we are', paragraphs: [`DailyAI Betting (dailyaibetting.com) is operated by ${op.name}. "We" and "us" in these terms mean ${op.name}.`] },
+      ...TERMS.sections.slice(0, -1),
+      { heading: 'Governing law', paragraphs: [`These terms are governed by the laws of the State of ${op.state}, except where the law where you live gives you rights that cannot be waived.`] },
+      TERMS.sections[TERMS.sections.length - 1],
+    ],
+  };
+}
 
 export const REFUNDS: Policy = {
   slug: 'refund-policy',
@@ -78,6 +106,7 @@ export const REFUNDS: Policy = {
     ] },
     { heading: 'Refunds', paragraphs: [
       `Charges are not refunded automatically for a partly used month. If you were charged by mistake, forgot to cancel a trial, or had a problem with the service, email ${SUPPORT_EMAIL} with the email on your account and we will review your request.`,
+      'Nothing in this policy limits any refund rights you have under applicable law.',
     ] },
     { heading: 'Failed payments', paragraphs: [
       'If a renewal payment fails, Pro is paused while Stripe retries the card. Updating your card in the billing portal restores access. If the payment cannot be collected after the retries, the subscription ends.',

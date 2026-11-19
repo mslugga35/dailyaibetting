@@ -91,10 +91,10 @@ async function createCheckout(opts: {
     const copy = offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: trialDays ?? 0, founding: null });
     params.expires_at = Math.floor(Date.now() / 1000) + FOUNDING_SESSION_SECONDS;
     params.subscription_data!.description = `DailyAI Pro – Founding Member (${copy.price}, locked while your subscription stays active)`;
-    params.custom_text = { submit: { message: [copy.terms, copy.firstChargeRelative, copy.trialRule, copy.lock, CANCEL_POLICY].filter(Boolean).join(' ').slice(0, 1200) } };
+    params.custom_text = { submit: { message: [CHECKOUT_BRAND_LINE, copy.terms, copy.firstChargeRelative, copy.trialRule, copy.lock, CANCEL_POLICY].filter(Boolean).join(' ').slice(0, 1200) } };
   } else if (choice.plan === 'regular') {
     const copy = offerCopy({ mode: 'regular', plan: 'regular', amountCents: PLANS.regular.cents, trialDays: trialDays ?? 0, founding: null });
-    params.custom_text = { submit: { message: [copy.terms, copy.firstChargeRelative, copy.trialRule, copy.renewal].filter(Boolean).join(' ').slice(0, 1200) } };
+    params.custom_text = { submit: { message: [CHECKOUT_BRAND_LINE, copy.terms, copy.firstChargeRelative, copy.trialRule, copy.renewal].filter(Boolean).join(' ').slice(0, 1200) } };
   }
 
   let session: Stripe.Checkout.Session;
@@ -116,6 +116,12 @@ async function createCheckout(opts: {
   }
   return NextResponse.json(opts.guestEmail ? { url: session.url, guest: true } : { url: session.url });
 }
+
+/**
+ * The Stripe account's public name is shared with other businesses (it reads as the
+ * owner's name), so Checkout names the product itself in the text under the button.
+ */
+const CHECKOUT_BRAND_LINE = 'You are subscribing to DailyAI Pro from DailyAI Betting (dailyaibetting.com).';
 
 export async function POST(request: Request) {
   try {

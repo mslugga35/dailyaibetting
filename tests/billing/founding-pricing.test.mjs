@@ -149,6 +149,9 @@ test('founding checkout reserves a seat, charges the founding price, expires in 
   assert.equal(s.subscription_data.metadata.founding_seat_id, '7');
   assert.match(s.custom_text.submit.message, /\$9\.99/);
   assert.match(s.custom_text.submit.message, /locked for as long as your subscription stays active/);
+  assert.match(s.custom_text.submit.message, /^You are subscribing to DailyAI Pro from DailyAI Betting \(dailyaibetting\.com\)\./);
+  assert.ok(s.custom_text.submit.message.length <= 1200);
+  assert.match(s.custom_text.submit.message, /you keep Pro until the end of the period you already paid for\.$/);
   const [r] = rpcCalls('dailyai_founding_reserve');
   assert.equal(r.p_cap, 100);
   assert.equal(r.p_hold_seconds, 91 * 60, 'hold outlives the 31-minute session by an hour');

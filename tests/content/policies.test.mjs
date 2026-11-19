@@ -13,7 +13,9 @@ const pages = {
 const rg = await import('../../src/app/responsible-gambling/page.tsx');
 const { Footer } = await import('../../src/components/layout/Footer.tsx');
 const text = (p) => p.sections.flatMap((s) => [s.heading, ...s.paragraphs]).join('\n');
-const withFlag = (v, fn) => { const o = process.env.POLICY_PAGES_PUBLISHED; if (v == null) delete process.env.POLICY_PAGES_PUBLISHED; else process.env.POLICY_PAGES_PUBLISHED = v; try { return fn(); } finally { if (o === undefined) delete process.env.POLICY_PAGES_PUBLISHED; else process.env.POLICY_PAGES_PUBLISHED = o; } };
+const withEnv = (vars, fn) => { const old = {}; for (const k of Object.keys(vars)) { old[k] = process.env[k]; if (vars[k] == null) delete process.env[k]; else process.env[k] = vars[k]; } try { return fn(); } finally { for (const k of Object.keys(vars)) { if (old[k] === undefined) delete process.env[k]; else process.env[k] = old[k]; } } };
+const OP = { POLICY_LEGAL_NAME: 'Example Co LLC', POLICY_GOVERNING_STATE: 'Florida' };
+const withFlag = (v, fn) => withEnv({ POLICY_PAGES_PUBLISHED: v, ...(v === 'true' ? OP : { POLICY_LEGAL_NAME: null, POLICY_GOVERNING_STATE: null }) }, fn);
 
 test('terms/privacy/refunds 404 until POLICY_PAGES_PUBLISHED=true, then render', () => {
   for (const [slug, mod] of Object.entries(pages)) {
@@ -55,4 +57,21 @@ test('policy text matches the real billing rules and makes no forbidden claims',
 test('root metadata sets metadataBase so per-page share images are absolute dailyaibetting.com URLs', async () => {
   const { readFileSync } = await import('node:fs');
   assert.match(readFileSync(new URL('../../src/app/layout.tsx', import.meta.url), 'utf8'), /metadataBase: new URL\('https:\/\/dailyaibetting\.com'\)/);
+});
+
+test('flag alone does not publish: legal name AND governing state are required', () => {
+  for (const vars of [{ POLICY_LEGAL_NAME: null, POLICY_GOVERNING_STATE: 'Florida' }, { POLICY_LEGAL_NAME: 'Example Co LLC', POLICY_GOVERNING_STATE: null }, { POLICY_LEGAL_NAME: ' ', POLICY_GOVERNING_STATE: ' ' }]) {
+    assert.throws(() => withEnv({ POLICY_PAGES_PUBLISHED: 'true', ...vars }, () => pages.terms.default()), /NEXT_(HTTP_ERROR_FALLBACK;404|NOT_FOUND)/, JSON.stringify(vars));
+  }
+  const html = withFlag('true', () => renderToString(pages.terms.default()));
+  assert.match(html, /operated by Example Co LLC/);
+  assert.match(html, /laws of the State of Florida/);
+});
+
+test('owner decisions 2026-11-19: 21+, refunds subject to law, price-change notice, founding price kept', () => {
+  const terms = text(P.TERMS); const refunds = text(P.REFUNDS);
+  assert.match(refunds, /Nothing in this policy limits any refund rights you have under applicable law/);
+  assert.match(terms, /email affected subscribers before the change takes effect/);
+  assert.match(terms, /Founding Member pricing is kept for as long as the founding subscription stays active/);
+  assert.match(text(P.PRIVACY), /21 and over/);
 });
