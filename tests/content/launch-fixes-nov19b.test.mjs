@@ -138,3 +138,11 @@ test('review fixes: names survive the feed cleaner; merged per-sport records are
     assert.doesNotMatch(src(f), /status: 429 \}\)/, `${f}: every 429 carries Retry-After`);
   }
 });
+
+test('sport pages never say "no picks" when the sport has Pro-only picks; totals come from the API', () => {
+  const c = src('src/components/picks/SportPicksToday.tsx');
+  assert.match(c, /const totalCount = data\?\.consensusCount \?\? nhlPicks\.length;/);
+  assert.match(c, /const lockedCount = Math\.max\(0, totalCount - nhlPicks\.length\);/);
+  assert.match(c, /\) : lockedCount === 0 \? \(/, 'the empty message only when nothing is locked');
+  assert.match(c, /data-testid="sport-locked"/);
+});

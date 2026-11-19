@@ -19,6 +19,10 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
 
   const nhlPicks = consensus.filter(p => p.sport === sport);
   const firePicks = nhlPicks.filter(p => p.isFire);
+  // Full totals for this sport from the API; free visitors receive only the free picks.
+  const totalCount = data?.consensusCount ?? nhlPicks.length;
+  const totalFire = data?.firePickCount ?? firePicks.length;
+  const lockedCount = Math.max(0, totalCount - nhlPicks.length);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -67,17 +71,17 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
       <SportQuickNav currentSport={({ NCAAB: 'CBB', NCAAF: 'CFB' } as Record<string, string>)[sport] ?? sport} />
 
       {/* Stats */}
-      {nhlPicks.length > 0 && (
+      {totalCount > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
-              <div className="text-3xl font-bold text-primary">{nhlPicks.length}</div>
+              <div className="text-3xl font-bold text-primary">{totalCount}</div>
               <div className="text-sm text-muted-foreground">{label} Consensus Picks</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-3xl font-bold text-orange-500">{firePicks.length}</div>
+              <div className="text-3xl font-bold text-orange-500">{totalFire}</div>
               <div className="text-sm text-muted-foreground">Fire Picks (3+)</div>
             </CardContent>
           </Card>
@@ -144,11 +148,19 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
                   </CardContent>
                 </Card>
               ))
-          ) : (
+          ) : lockedCount === 0 ? (
             <Card className="p-8 text-center">
               <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">No {label} consensus picks yet today. Picks update throughout the day.</p>
               <p className="text-sm text-muted-foreground mt-2">Check back closer to game time!</p>
+            </Card>
+          ) : null}
+          {lockedCount > 0 && (
+            // Never "no picks" when the sport has picks a free visitor can't see (QA 2026-11-19).
+            <Card className="p-6 text-center" data-testid="sport-locked">
+              <p className="font-semibold">{lockedCount}{nhlPicks.length > 0 ? ' more' : ''} {label} consensus {lockedCount === 1 ? 'pick is' : 'picks are'} Pro today</p>
+              <p className="text-sm text-muted-foreground mt-1 mb-3">The free preview shows today&apos;s top 5 across all sports.</p>
+              <Button asChild size="sm"><Link href="/pricing">See Pro</Link></Button>
             </Card>
           )}
         </div>
