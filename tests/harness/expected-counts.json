@@ -33,5 +33,6 @@
   "tests/security/middleware.test.mjs": 18,
   "tests/security/safe-next.test.mjs": 3,
   "tests/content/qa-nov19-fixes.test.mjs": 7,
-  "tests/content/launch-fixes-nov19b.test.mjs": 10
+  "tests/content/launch-fixes-nov19b.test.mjs": 10,
+  "tests/content/muse-b3eacc4.test.mjs": 6
 }

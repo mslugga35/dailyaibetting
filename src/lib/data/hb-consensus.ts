@@ -16,7 +16,7 @@
  * DailyAI within writer interval (60 s) + 30 s.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { resolveFireConflicts } from '@/lib/consensus/fire-conflicts';
+import { resolveFireConflicts, withOppositeSide } from '@/lib/consensus/fire-conflicts';
 import type { BetType, ConsensusPick, NormalizedPick } from '../consensus/consensus-builder';
 
 export type ConsensusSource = 'hb' | 'legacy';
@@ -210,7 +210,7 @@ export async function fetchHbConsensus(
   const sport = opts.sport && opts.sport.toLowerCase() !== 'all' ? opts.sport.toLowerCase() : null;
   // Conflicts are resolved over the whole day BEFORE any sport / minCappers filter, so the
   // opposite side of a game is always seen (owner decision 2026-11-19).
-  return resolveFireConflicts(await loadDates(valid, opts.db))
+  return withOppositeSide(resolveFireConflicts(await loadDates(valid, opts.db)))
     .filter((r) => r.capper_count >= min && (!sport || r.sport === sport))
     .sort(compareLiveRows);
 }
@@ -264,6 +264,7 @@ export function toConsensusPick(r: HbConsensusRow): SharedConsensusPick {
     side: r.side,
     tier: r.tier,
     opposingCount: r.opposing_count,
+    oppositeCapperCount: (r as { opposite_capper_count?: number }).opposite_capper_count ?? 0,
     agreementPct: Number(r.agreement_pct),
     lineRange: { min: r.line_min == null ? null : Number(r.line_min), max: r.line_max == null ? null : Number(r.line_max) },
     lineBreakdown: r.lines || [],

@@ -112,6 +112,8 @@ export interface ConsensusPick {
   capperCount: number;
   cappers: string[];
   isFire: boolean; // 3+ cappers = 🔥
+  /** Cappers in the strongest consensus group on the OTHER side of this game (0 = none). */
+  oppositeCapperCount?: number;
   confidence: number;
   /** W/L/P grade — only present on yesterday's picks */
   result?: 'W' | 'L' | 'P' | null;

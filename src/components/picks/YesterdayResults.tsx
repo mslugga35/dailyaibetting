@@ -21,7 +21,10 @@ function getResultBadge(result: 'W' | 'L' | 'P' | null | undefined) {
   return <Badge variant="secondary">TBD</Badge>;
 }
 
-function getFireEmoji(count: number): string {
+function getFireEmoji(pick: { capperCount: number; isFire?: boolean }): string {
+  // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+  if (pick.isFire === false) return '';
+  const count = pick.capperCount;
   if (count >= 10) return ' \u{1F525}\u{1F525}\u{1F525}';
   if (count >= 3) return ' \u{1F525}';
   return '';
@@ -106,7 +109,7 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
                   {consensus.slice(0, 6).map((pick, i) => (
                     <div key={pick.id || i} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
                       <span className={`font-mono text-sm ${pick.result === 'W' ? 'text-emerald-400' : pick.result === 'L' ? 'text-red-400' : ''}`}>
-                        {pick.bet} — {pick.capperCount} cappers{getFireEmoji(pick.capperCount)}
+                        {pick.bet} — {pick.capperCount} cappers{getFireEmoji(pick)}
                       </span>
                       {getResultBadge(pick.result)}
                     </div>
@@ -124,7 +127,7 @@ export function YesterdayResults({ consensus, stats, date, bySport }: YesterdayR
                       {picks.slice(0, 5).map((pick, i) => (
                         <div key={pick.id || i} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
                           <span className={`font-mono text-sm ${pick.result === 'W' ? 'text-emerald-400' : pick.result === 'L' ? 'text-red-400' : ''}`}>
-                            {pick.bet} — {pick.capperCount} cappers{getFireEmoji(pick.capperCount)}
+                            {pick.bet} — {pick.capperCount} cappers{getFireEmoji(pick)}
                           </span>
                           {getResultBadge(pick.result)}
                         </div>

@@ -115,7 +115,10 @@ export default async function GamePage({ params }: PageProps) {
   // Determine sport from picks
   const sport = gamePicks[0]?.sport || 'SPORTS';
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 3) return '🔥';
     return '';
@@ -178,7 +181,7 @@ export default async function GamePage({ params }: PageProps) {
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="outline">{pick.betType}</Badge>
                         {pick.isFire && (
-                          <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                          <span className="text-lg">{getFireEmoji(pick)}</span>
                         )}
                       </div>
                       <div className="text-lg font-bold text-primary">{pick.bet}</div>

@@ -31,3 +31,24 @@ export function resolveFireConflicts<T extends FireRow>(rows: T[]): (T & { fire_
     return beaten ? { ...r, is_fire: false, fire_conflict: true } : { ...r, fire_conflict: false };
   });
 }
+
+/**
+ * Muse review 2026-11-19: a consensus pick whose opposite side ALSO has consensus (2+ cappers)
+ * is flagged so the page never presents both sides as clean agreement. opposite_capper_count is
+ * the capper count of the strongest group backing the other side of the same game and market
+ * family (0 when none). Same "opposite side" test as resolveFireConflicts.
+ */
+export function withOppositeSide<T extends FireRow>(rows: T[], minCappers = 2): (T & { opposite_capper_count: number })[] {
+  return rows.map((r) => {
+    if (!r.game_id) return { ...r, opposite_capper_count: 0 };
+    const isTotal = r.market === 'total';
+    let best = 0;
+    for (const o of rows) {
+      if (o === r || o.et_date !== r.et_date || o.game_id !== r.game_id) continue;
+      if ((o.market === 'total') !== isTotal) continue;
+      if (isTotal ? o.side === r.side : o.team === r.team) continue;
+      if (o.capper_count >= minCappers && o.capper_count > best) best = o.capper_count;
+    }
+    return { ...r, opposite_capper_count: best };
+  });
+}

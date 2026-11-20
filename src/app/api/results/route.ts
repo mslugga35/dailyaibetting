@@ -6,6 +6,7 @@ import { isAdminUser } from '@/lib/auth/admin';
 import { recordTable, cleanRecordRows } from '@/lib/data/record-source';
 import { getConsensusSource } from '@/lib/data/hb-consensus';
 import { redactResultRows } from '@/lib/data/result-redaction';
+import { getRecordDisclosure } from '@/lib/data/record-disclosure';
 
 // Lazy initialization to avoid build errors
 let supabase: SupabaseClient | null = null;
@@ -216,6 +217,13 @@ export async function GET(request: Request) {
         if (streakRes.error) throw streakRes.error;
         data = { allTime, last30Days, streak: calculateStreak(streakRes.data || []) };
         break;
+      }
+
+      case 'disclosure': {
+        // Aggregate counts only (no pick detail): the record, the opposite-side exclusions and
+        // win rate by capper count, shown next to every headline record (Muse 2026-11-19).
+        const d = await getRecordDisclosure(db);
+        return NextResponse.json({ success: true, view, data: d });
       }
 
       default:

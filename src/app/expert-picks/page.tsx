@@ -23,7 +23,10 @@ export default function ExpertPicksPage() {
     year: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 5) return '🔥🔥';
     if (count >= 3) return '🔥';
@@ -153,7 +156,7 @@ export default function ExpertPicksPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline" className={sportColors[pick.sport] || ''}>{pick.sport}</Badge>
                           <Badge className={`${confidence.color} text-white text-xs`}>{confidence.label}</Badge>
-                          <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                          <span className="text-lg">{getFireEmoji(pick)}</span>
                         </div>
                         <div className="font-medium">{pick.matchup}</div>
                         <div className="text-lg font-bold text-primary">{pick.bet}</div>
@@ -192,7 +195,7 @@ export default function ExpertPicksPage() {
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline" className={sportColors[pick.sport] || ''}>{pick.sport}</Badge>
                               <Badge className={`${confidence.color} text-white text-xs`}>{confidence.label}</Badge>
-                              <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                              <span className="text-lg">{getFireEmoji(pick)}</span>
                             </div>
                             <div className="font-medium">{pick.matchup}</div>
                             <div className="text-lg font-bold text-primary">{pick.bet}</div>

@@ -25,7 +25,10 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
     year: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 5) return '🔥🔥';
     if (count >= 3) return '🔥';
@@ -154,7 +157,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className={sportColors[topPick.sport] || ''}>{topPick.sport}</Badge>
                   <Badge className="bg-yellow-500 text-white">#1 PICK</Badge>
-                  <span className="text-xl">{getFireEmoji(topPick.capperCount)}</span>
+                  <span className="text-xl">{getFireEmoji(topPick)}</span>
                 </div>
                 <div className="text-lg text-muted-foreground mb-1">{topPick.matchup}</div>
                 <div className="text-2xl font-bold text-primary">{topPick.bet}</div>
@@ -191,7 +194,7 @@ export function BestBetsContent({ initialData }: { initialData: unknown }) {
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline" className={sportColors[pick.sport] || ''}>{pick.sport}</Badge>
                               {rank && <Badge className={`${rank.color} text-white text-xs`}>{rank.label}</Badge>}
-                              <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                              <span className="text-lg">{getFireEmoji(pick)}</span>
                             </div>
                             <div className="font-medium">{pick.matchup}</div>
                             <div className="text-lg font-bold text-primary">{pick.bet}</div>

@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 
     // Filter to fire picks only
     const firePicks = (data.topOverall || [])
-      .filter((pick: any) => pick.capperCount >= minCappers)
+      // isFire, not the raw count: an out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+      .filter((pick: any) => pick.isFire === true && pick.capperCount >= minCappers)
       .slice(0, 10); // Max 10 picks
 
     if (firePicks.length === 0) {
@@ -81,7 +82,7 @@ function formatForDiscord(picks: any[]): object {
   });
 
   const fields = picks.map((pick, index) => ({
-    name: `${getFireEmoji(pick.capperCount)} ${pick.sport} - ${pick.matchup || 'Game'}`,
+    name: `${getFireEmoji(pick)} ${pick.sport} - ${pick.matchup || 'Game'}`,
     value: `**${pick.bet}**\n${pick.capperCount} cappers agree`,
     inline: true,
   }));
@@ -117,7 +118,7 @@ function formatForTelegram(picks: any[]): string {
   message += `━━━━━━━━━━━━━━━━━━\n\n`;
 
   picks.forEach((pick, index) => {
-    const fire = getFireEmoji(pick.capperCount);
+    const fire = getFireEmoji(pick);
     message += `${fire} <b>${pick.sport}</b>\n`;
     message += `📍 ${pick.matchup || 'Game'}\n`;
     message += `✅ <b>${pick.bet}</b>\n`;
@@ -130,7 +131,9 @@ function formatForTelegram(picks: any[]): string {
   return message;
 }
 
-function getFireEmoji(count: number): string {
+function getFireEmoji(pick: { capperCount: number; isFire?: boolean }): string {
+  if (pick.isFire === false) return '';
+  const count = pick.capperCount;
   if (count >= 7) return '🔥🔥🔥';
   if (count >= 5) return '🔥🔥';
   if (count >= 3) return '🔥';

@@ -82,16 +82,19 @@ test('adminGuard: an auth outage never yields admin', async () => {
   assert.ok(res && [401, 503].includes(res.status), `got ${res?.status}`);
 });
 
-test('admin page: signed out → login (returns here); a signed-in non-admin (member, or admin email without the admin id) gets notFound, never the UI', async () => {
+test('admin page: signed out → login (returns here); a signed-in non-admin (member, or admin email without the admin id) gets a no-access page, never the UI', async () => {
   const page = await import('../../src/app/admin/grading/page.tsx');
-  const isNotFound = (e) => /NEXT_(HTTP_ERROR_FALLBACK;404|NOT_FOUND)/.test(String(e?.digest ?? e?.message ?? e));
   const isLoginRedirect = (e) => /NEXT_REDIRECT.*\/login\?redirect=\/admin\/grading/.test(String(e?.digest ?? e?.message ?? e));
+  const noAccess = (el) => el?.props?.['data-testid'] === 'admin-no-access';
+  const isTool = (el) => el?.type?.name === 'GradingClient';
   await assert.rejects(page.default(), isLoginRedirect);
   cookieUser('u_member', 'member@example.test', CONFIRMED);
-  await assert.rejects(page.default(), isNotFound);
+  let el = await page.default();
+  assert.ok(noAccess(el) && !isTool(el), 'member sees no-access, not the tool');
   cookieUser('u_not_listed', 'boss@example.test', CONFIRMED);
-  await assert.rejects(page.default(), isNotFound);
+  el = await page.default();
+  assert.ok(noAccess(el) && !isTool(el), 'admin email without the admin id sees no-access');
   cookieUser('u_boss', 'boss@example.test', CONFIRMED);
-  const el = await page.default();
-  assert.ok(el && typeof el === 'object', 'admin gets the page element');
+  el = await page.default();
+  assert.ok(isTool(el), 'admin gets the grading tool');
 });

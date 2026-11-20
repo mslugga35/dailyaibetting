@@ -17,6 +17,8 @@ export interface DailyBetPick {
   capperCount: number;
   /** 3+ cappers and not out-voted on the other side of the same game. */
   isFire: boolean;
+  /** Cappers backing the other side of the same game (0 = none). */
+  oppositeCapperCount?: number;
 }
 
 export function toDailyBetPick(pick: ConsensusPick): DailyBetPick {
@@ -27,6 +29,7 @@ export function toDailyBetPick(pick: ConsensusPick): DailyBetPick {
     bet: pick.bet,
     capperCount: pick.capperCount,
     isFire: pick.isFire,
+    oppositeCapperCount: pick.oppositeCapperCount ?? 0,
   };
 }
 

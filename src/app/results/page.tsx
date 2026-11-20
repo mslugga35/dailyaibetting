@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Trophy, ShieldCheck, Info, CheckCircle, XCircle, MinusCircle, Scale } from 'lucide-react';
+import { RecordDisclosure } from '@/components/results/RecordDisclosure';
+import { getRecordDisclosure } from '@/lib/data/record-disclosure';
 import { getVerifiedPerformance, MIN_SAMPLE, type Record3 } from '@/lib/data/performance';
 
 export const metadata: Metadata = {
@@ -58,20 +60,21 @@ export default async function ResultsPage() {
   } catch (e) {
     console.error('Performance page:', (e as { message?: string })?.message || String(e));
   }
+  const disclosure = await getRecordDisclosure().catch(() => null);
   const hasData = !!perf && perf.allTime.wins + perf.allTime.losses + perf.allTime.pushes > 0;
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-8">
       <header className="mb-8 text-center">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
-          <ShieldCheck className="h-3.5 w-3.5" /> Graded from final scores · nothing estimated
+          <ShieldCheck className="h-3.5 w-3.5" /> Wins and losses graded from final scores
         </div>
         <h1 className="flex items-center justify-center gap-3 text-3xl font-bold md:text-4xl">
           <Trophy className="h-8 w-8 text-emerald-400" aria-hidden="true" />
           Graded Track Record
         </h1>
         <p className="mx-auto mt-2 max-w-2xl text-muted-foreground">
-          Every fire pick (3+ cappers on the same bet) that has been graded, win or lose. Past results do not
+          Every graded fire pick (3+ cappers on the same bet), win or lose. When cappers backed both sides of one game, only the side with more cappers counts (details below). Past results do not
           predict future results, and no outcome is guaranteed.
         </p>
         {perf?.firstGradedDate && perf.lastGradedDate && (
@@ -79,6 +82,7 @@ export default async function ResultsPage() {
             Graded picks from {perf.firstGradedDate} to {perf.lastGradedDate}
           </p>
         )}
+        <RecordDisclosure initial={disclosure} className="mx-auto mt-4 max-w-2xl text-left" />
       </header>
 
       {!perf || !perf.configured ? (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { RecordDisclosure } from '@/components/results/RecordDisclosure';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -183,6 +184,8 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
       </div>
+
+      <RecordDisclosure className="mb-6" />
 
       {/* Filters & Pick List — Pro only */}
       <ProGateSection feature="the pick-by-pick list">

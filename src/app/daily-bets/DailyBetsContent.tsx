@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { OppositeSideNote } from '@/components/picks/OppositeSideNote';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,7 +60,10 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
     day: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 7) return '🔥🔥';
     if (count >= 3) return '🔥';
@@ -74,16 +78,8 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
     if (data.topPicks.length > 0) {
       text += `🏆 **TOP 5 BY CAPPER AGREEMENT**\n`;
       data.topPicks.forEach((pick, i) => {
-        const fire = getFireEmoji(pick.capperCount);
+        const fire = getFireEmoji(pick);
         text += `${i + 1}. **${pick.sport}** | ${pick.matchup} | ${pick.bet} (${pick.capperCount} cappers agree) ${fire}\n`;
-      });
-      text += `\n`;
-    }
-
-    if (data.top5MostCommon.length > 0) {
-      text += `📊 **MOST COMMON PICKS**\n`;
-      data.top5MostCommon.slice(0, 3).forEach((pick) => {
-        text += `• ${pick.sport} | ${pick.bet} — ${pick.frequency} ${pick.frequency === 1 ? 'pick' : 'picks'} from ${pick.capperCount} ${pick.capperCount === 1 ? 'capper' : 'cappers'} ${pick.isFire ? '🔥' : ''}\n`;
       });
       text += `\n`;
     }
@@ -110,7 +106,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
   const shareToTwitter = () => {
     if (!data || data.topPicks.length === 0) return;
     const topPick = data.topPicks[0];
-    const fire = getFireEmoji(topPick.capperCount);
+    const fire = getFireEmoji(topPick);
     const text = `Today's Top Consensus Pick:\n\n${fire} ${topPick.sport} | ${topPick.bet}\n${topPick.capperCount} cappers agree\n\nMore free picks at https://dailyaibetting.com/daily-bets`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -279,11 +275,12 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                             <div className="flex items-center gap-2 mb-1">
                               <Badge variant="outline">{pick.sport}</Badge>
                               {pick.isFire && (
-                                <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                                <span className="text-lg">{getFireEmoji(pick)}</span>
                               )}
                             </div>
                             <div className="font-semibold">{pick.matchup}</div>
                             <div className="text-primary font-medium text-lg">{pick.bet}</div>
+                            <OppositeSideNote count={pick.oppositeCapperCount} className="mt-1" />
                           </div>
                           <div className="text-right">
                             <div className="text-3xl font-bold">{pick.capperCount}</div>
@@ -298,46 +295,8 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                 </CardContent>
               </Card>
 
-              {/* Most Common Bets */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    Top 5 Most Common Bets
-                  </CardTitle>
-                  <CardDescription>
-                    Frequency analysis - how many times each bet appears
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {data.top5MostCommon.length > 0 ? (
-                    <div className="space-y-3">
-                      {data.top5MostCommon.map((pick, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline">{pick.sport}</Badge>
-                            <div>
-                              <span className="font-medium">{pick.bet}</span>
-                              <span className="mx-2 text-muted-foreground">•</span>
-                              <span className="text-sm text-muted-foreground">{pick.matchup}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              {/* frequency counts every posting; capperCount counts distinct cappers */}
-                              <div className="font-bold">{pick.frequency} {pick.frequency === 1 ? 'pick' : 'picks'}</div>
-                              <div className="text-xs text-muted-foreground">from {pick.capperCount} {pick.capperCount === 1 ? 'capper' : 'cappers'}</div>
-                            </div>
-                            {pick.isFire && <span className="text-lg">🔥</span>}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center py-4 text-muted-foreground">No frequency data available.</p>
-                  )}
-                </CardContent>
-              </Card>
+              {/* "Most Common Bets" removed 2026-11-19: it counted the local feed, not the shared consensus,
+                  so its capper counts contradicted "Top 5 by agreement" on the same page (Muse review). */}
             </Section>
 
             {/* Parlays Tab */}
@@ -365,7 +324,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                               <div key={pick.id} className="p-2 rounded bg-muted/50 mb-2">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
-                                  <span>{getFireEmoji(pick.capperCount)}</span>
+                                  <span>{getFireEmoji(pick)}</span>
                                 </div>
                                 <div className="text-sm text-muted-foreground">{pick.matchup}</div>
                                 <div className="font-semibold text-primary">{pick.bet}</div>
@@ -400,7 +359,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                               <div key={pick.id} className="p-2 rounded bg-muted/50 mb-2">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Badge variant="outline" className="text-xs">{pick.sport}</Badge>
-                                  <span>{getFireEmoji(pick.capperCount)}</span>
+                                  <span>{getFireEmoji(pick)}</span>
                                 </div>
                                 <div className="text-sm text-muted-foreground">{pick.matchup}</div>
                                 <div className="font-semibold text-primary">{pick.bet}</div>
@@ -474,7 +433,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                         <div key={sport} className="p-4 rounded-lg border bg-card">
                           <div className="flex items-center justify-between mb-2">
                             <Badge className="bg-primary">{sport}</Badge>
-                            <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                            <span className="text-lg">{getFireEmoji(pick)}</span>
                           </div>
                           <div className="text-sm text-muted-foreground mb-1">{pick.matchup}</div>
                           <div className="font-semibold text-primary text-lg">{pick.bet}</div>
@@ -509,7 +468,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
                         <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
                           <div className="flex items-center gap-2 mb-2">
                             <Badge variant="outline">{data.ladderPick.pick.sport}</Badge>
-                            <span className="text-lg">{getFireEmoji(data.ladderPick.pick.capperCount)}</span>
+                            <span className="text-lg">{getFireEmoji(data.ladderPick.pick)}</span>
                           </div>
                           <div className="text-sm text-muted-foreground">{data.ladderPick.pick.matchup}</div>
                           <div className="font-bold text-xl text-primary mt-1">{data.ladderPick.pick.bet}</div>

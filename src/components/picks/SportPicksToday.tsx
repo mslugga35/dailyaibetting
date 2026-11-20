@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OppositeSideNote } from '@/components/picks/OppositeSideNote';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Target, RefreshCw, Loader2, Flame } from 'lucide-react';
@@ -31,7 +32,9 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
     year: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 3) return '🔥';
     return '';
@@ -135,11 +138,12 @@ export function SportPicksToday({ sport, label }: { sport: string; label: string
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline">{label}</Badge>
                           {pick.isFire && (
-                            <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                            <span className="text-lg">{getFireEmoji(pick)}</span>
                           )}
                         </div>
                         <div className="font-medium">{pick.matchup}</div>
                         <div className="text-lg font-bold text-primary">{pick.bet}</div>
+                        <OppositeSideNote count={pick.oppositeCapperCount} className="mt-1" />
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold">{pick.capperCount}</div>

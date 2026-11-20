@@ -13,6 +13,8 @@ import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementU
 import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
 import { getCurrentOffer } from '@/lib/pricing/offer';
 import { offerCopy } from '@/lib/pricing/plans';
+import { RecordDisclosure } from '@/components/results/RecordDisclosure';
+import { getRecordDisclosure } from '@/lib/data/record-disclosure';
 import { getAllTimeRecord, MIN_SAMPLE, estRoiAt110 } from '@/lib/data/performance';
 import type { Metadata } from 'next';
 
@@ -58,7 +60,7 @@ export const revalidate = 0;
 export default async function HomePage() {
   const offer = await getCurrentOffer();
   const priceCopy = offerCopy(offer);
-  const [data, trackRecord] = await Promise.all([getConsensusData(), getTrackRecord()]);
+  const [data, trackRecord, disclosure] = await Promise.all([getConsensusData(), getTrackRecord(), getRecordDisclosure().catch(() => null)]);
   // Only advertise a win rate once the sample is meaningful; the full record is always on /results.
   const hasTrackRecord = !!trackRecord && trackRecord.decided >= MIN_SAMPLE;
 
@@ -120,6 +122,7 @@ export default async function HomePage() {
             <span className="text-sm font-medium text-emerald-400">See every result →</span>
           </Link>
         )}
+        {hasTrackRecord && <RecordDisclosure initial={disclosure} className="mx-auto max-w-2xl mb-6 text-left" />}
         {(totalConsensusCount > 0 || capperCount > 0) && (
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-8 text-sm">
             {firePicksCount > 0 && (

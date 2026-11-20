@@ -46,6 +46,8 @@ export interface ConsensusPick {
   cappers: string[];
   isFire: boolean; // 3+ cappers = 🔥
   confidence: number; // 0-1 based on capper count
+  /** Cappers in the strongest consensus group on the OTHER side of this game (0 = none). */
+  oppositeCapperCount?: number;
 }
 
 /**

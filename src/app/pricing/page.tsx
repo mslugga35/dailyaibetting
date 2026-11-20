@@ -8,6 +8,8 @@ import { UpgradeButton } from '@/components/subscription/UpgradeButton';
 import { EntitlementUnknownNotice } from '@/components/subscription/EntitlementUnknownNotice';
 import { getCurrentOffer, personalizeOffer } from '@/lib/pricing/offer';
 import { offerCopy, REFUND_NOTE } from '@/lib/pricing/plans';
+import { RecordDisclosure } from '@/components/results/RecordDisclosure';
+import { getRecordDisclosure } from '@/lib/data/record-disclosure';
 import { EmailSafeText } from '@/components/ui/email-safe-text';
 
 // Price and seat count change at runtime (founding seats sell out -> $19.99): never prerender.
@@ -181,7 +183,7 @@ export default async function PricingPage() {
             ['Can I get a refund?', REFUND_NOTE],
             ['What do I get that free users do not?', 'Every consensus pick each day instead of the top 5, individual capper pick detail, fade-the-public flags on picks with 7+ cappers, and pick-by-pick graded results for the latest 50 fire picks. (The graded consensus track record on /results is free for everyone.) There are no push, email or text alerts.'],
             ['Is this betting advice? Do you guarantee wins?', 'No. We aggregate and grade picks from third-party cappers. Consensus means several cappers chose the same bet; it does not guarantee any outcome. Please bet responsibly.'],
-            ['How is the track record calculated?', 'Every fire pick is graded win, loss or push from the final score. Win rate excludes pushes. Nothing is estimated; the full method is on the Results page.'],
+            ['How is the track record calculated?', 'Every fire pick is graded win, loss or push from the final score, and win rate excludes pushes. When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither); the Results page shows how the removed picks did. Odds were not recorded, so ROI and units are estimates at -110. The full method is on the Results page.'],
           ].map(([q, a]) => (
             <details key={q} className="group p-4">
               <summary className="cursor-pointer list-none font-medium flex items-center justify-between gap-4">
@@ -193,6 +195,7 @@ export default async function PricingPage() {
           ))}
         </div>
         <p className="mt-4 text-center text-xs text-muted-foreground">21+. Gambling problem? Call 1-800-GAMBLER.</p>
+        <RecordDisclosure initial={await getRecordDisclosure().catch(() => null)} className="mt-4" />
       </section>
 
       <p className="text-center text-sm text-muted-foreground mt-8">

@@ -18,18 +18,19 @@ interface ConsensusReportProps {
  * - 3+ cappers = 🔥
  * - <3 cappers = no fire
  */
-function getFireEmoji(capperCount: number): string {
-  if (capperCount >= 10) return ' 🔥🔥🔥';
-  if (capperCount >= 3) return ' 🔥';
-  return '';
+function getFireEmoji(pick: Pick<ConsensusPick, 'capperCount' | 'isFire'>): string {
+  // isFire, not the raw count: an out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+  if (!pick.isFire) return '';
+  return pick.capperCount >= 10 ? ' 🔥🔥🔥' : ' 🔥';
 }
 
 /**
  * Format a consensus pick for display
  */
 function formatPick(pick: ConsensusPick): string {
-  const fire = getFireEmoji(pick.capperCount);
-  return `${pick.bet} – ${pick.capperCount} cappers${fire}`;
+  const fire = getFireEmoji(pick);
+  const split = pick.oppositeCapperCount && pick.oppositeCapperCount >= 2 ? ` (split: ${pick.oppositeCapperCount} on the other side)` : '';
+  return `${pick.bet} – ${pick.capperCount} cappers${fire}${split}`;
 }
 
 /**

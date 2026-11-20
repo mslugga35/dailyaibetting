@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OppositeSideNote } from '@/components/picks/OppositeSideNote';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,7 +29,10 @@ export function PicksContent({ initialData, sport }: { initialData: unknown; spo
     year: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 3) return '🔥';
     return '';
@@ -152,10 +156,11 @@ export function PicksContent({ initialData, sport }: { initialData: unknown; spo
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge className="bg-orange-500 text-white">{pick.sport}</Badge>
-                            <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                            <span className="text-lg">{getFireEmoji(pick)}</span>
                           </div>
                           <div className="font-semibold text-lg">{pick.bet}</div>
                           <div className="text-sm text-muted-foreground">{pick.matchup}</div>
+                          <OppositeSideNote count={pick.oppositeCapperCount} className="mt-1" />
                           <div className="flex items-center gap-1 mt-2">
                             <Users className="h-3 w-3 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">
@@ -194,11 +199,12 @@ export function PicksContent({ initialData, sport }: { initialData: unknown; spo
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline">{pick.sport}</Badge>
                             {pick.isFire && (
-                              <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                              <span className="text-lg">{getFireEmoji(pick)}</span>
                             )}
                           </div>
                           <div className="font-medium">{pick.bet}</div>
                           <div className="text-sm text-muted-foreground">{pick.matchup}</div>
+                          <OppositeSideNote count={pick.oppositeCapperCount} className="mt-1" />
                           <div className="flex items-center gap-1 mt-2">
                             <Users className="h-3 w-3 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">
@@ -278,10 +284,11 @@ export function PicksContent({ initialData, sport }: { initialData: unknown; spo
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{pick.bet}</span>
                                 {pick.isFire && (
-                                  <span>{getFireEmoji(pick.capperCount)}</span>
+                                  <span>{getFireEmoji(pick)}</span>
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">{pick.matchup}</div>
+                              <OppositeSideNote count={pick.oppositeCapperCount} className="mt-1" />
                             </div>
                             <div className="text-right">
                               <div className={`text-xl font-bold ${pick.isFire ? 'text-orange-500' : ''}`}>

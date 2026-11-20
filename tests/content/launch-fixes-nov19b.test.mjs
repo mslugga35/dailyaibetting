@@ -34,7 +34,7 @@ test('fire conflicts: only the side with more cappers stays fire; a tie leaves n
   assert.deepEqual(tot.map((r) => r.is_fire), [true, false]);
   // The board applies it before filtering and maps isFire from it; the record view uses the same rule.
   const hb = src('src/lib/data/hb-consensus.ts');
-  assert.match(hb, /return resolveFireConflicts\(await loadDates\(valid, opts\.db\)\)\n\s*\.filter/);
+  assert.match(hb, /return withOppositeSide\(resolveFireConflicts\(await loadDates\(valid, opts\.db\)\)\)\r?\n\s*\.filter/);
   assert.match(hb, /isFire: r\.is_fire,/);
   const sql = src('supabase/migrations/20261119_record_fire_conflicts.sql');
   assert.match(sql, /o\.capper_count >= l\.capper_count/);

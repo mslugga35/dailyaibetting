@@ -22,7 +22,10 @@ export default function ParlayPicksPage() {
     year: 'numeric',
   });
 
-  const getFireEmoji = (count: number) => {
+  const getFireEmoji = (pick: { capperCount: number; isFire?: boolean }) => {
+    // An out-voted opposite side keeps 3+ cappers but is not fire (2026-11-19).
+    if (pick.isFire === false) return '';
+    const count = pick.capperCount;
     if (count >= 10) return '🔥🔥🔥';
     if (count >= 3) return '🔥';
     return '';
@@ -141,7 +144,7 @@ export default function ParlayPicksPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                    <span className="text-lg">{getFireEmoji(pick)}</span>
                     <div className="text-sm font-bold">{pick.capperCount} cappers</div>
                   </div>
                 </div>
@@ -176,7 +179,7 @@ export default function ParlayPicksPage() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="outline" className={sportColors[pick.sport] || ''}>{pick.sport}</Badge>
-                            <span className="text-lg">{getFireEmoji(pick.capperCount)}</span>
+                            <span className="text-lg">{getFireEmoji(pick)}</span>
                           </div>
                           <div className="font-medium">{pick.matchup}</div>
                           <div className="text-lg font-bold text-primary">{pick.bet}</div>
