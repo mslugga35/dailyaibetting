@@ -29,12 +29,12 @@ test('generateEmailLink: emails OUR confirm page (token_hash), never the consuma
   const admin = (result) => ({ auth: { admin: { generateLink: async (a) => { calls.push(a); return result; } } } });
   const H = 'a'.repeat(56);
   const ok = await lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x.supabase.co/auth/v1/verify?t=1', hashed_token: H, verification_type: 'signup' } }, error: null }), 'n@example.com', '/pricing');
-  assert.deepEqual(ok, { actionLink: `https://dailyaibetting.com/auth/confirm?token_hash=${H}&type=signup&next=%2Fpricing`, isNew: true });
+  assert.deepEqual(ok, { actionLink: `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=signup&next=%2Fpricing`, isNew: true });
   assert.doesNotMatch(ok.actionLink, /supabase|\/verify/);
   assert.equal(calls[0].type, 'magiclink');
   const existing = await lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'magiclink' } }, error: null }), 'e@example.com');
   assert.equal(existing.isNew, false);
-  assert.equal(existing.actionLink, `https://dailyaibetting.com/auth/confirm?token_hash=${H}&type=magiclink`);
+  assert.equal(existing.actionLink, `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=magiclink`);
   await assert.rejects(lib.generateEmailLink(admin({ data: null, error: { message: 'boom' } }), 'e@example.com'));
   await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x/v' } }, error: null }), 'e@example.com'), /no token/);
   await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'recovery' } }, error: null }), 'e@example.com'));

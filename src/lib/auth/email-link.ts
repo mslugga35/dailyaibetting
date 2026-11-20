@@ -40,7 +40,7 @@ export function confirmUrl(tokenHash: string, type: string, next: unknown): stri
   const path = safeNext(typeof next === 'string' ? next : null);
   const q = new URLSearchParams({ token_hash: tokenHash, type });
   if (path !== '/') q.set('next', path);
-  return `${SITE}/auth/confirm?${q.toString()}`;
+  return `${SITE}/auth/confirm#${q.toString()}`;
 }
 
 /**
