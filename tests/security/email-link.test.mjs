@@ -29,12 +29,14 @@ test('generateEmailLink: emails OUR confirm page (token_hash), never the consuma
   const admin = (result) => ({ auth: { admin: { generateLink: async (a) => { calls.push(a); return result; } } } });
   const H = 'a'.repeat(56);
   const ok = await lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x.supabase.co/auth/v1/verify?t=1', hashed_token: H, verification_type: 'signup' } }, error: null }), 'n@example.com', '/pricing');
-  assert.deepEqual(ok, { actionLink: `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=signup&next=%2Fpricing`, isNew: true });
+  assert.equal(ok.isNew, true);
+  assert.ok(ok.issuedAt instanceof Date && Math.abs(ok.issuedAt - Date.now()) < 5000);
+  assert.equal(ok.actionLink, `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=signup&next=%2Fpricing&sent=${Math.floor(ok.issuedAt / 1000)}`);
   assert.doesNotMatch(ok.actionLink, /supabase|\/verify/);
   assert.equal(calls[0].type, 'magiclink');
   const existing = await lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'magiclink' } }, error: null }), 'e@example.com');
   assert.equal(existing.isNew, false);
-  assert.equal(existing.actionLink, `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=magiclink`);
+  assert.equal(existing.actionLink, `https://dailyaibetting.com/auth/confirm#token_hash=${H}&type=magiclink&sent=${Math.floor(existing.issuedAt / 1000)}`);
   await assert.rejects(lib.generateEmailLink(admin({ data: null, error: { message: 'boom' } }), 'e@example.com'));
   await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x/v' } }, error: null }), 'e@example.com'), /no token/);
   await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'recovery' } }, error: null }), 'e@example.com'));
@@ -47,6 +49,14 @@ test('email content escapes the link and uses sign-up wording only for new accou
   assert.match(n.subject, /finish creating/);
   assert.match(n.html, /href="https:\/\/x\/v\?a=1&amp;b=&quot;2&quot;"/);
   assert.match(lib.linkEmailContent('https://x/v', false).subject, /sign-in link/);
+  // DAI-05 (Muse 11-20): every email gets its own subject (send time, ET), so Gmail does not stack
+  // two links into one conversation and hide the newer one behind the older one's identical body.
+  const t1 = lib.linkEmailContent('https://x/v', false, new Date('2026-11-20T15:49:53Z'));
+  const t2 = lib.linkEmailContent('https://x/v', false, new Date('2026-11-20T15:50:59Z'));
+  assert.equal(t1.subject, 'Your DailyAI sign-in link (sent 10:49 AM ET)');
+  assert.notEqual(t1.subject, t2.subject);
+  assert.match(t1.text, /Sent at 10:49 AM ET\..*use the most recent email/s);
+  assert.match(lib.linkEmailContent('https://x/v', true, new Date('2026-07-04T16:05:00Z')).subject, /\(sent 12:05 PM ET\)$/);
 });
 
 test('sendLinkEmail posts to Resend and throws on failure or missing config', async () => {
@@ -77,7 +87,8 @@ test('route rejects bad input and limits per address before touching Supabase', 
   });
   assert.equal((await POST(req({ email: 'nope' }, '10.0.0.1'))).status, 400);
   // 3 per address per hour: the 4th request (from different IPs) sends nothing.
-  // The first three get past the limit and fail at Supabase (network is blocked in tests) → 502.
+  // The first three get past the limit and fail at the email send (Resend is blocked in tests) → 502;
+  // a failed send gives the one-a-minute slot back, so each retry is allowed.
   const statuses = [];
   for (const ip of ['10.0.0.2', '10.0.0.3', '10.0.0.4', '10.0.0.5']) statuses.push((await POST(req({ email: 'limit@example.com' }, ip))).status);
   // Over the limit the route answers ok without trying to send (no 502 from the blocked network).
@@ -96,7 +107,8 @@ test('bot checks: honeypot or a form filled in under 1.5 s gets ok with no send 
   const req = (body, ip) => new Request('https://dailyaibetting.com/api/auth/email-link', {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body),
   });
-  // A real send attempt fails at Supabase in tests (network blocked) → 502; a bot-trip answers 200 without trying.
+  // A real send attempt fails at the email send in tests (Resend blocked) → 502; a bot-trip answers 200
+  // without trying. The successful path is covered in link-lifecycle.test.mjs.
   const cases = [
     [{ email: 'bot1@example.com', website: 'http://spam', elapsedMs: 9000 }, 200],
     [{ email: 'bot2@example.com', elapsedMs: 200 }, 200],

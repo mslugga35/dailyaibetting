@@ -74,7 +74,7 @@ export default async function ResultsPage() {
           Graded Track Record
         </h1>
         <p className="mx-auto mt-2 max-w-2xl text-muted-foreground">
-          Every graded fire pick (3+ cappers on the same bet), win or lose. When cappers backed both sides of one game, only the side with more cappers counts (details below). Past results do not
+          Every graded fire pick (3+ cappers on the same bet), win or lose. When fire picks landed on both sides of one game, a pick counts only if it has more cappers than every fire pick on the other side (details below). Past results do not
           predict future results, and no outcome is guaranteed.
         </p>
         {perf?.firstGradedDate && perf.lastGradedDate && (

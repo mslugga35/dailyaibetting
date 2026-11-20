@@ -15,7 +15,7 @@ export function disclosureLines(d: Disclosure): string[] {
   const lines: string[] = [];
   if (d.excluded && d.withExcluded && d.excluded.wins + d.excluded.losses + d.excluded.pushes > 0) {
     lines.push(
-      `When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). ` +
+      `When fire picks landed on both sides of one game, a pick counts only if it has more cappers than every fire pick on the other side (a tie counts neither). ` +
       `That removed ${n(d.excluded.wins + d.excluded.losses + d.excluded.pushes)} graded picks, which went ${rec(d.excluded)} (${pct(d.excluded)}). ` +
       `Including them, the record would be ${rec(d.withExcluded)} (${pct(d.withExcluded)}).`,
     );

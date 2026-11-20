@@ -20,7 +20,7 @@ const strip = (h) => h.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<[^>]+
     await sleep(1500);
     const html = await (await fetch(B + p)).text(); const t = strip(html);
     const ssr = /data-testid="record-disclosure"/.test(html);
-    ok(`${p} raw HTML has disclosure (no JS)`, ssr && t.includes(`removed ${exclN.toLocaleString('en-US')} graded picks`) && t.includes(rec(d.withExcluded)), ssr ? (t.match(/When cappers backed both sides[^.]*\.[^.]*\.[^.]*\./) || [''])[0].slice(0, 220) : 'no data-testid in server HTML');
+    ok(`${p} raw HTML has disclosure (no JS)`, ssr && t.includes(`removed ${exclN.toLocaleString('en-US')} graded picks`) && t.includes(rec(d.withExcluded)), ssr ? (t.match(/When fire picks landed on both sides[^.]*\.[^.]*\.[^.]*\./) || [''])[0].slice(0, 220) : 'no data-testid in server HTML');
   }
   const browser = await chromium.launch();
   for (const js of [false, true]) {

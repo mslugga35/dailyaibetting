@@ -28,7 +28,7 @@ for (const [client, page] of [['src/app/stats/StatsClient.tsx', 'src/app/stats/p
 // DAI-05: links survive scanners and the copy matches real behavior (24h, newest link only).
 test('DAI-05 /auth/confirm spends the token only on a click, never on page load', () => {
   const s = src('src/app/auth/confirm/page.tsx');
-  assert.match(s, /verifyOtp\(\{ token_hash: link\.tokenHash/);
+  assert.match(s, /verifyOtp\(\{ token_hash: mine/);
   const pre = s.slice(0, s.indexOf('async function signIn')).split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
   assert.doesNotMatch(pre, /verifyOtp/, 'no verify before the click');
   assert.match(s, /window\.location\.hash/, 'token read from the fragment, never the query');

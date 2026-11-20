@@ -82,6 +82,6 @@ test('record disclosure is shown wherever the headline record is, and "nothing e
   assert.doesNotMatch(src('src/app/results/page.tsx'), /nothing estimated/i);
   const faq = src('src/app/pricing/page.tsx');
   assert.doesNotMatch(faq, /Nothing is estimated/);
-  assert.match(faq, /only the side with more cappers counts as a fire pick/);
+  assert.match(faq, /a pick counts only if it has more cappers than every fire pick on the other side/);
   assert.match(src('src/app/api/results/route.ts'), /case 'disclosure':/);
 });

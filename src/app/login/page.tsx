@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Brain, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { safeNext } from '@/lib/auth/safe-next';
+import { sentLabel } from '@/lib/auth/link-token';
 
 /**
  * Fixed messages for the ?error= codes the auth flow sends here. Anything else shows the
@@ -33,6 +34,7 @@ function LoginContent() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentAt, setSentAt] = useState<Date | null>(null);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [usePassword, setUsePassword] = useState(false);
@@ -124,7 +126,7 @@ function LoginContent() {
       });
       const data = await res.json().catch(() => ({}));
       setLoading(false);
-      if (res.ok && data.ok) setSent(true);
+      if (res.ok && data.ok) { setSentAt(new Date()); setSent(true); }
       else setError(data.error || 'We could not send the email right now. Please try again.');
     } catch {
       setLoading(false);
@@ -159,7 +161,8 @@ function LoginContent() {
                 {signup ? ' confirm your email and finish creating your account.' : ' sign in. New here? The same link creates your free account.'}
               </p>
               <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
-                <p>The link works once and stays valid for 24 hours. Only the newest link works: asking for another one cancels the earlier ones.</p>
+                {sentAt && <p data-testid="login-sent-at">Requested at {sentLabel(sentAt)}. Each email&apos;s subject shows when it was sent; use the most recent one.</p>}
+                <p>The link works once and stays valid for 24 hours. Only the newest link works: asking for another one cancels the earlier ones. We send at most one link a minute, so if you asked again within a minute, use the first email.</p>
                 <p>Check your spam folder if you don&apos;t see it.</p>
               </div>
               <button

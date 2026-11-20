@@ -1,0 +1,121 @@
+{
+ "label": "run1-20261120",
+ "at": "2026-11-20T17:29:08.721Z",
+ "email": "FREE test account",
+ "expected": 19,
+ "ran": 19,
+ "pass": 18,
+ "fail": 1,
+ "results": [
+  {
+   "check": "gap 0s: newest link works (used new first)",
+   "pass": true,
+   "info": "ee5285f4 mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 0s: older link refused",
+   "pass": true,
+   "info": "de9d88f4 403 otp_expired"
+  },
+  {
+   "check": "gap 1s: newest link works (used old first)",
+   "pass": true,
+   "info": "d923469e mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 1s: older link refused",
+   "pass": true,
+   "info": "3199c949 403 otp_expired"
+  },
+  {
+   "check": "gap 3s: newest link works (used old first)",
+   "pass": true,
+   "info": "df017054 mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 3s: older link refused",
+   "pass": true,
+   "info": "1520704f 403 otp_expired"
+  },
+  {
+   "check": "gap 7s: newest link works (used old first)",
+   "pass": true,
+   "info": "e3b3ef10 mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 7s: older link refused",
+   "pass": true,
+   "info": "69bd7b9c 403 otp_expired"
+  },
+  {
+   "check": "gap 15s: newest link works (used old first)",
+   "pass": true,
+   "info": "a6a861ac mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 15s: older link refused",
+   "pass": true,
+   "info": "6ede9ec3 403 otp_expired"
+  },
+  {
+   "check": "gap 30s: newest link works (used new first)",
+   "pass": true,
+   "info": "68505d3d mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 30s: older link refused",
+   "pass": true,
+   "info": "9692cd8e 403 otp_expired"
+  },
+  {
+   "check": "gap 60s: newest link works (used new first)",
+   "pass": true,
+   "info": "2ac8e4c7 mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "gap 60s: older link refused",
+   "pass": true,
+   "info": "f32e16fe 403 otp_expired"
+  },
+  {
+   "check": "overlap round 1: exactly one of 3 simultaneous links works",
+   "pass": true,
+   "info": "d9ec6364"
+  },
+  {
+   "check": "overlap round 1: last-arriving response holds the valid token (observation)",
+   "pass": null,
+   "info": "true"
+  },
+  {
+   "check": "overlap round 2: exactly one of 3 simultaneous links works",
+   "pass": true,
+   "info": "7e0e94a3"
+  },
+  {
+   "check": "overlap round 2: last-arriving response holds the valid token (observation)",
+   "pass": null,
+   "info": "true"
+  },
+  {
+   "check": "overlap round 3: exactly one of 3 simultaneous links works",
+   "pass": true,
+   "info": "bd232256"
+  },
+  {
+   "check": "overlap round 3: last-arriving response holds the valid token (observation)",
+   "pass": null,
+   "info": "true"
+  },
+  {
+   "check": "same link pressed in two sessions at once: exactly one signs in",
+   "pass": false,
+   "info": "mpm.morales+daifree@gmail.com | mpm.morales+daifree@gmail.com"
+  },
+  {
+   "check": "audit log: user_recovery_requested == links this run minted",
+   "pass": true,
+   "info": "audit 24 / minted 24"
+  }
+ ]
+}

@@ -34,6 +34,7 @@
   "tests/security/free-tier-enum.test.mjs": 2,
   "tests/security/hardening.test.mjs": 5,
   "tests/security/internal-url.test.mjs": 12,
+  "tests/security/link-lifecycle.test.mjs": 9,
   "tests/security/middleware.test.mjs": 18,
   "tests/security/safe-next.test.mjs": 3
 }

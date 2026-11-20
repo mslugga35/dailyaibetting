@@ -51,10 +51,15 @@ export function makeClient(url, key, { sessionUser } = {}) {
         const hh = harness();
         hh.db.log.push({ table: 'auth.users', op: 'generateLink', key: client.kind });
         if (client.kind !== 'service') return { data: null, error: { message: 'not allowed', status: 403 } };
-        const user = hh.authUsers.find((u) => u.email === email);
-        if (!user) return { data: null, error: { message: 'User not found', status: 404 } };
+        // Like GoTrue: an unknown address gets a new, unconfirmed account (type signup); every call
+        // issues a NEW token and it replaces the user's previous one (only the newest link works).
+        let user = hh.authUsers.find((u) => u.email === email);
+        if (!user) { user = { id: `user_link_${hh.authUsers.length + 1}`, email, confirmed: false }; hh.authUsers.push(user); }
+        hh.linkSeq = (hh.linkSeq || 0) + 1;
+        const hashed = `h${String(user.id).replace(/[^A-Za-z0-9]/g, '')}x${hh.linkSeq}`.padEnd(24, '0');
+        user.currentLinkToken = hashed;
         return {
-          data: { user, properties: { action_link: `https://auth.supabase.test/verify?token=t_${user.id}&redirect_to=${encodeURIComponent(options?.redirectTo || '')}`, hashed_token: `h${String(user.id).replace(/[^A-Za-z0-9]/g, '').padEnd(24, '0')}`, verification_type: 'magiclink' } },
+          data: { user, properties: { action_link: `https://auth.supabase.test/verify?token=t_${user.id}&redirect_to=${encodeURIComponent(options?.redirectTo || '')}`, hashed_token: hashed, verification_type: user.confirmed === false ? 'signup' : 'magiclink' } },
           error: null,
         };
       },
