@@ -1,0 +1,649 @@
+{
+ "label": "prod2-41ba76a",
+ "base": "https://dailyaibetting.com",
+ "at": "2026-11-20T14:56:06.388Z",
+ "pass": 128,
+ "fail": 0,
+ "results": [
+  {
+   "check": "/ @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/ @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/pricing @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/pricing @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/consensus @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/consensus @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/picks @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/picks @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/daily-bets @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/daily-bets @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/results @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/results @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/stats @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/stats @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/history @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/history @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/cappers @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/cappers @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/login @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/login @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/props @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/props @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "/nba-picks-today @360 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/nba-picks-today @360 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 360 vs 360"
+  },
+  {
+   "check": "menu toggle visible @360",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "menu opens with nav links @360",
+   "pass": true,
+   "info": "18 visible nav links"
+  },
+  {
+   "check": "/ @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/ @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/pricing @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/pricing @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/consensus @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/consensus @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/picks @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/picks @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/daily-bets @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/daily-bets @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/results @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/results @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/stats @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/stats @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/history @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/history @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/cappers @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/cappers @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/login @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/login @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/props @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/props @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "/nba-picks-today @390 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/nba-picks-today @390 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 390 vs 390"
+  },
+  {
+   "check": "menu toggle visible @390",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "menu opens with nav links @390",
+   "pass": true,
+   "info": "18 visible nav links"
+  },
+  {
+   "check": "/ @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/ @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/pricing @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/pricing @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/consensus @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/consensus @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/picks @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/picks @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/daily-bets @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/daily-bets @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/results @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/results @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/stats @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/stats @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/history @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/history @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/cappers @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/cappers @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/login @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/login @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/props @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/props @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "/nba-picks-today @768 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/nba-picks-today @768 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 768 vs 768"
+  },
+  {
+   "check": "menu toggle visible @768",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "menu opens with nav links @768",
+   "pass": true,
+   "info": "18 visible nav links"
+  },
+  {
+   "check": "/ @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/ @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/pricing @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/pricing @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/consensus @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/consensus @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/picks @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/picks @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/daily-bets @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/daily-bets @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/results @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/results @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/stats @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/stats @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/history @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/history @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/cappers @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/cappers @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/login @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/login @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/props @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/props @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "/nba-picks-today @1024 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/nba-picks-today @1024 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1024 vs 1024"
+  },
+  {
+   "check": "menu toggle visible @1024",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "menu opens with nav links @1024",
+   "pass": true,
+   "info": "18 visible nav links"
+  },
+  {
+   "check": "/ @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/ @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/pricing @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/pricing @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/consensus @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/consensus @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/picks @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/picks @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/daily-bets @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/daily-bets @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/results @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/results @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/stats @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/stats @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/history @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/history @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/cappers @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/cappers @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/login @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/login @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/props @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/props @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  },
+  {
+   "check": "/nba-picks-today @1440 loads",
+   "pass": true,
+   "info": "status 200"
+  },
+  {
+   "check": "/nba-picks-today @1440 no horizontal page scroll",
+   "pass": true,
+   "info": "scrollWidth 1440 vs 1440"
+  }
+ ]
+}

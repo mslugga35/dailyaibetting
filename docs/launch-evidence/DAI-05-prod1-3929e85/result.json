@@ -1,0 +1,62 @@
+{
+ "label": "prod1-3929e85",
+ "at": "2026-11-20T14:50:30.836Z",
+ "pass": 9,
+ "fail": 0,
+ "results": [
+  {
+   "check": "A landing page shows a Sign in button (token not spent on load)",
+   "pass": true,
+   "info": "",
+   "at": "2026-11-20T14:42:56.987Z"
+  },
+  {
+   "check": "A link still works after a scanner-style open, signs in as FREE",
+   "pass": true,
+   "info": "{\"outcome\":\"navigated\",\"who\":\"mpm.morales+daifree@gmail.com\",\"urlNoToken\":true}",
+   "at": "2026-11-20T14:43:15.392Z"
+  },
+  {
+   "check": "A token removed from the address bar",
+   "pass": true,
+   "info": "",
+   "at": "2026-11-20T14:43:15.393Z"
+  },
+  {
+   "check": "B reused link shows \"no longer works\"",
+   "pass": true,
+   "info": "failed",
+   "at": "2026-11-20T14:43:31.127Z"
+  },
+  {
+   "check": "C older link after a newer one -> clear failure message",
+   "pass": true,
+   "info": "failed",
+   "at": "2026-11-20T14:43:48.787Z"
+  },
+  {
+   "check": "C newest link works",
+   "pass": true,
+   "info": "{\"outcome\":\"navigated\",\"who\":\"mpm.morales+daifree@gmail.com\",\"urlNoToken\":true}",
+   "at": "2026-11-20T14:44:07.179Z"
+  },
+  {
+   "check": "E password sign-in works (PRO)",
+   "pass": true,
+   "info": "",
+   "at": "2026-11-20T14:44:11.630Z"
+  },
+  {
+   "check": "D link used after 6 minutes still works",
+   "pass": true,
+   "info": "{\"outcome\":\"navigated\",\"who\":\"mpm.morales+daifree@gmail.com\",\"urlNoToken\":true}",
+   "at": "2026-11-20T14:50:30.451Z"
+  },
+  {
+   "check": "F email-link endpoint accepts a real request",
+   "pass": true,
+   "info": "status 200",
+   "at": "2026-11-20T14:50:30.836Z"
+  }
+ ]
+}

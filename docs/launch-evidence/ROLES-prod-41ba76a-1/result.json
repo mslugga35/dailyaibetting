@@ -1,0 +1,48 @@
+{
+ "label": "prod-41ba76a-1",
+ "at": "2026-11-20T14:57:08.340Z",
+ "pass": 8,
+ "fail": 0,
+ "results": [
+  {
+   "check": "DAI-08 home and /picks report the same fire-pick count",
+   "pass": true,
+   "info": "home 0 / picks 0"
+  },
+  {
+   "check": "signed-out /admin/grading does not show the grader",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE /admin -> access denied page, no grader",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE /account shows the free plan, signed in",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "DAI-09 PRO /admin/grading -> \"You don't have access\" page",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "DAI-10 PRO /account: complimentary Pro, no portal hang",
+   "pass": true,
+   "info": "com Member since 11/18/2026 Subscription ⚡ Pro Status Active Access until 12/18/2026 Complimentary Pro access."
+  },
+  {
+   "check": "ADMIN /admin/grading loads (buttons present, NOT clicked)",
+   "pass": true,
+   "info": "Pending 1965"
+  },
+  {
+   "check": "DAI-07 signed-in /account @390 no horizontal scroll",
+   "pass": true,
+   "info": "{\"vw\":390,\"sw\":390}"
+  }
+ ]
+}

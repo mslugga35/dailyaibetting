@@ -1,0 +1,47 @@
+{
+ "at": "2026-11-20T14:57:38.074Z",
+ "mode": "stripe-test",
+ "captcha": false,
+ "results": [
+  {
+   "check": "portal shows the founding plan at $9.99/month",
+   "pass": true,
+   "info": "$9.99 per month"
+  },
+  {
+   "check": "portal shows the card on file (4242)",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "portal shows invoice history with a paid invoice",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "portal offers Cancel subscription",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "portal offers NO plan change/upgrade (founding price locked)",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "portal offers payment-method update",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "return link goes back to dailyaibetting.com/account",
+   "pass": true,
+   "info": "https://dailyaibetting.com/account"
+  },
+  {
+   "check": "cancel flow explains access continues until period end (not confirmed)",
+   "pass": true,
+   "info": "If you cancel this subscription, it will still be available until the end of your billing period on December 20, 2026."
+  }
+ ]
+}
