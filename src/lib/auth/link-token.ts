@@ -50,7 +50,7 @@ export function createLinkCooldown(ms: number) {
       if (until.size > 5000) for (const [k, v] of until) if (v.t <= now) until.delete(k);
       const cur = until.get(key);
       if (cur && cur.t > now) return null;
-      const owner = Symbol(key);
+      const owner = Symbol('link-slot');
       until.set(key, { t: now + ms, owner });
       return owner;
     },

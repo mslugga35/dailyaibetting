@@ -111,6 +111,25 @@ Never reopen a VERIFIED issue without new evidence. Evidence lives in `docs/laun
 - **Prod:** baseline 740faa2: no horizontal scroll anywhere. Check 1 3929e85 128/128 · check 2 41ba76a 128/128 · signed-in /account at 390: no overflow (`ROLES-prod-41ba76a-1`).
 - **Not covered:** Stripe-hosted checkout on a phone (Stripe's own page).
 
+## New findings from the 11-20 war-room review (independent agents; all OPEN unless stated)
+Found by the billing audit, the security review and the test review. None is a regression from the 11-20 fixes.
+
+| ID | Finding | Sev | Status | Proposed fix | Needs owner? |
+|---|---|---|---|---|---|
+| DAI-11 | A second live subscription can be created (two open Checkout tabs, or two concurrent first checkouts), and the webhook only logs `MANUAL RECONCILE` and keeps billing it | Med | OPEN | Idempotency key on `customers.create`; expire other open sessions on completion; auto-cancel a duplicate *trial* (`invoice_now:false`); a real alert instead of a log line | Yes: auto-cancel touches subscriptions |
+| DAI-12 | A redelivered `checkout.session.completed` re-runs the one-trial-per-card check and can cancel an already-approved trial after a card change | Med | OPEN | Skip enforcement when `metadata.trial_card_checked === '1'` | No (code fix), but billing path: test-mode e2e first |
+| DAI-13 | A payer whose login isn't mapped to their Stripe customer can buy a second subscription | Med | OPEN | Block or redirect when any same-email customer has a live DailyAI subscription; reconcile Stripe against the DB before launch | Reconcile: read-only |
+| DAI-14 | Founding holds can be squatted cheaply (confirmed-email accounts, no card); 20 holds make checkout "busy" | Med | OPEN | Per-IP hold limit and an alert on prolonged "busy"; offer the regular price instead of a dead end | Pricing UX: yes |
+| DAI-15 | `GUEST_CHECKOUT_ENABLED=true` in production. Checkout still refuses guests (401), but the webhook's guest path is live for any non-app payment (e.g. a Payment Link), and it emails Supabase's consumable verify link | Low | OPEN | Set it to false, or route guest emails through `/auth/confirm` | Yes: production payment setting |
+| DAI-16 | Third-party scripts (HarborSEO, AdSense, GA, webmcp) load on `/auth/confirm` and `/login`; no CSP | Low | OPEN | Don't render them on `/auth/*` and `/login`; add a CSP | No |
+| DAI-17 | Supabase allows the **same** sign-in link pressed in two places in the same instant to sign in twice (no row lock in GoTrue `/verify`). Admits only someone who already holds the link | Info | ACCEPTED (upstream) | None in DailyAI; recorded in `DAI-05-semantics-run1-20261120` | No |
+
+Billing read-only checks done 11-20 (Phase 5):
+- `user_subscriptions` RLS is on. Writes are service-role only (`auth.role()='service_role'`), and members can only read their own row ✅.
+- pm2 `dailyaibetting` runs in fork mode as one process, so the per-process limits hold ✅.
+- The app's `STRIPE_PORTAL_CONFIGURATION_ID` (`bpc_1TIA…`) **is** the live default configuration, read-only: livemode, active, plan switching off, cancel at period end, payment method and invoices on, customer may update name/email/address/phone; no headline and no terms/privacy URLs (LEGAL / STRIPE-NAME).
+- `PRICING_MODE=founding`, live key ✅.
+
 ## DAI-08 / DAI-09 / DAI-10: VERIFIED by Muse 11-20, regression only
 - DAI-08: "Homepage and /picks agree: 6 total, 3 consensus, 0 fire picks … now matching the grading page's 1,031 wins / 934 losses at 52.5%." Regression 41ba76a: home = /picks fire count ✅.
 - DAI-09: "a proper access-denied page: "You don't have access to this page. This area is for site administrators only."" Regression: PRO and FREE /admin denied ✅; ADMIN /admin/grading loads (view only) ✅.

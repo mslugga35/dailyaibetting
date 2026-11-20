@@ -186,8 +186,9 @@ export function Header() {
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px]">
-              <div className="flex flex-col gap-4 mt-8">
+            <SheetContent side="right" className="w-[300px] overflow-y-auto">
+              {/* px-4: the drawer has no padding of its own (DAI-07: content touched the edge at 360 px) */}
+              <div className="flex flex-col gap-4 mt-8 px-4 pb-6">
                 <div className="flex items-center gap-2 pb-4 border-b">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
                     <Brain className="h-5 w-5 text-primary-foreground" />

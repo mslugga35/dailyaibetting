@@ -116,6 +116,9 @@ async function whoAmI(pg) {
       await pg.getByTestId('confirm-signin').click();
       await pg.waitForURL((u) => !/\/auth\/confirm/.test(String(u)), { timeout: 20000 }).catch(() => {});
       ok(`${two}: newer link signs in`, (await whoAmI(pg)) === emailOf(two));
+      // Signed-in browser + an OLDER (superseded) link: must say "no longer works", never "already signed in".
+      await pg.goto(older.href); await testid(pg, 'confirm-signin'); await pg.getByTestId('confirm-signin').click();
+      ok(`${two}: signed-in browser opening the older link is told it no longer works (not "already signed in")`, await testid(pg, 'confirm-failed'));
       await ctx.close(); }
     // ONE link: reload (tab restore), simulated network failure + retry, then a second tab -> "already signed in".
     { const [m] = links[one]; const ctx = await newCtx(browser, `${one}-lifecycle`); const pg = await ctx.newPage();
@@ -150,7 +153,7 @@ async function whoAmI(pg) {
     ok(`${two}: audit shows exactly 1 login and no new link minted during use`, a2.login === 1 && !a2.user_recovery_requested, JSON.stringify(a2));
     ok(`${one}: audit shows exactly 1 login and no new link minted during use`, a1.login === 1 && !a1.user_recovery_requested, JSON.stringify(a1));
     ok('token never sent anywhere except Supabase /verify (body only)', leaks.length === 0, leaks.join('; '));
-    EXPECTED = 22 + (kv.DELAY ? 1 : 0);
+    EXPECTED = 23 + (kv.DELAY ? 1 : 0);
   } else { console.error('phase must be request|use'); process.exit(2); }
   await browser.close();
   ok('no page errors in any browser context', consoleErrors.filter((e) => !/favicon|Failed to load resource.*(403|404)/i.test(e)).length === 0, consoleErrors.slice(0, 4).join(' | '));
