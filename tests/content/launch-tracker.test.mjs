@@ -64,3 +64,14 @@ test('DAI-02 pricing FAQ does not claim every fire pick is graded', () => {
   assert.doesNotMatch(s, /Every fire pick is graded/);
   assert.match(s, /stay pending and are not counted/);
 });
+
+test('DAI-04 /stats and /history render the disclosure outside any loading branch', () => {
+  for (const f of ['src/app/stats/StatsClient.tsx', 'src/app/history/HistoryClient.tsx']) {
+    const s = src(f);
+    const at = s.indexOf('<RecordDisclosure initial={disclosure}');
+    assert.ok(at > 0, f);
+    // the page's loading ternary hides its whole body on the server; the disclosure must come before it
+    const loadingAt = s.search(/\{\s*loading \? \(/);
+    assert.ok(loadingAt === -1 || at < loadingAt, `${f}: disclosure must not sit inside the loading branch`);
+  }
+});

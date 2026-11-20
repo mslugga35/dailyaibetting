@@ -173,6 +173,8 @@ export default function StatsClient({ disclosure = null }: { disclosure?: Disclo
         ))}
       </div>
 
+      {/* Outside the loading branch so it is in the server HTML (DAI-04). */}
+      <RecordDisclosure initial={disclosure} className="mb-8" />
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -224,7 +226,6 @@ export default function StatsClient({ disclosure = null }: { disclosure?: Disclo
             </Card>
           </div>
 
-          <RecordDisclosure initial={disclosure} className="mb-8" />
 
           {/* Tier Stats — Pro only */}
           <ProGateSection feature="detailed tier breakdowns">

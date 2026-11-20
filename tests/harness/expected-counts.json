@@ -12,7 +12,7 @@
   "tests/content/blog-content.test.mjs": 9,
   "tests/content/email-safe-text.test.mjs": 1,
   "tests/content/launch-fixes-nov19b.test.mjs": 10,
-  "tests/content/launch-tracker.test.mjs": 11,
+  "tests/content/launch-tracker.test.mjs": 12,
   "tests/content/marketing-claims.test.mjs": 19,
   "tests/content/muse-b3eacc4.test.mjs": 6,
   "tests/content/policies.test.mjs": 8,

@@ -1,0 +1,151 @@
+{
+ "label": "prod1-3929e85",
+ "base": "https://dailyaibetting.com",
+ "at": "2026-11-20T14:37:31.297Z",
+ "pass": 15,
+ "fail": 2,
+ "results": [
+  {
+   "check": "API disclosure present",
+   "pass": true,
+   "info": "kept 1,031-934-23 excluded 269-263-4 with 1,300-1,197-27"
+  },
+  {
+   "check": "API arithmetic: kept + excluded = withExcluded",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "/ raw HTML has disclosure (no JS)",
+   "pass": true,
+   "info": "When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That removed 536 graded picks, which went 269-263-4 (50.6%)."
+  },
+  {
+   "check": "/results raw HTML has disclosure (no JS)",
+   "pass": true,
+   "info": "When cappers backed both sides of one game, only the side with more cappers counts (details below). Past results do not predict future results, and no outcome is guaranteed. Graded picks from 2026-06-01 to 2026-11-19 How"
+  },
+  {
+   "check": "/stats raw HTML has disclosure (no JS)",
+   "pass": false,
+   "info": "no data-testid in server HTML"
+  },
+  {
+   "check": "/history raw HTML has disclosure (no JS)",
+   "pass": true,
+   "info": "When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That removed 536 graded picks, which went 269-263-4 (50.6%)."
+  },
+  {
+   "check": "/pricing raw HTML has disclosure (no JS)",
+   "pass": true,
+   "info": "When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither); the Results page shows how the removed picks did. Odds were not recorded, so ROI and units are est"
+  },
+  {
+   "check": "/ disclosure visible (JS off)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/results disclosure visible (JS off)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/stats disclosure visible (JS off)",
+   "pass": false,
+   "info": ""
+  },
+  {
+   "check": "/history disclosure visible (JS off)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/pricing disclosure visible (JS off)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/ disclosure visible (JS on)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/results disclosure visible (JS on)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/stats disclosure visible (JS on)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/history disclosure visible (JS on)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  },
+  {
+   "check": "/pricing disclosure visible (JS on)",
+   "pass": true,
+   "info": "How this record is counted When cappers backed both sides of one game, only the side with more cappers counts as a fire pick (a tie counts neither). That remove"
+  }
+ ],
+ "api": {
+  "kept": {
+   "wins": 1031,
+   "losses": 934,
+   "pushes": 23,
+   "decided": 1965,
+   "winPct": 52.5
+  },
+  "excluded": {
+   "wins": 269,
+   "losses": 263,
+   "pushes": 4,
+   "decided": 532,
+   "winPct": 50.6
+  },
+  "withExcluded": {
+   "wins": 1300,
+   "losses": 1197,
+   "pushes": 27,
+   "decided": 2497,
+   "winPct": 52.1
+  },
+  "byCapperCount": [
+   {
+    "label": "3–4 cappers",
+    "wins": 568,
+    "losses": 495,
+    "pushes": 16,
+    "decided": 1063,
+    "winPct": 53.4
+   },
+   {
+    "label": "5–6 cappers",
+    "wins": 267,
+    "losses": 249,
+    "pushes": 5,
+    "decided": 516,
+    "winPct": 51.7
+   },
+   {
+    "label": "7–9 cappers",
+    "wins": 145,
+    "losses": 142,
+    "pushes": 2,
+    "decided": 287,
+    "winPct": 50.5
+   },
+   {
+    "label": "10+ cappers",
+    "wins": 51,
+    "losses": 48,
+    "pushes": 0,
+    "decided": 99,
+    "winPct": 51.5
+   }
+  ]
+ }
+}
