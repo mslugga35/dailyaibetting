@@ -89,7 +89,7 @@ test('Nov 19 Muse follow-ups: $19.99 disclosed, Free All Picks explains the gate
   assert.doesNotMatch(admin, /Vercel Cron/);
   assert.match(read(join(ROOT, 'src/app/admin/page.tsx')), /redirect\('\/admin\/grading'\)/);
   assert.doesNotMatch(read(join(ROOT, 'src/components/picks/ConsensusReport.tsx')), /picks\.slice\(0, 3\)/);
-  assert.match(read(join(ROOT, 'src/app/stats/page.tsx')), /data-testid="overall-roi"/);
+  assert.match(read(join(ROOT, 'src/app/stats/StatsClient.tsx')), /data-testid="overall-roi"/);
   const bc = read(join(ROOT, 'src/components/ui/breadcrumbs.tsx'));
   assert.match(bc, /'daily-ai-picks': 'Daily AI Picks'/);
   assert.match(bc, /'ncaab': 'NCAAB'/);

@@ -54,7 +54,7 @@ export function makeClient(url, key, { sessionUser } = {}) {
         const user = hh.authUsers.find((u) => u.email === email);
         if (!user) return { data: null, error: { message: 'User not found', status: 404 } };
         return {
-          data: { user, properties: { action_link: `https://auth.supabase.test/verify?token=t_${user.id}&redirect_to=${encodeURIComponent(options?.redirectTo || '')}` } },
+          data: { user, properties: { action_link: `https://auth.supabase.test/verify?token=t_${user.id}&redirect_to=${encodeURIComponent(options?.redirectTo || '')}`, hashed_token: `h${String(user.id).replace(/[^A-Za-z0-9]/g, '').padEnd(24, '0')}`, verification_type: 'magiclink' } },
           error: null,
         };
       },

@@ -24,17 +24,22 @@ test('callbackUrl only ever lands on our own /auth/callback with a same-site nex
   }
 });
 
-test('generateEmailLink: new address → sign-up wording; errors and non-https links throw', async () => {
+test('generateEmailLink: emails OUR confirm page (token_hash), never the consumable Supabase verify URL (DAI-05)', async () => {
   const calls = [];
   const admin = (result) => ({ auth: { admin: { generateLink: async (a) => { calls.push(a); return result; } } } });
-  const ok = await lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x.supabase.co/auth/v1/verify?t=1', verification_type: 'signup' } }, error: null }), 'n@example.com', '/pricing');
-  assert.deepEqual(ok, { actionLink: 'https://x.supabase.co/auth/v1/verify?t=1', isNew: true });
+  const H = 'a'.repeat(56);
+  const ok = await lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x.supabase.co/auth/v1/verify?t=1', hashed_token: H, verification_type: 'signup' } }, error: null }), 'n@example.com', '/pricing');
+  assert.deepEqual(ok, { actionLink: `https://dailyaibetting.com/auth/confirm?token_hash=${H}&type=signup&next=%2Fpricing`, isNew: true });
+  assert.doesNotMatch(ok.actionLink, /supabase|\/verify/);
   assert.equal(calls[0].type, 'magiclink');
-  assert.equal(calls[0].options.redirectTo, 'https://dailyaibetting.com/auth/callback?next=%2Fpricing');
-  const existing = await lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x/v', verification_type: 'magiclink' } }, error: null }), 'e@example.com');
+  const existing = await lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'magiclink' } }, error: null }), 'e@example.com');
   assert.equal(existing.isNew, false);
+  assert.equal(existing.actionLink, `https://dailyaibetting.com/auth/confirm?token_hash=${H}&type=magiclink`);
   await assert.rejects(lib.generateEmailLink(admin({ data: null, error: { message: 'boom' } }), 'e@example.com'));
-  await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { action_link: 'http://x/v' } }, error: null }), 'e@example.com'));
+  await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { action_link: 'https://x/v' } }, error: null }), 'e@example.com'), /no token/);
+  await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { hashed_token: H, verification_type: 'recovery' } }, error: null }), 'e@example.com'));
+  await assert.rejects(lib.generateEmailLink(admin({ data: { properties: { hashed_token: 'x"><script>', verification_type: 'magiclink' } }, error: null }), 'e@example.com'));
+  for (const evil of ['https://evil.com', '//evil.com', 'javascript:alert(1)']) assert.doesNotMatch(lib.confirmUrl(H, 'magiclink', evil), /evil|javascript/);
 });
 
 test('email content escapes the link and uses sign-up wording only for new accounts', () => {

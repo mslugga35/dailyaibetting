@@ -76,7 +76,7 @@ test('record disclosure: excluded = before - after, and the text states both rec
 });
 
 test('record disclosure is shown wherever the headline record is, and "nothing estimated" is gone', () => {
-  for (const f of ['src/app/page.tsx', 'src/app/results/page.tsx', 'src/app/stats/page.tsx', 'src/app/history/page.tsx', 'src/app/pricing/page.tsx']) {
+  for (const f of ['src/app/page.tsx', 'src/app/results/page.tsx', 'src/app/stats/StatsClient.tsx', 'src/app/history/HistoryClient.tsx', 'src/app/pricing/page.tsx']) {
     assert.match(src(f), /<RecordDisclosure\b/, f);
   }
   assert.doesNotMatch(src('src/app/results/page.tsx'), /nothing estimated/i);

@@ -11,8 +11,12 @@
   "tests/content/ai-report-status.test.mjs": 6,
   "tests/content/blog-content.test.mjs": 9,
   "tests/content/email-safe-text.test.mjs": 1,
+  "tests/content/launch-fixes-nov19b.test.mjs": 10,
+  "tests/content/launch-tracker.test.mjs": 9,
   "tests/content/marketing-claims.test.mjs": 19,
+  "tests/content/muse-b3eacc4.test.mjs": 6,
   "tests/content/policies.test.mjs": 8,
+  "tests/content/qa-nov19-fixes.test.mjs": 7,
   "tests/data/bot-record.test.mjs": 1,
   "tests/data/capper-stats-excluded.test.mjs": 1,
   "tests/data/daily-ai-report-season.test.mjs": 13,
@@ -31,8 +35,5 @@
   "tests/security/hardening.test.mjs": 5,
   "tests/security/internal-url.test.mjs": 12,
   "tests/security/middleware.test.mjs": 18,
-  "tests/security/safe-next.test.mjs": 3,
-  "tests/content/qa-nov19-fixes.test.mjs": 7,
-  "tests/content/launch-fixes-nov19b.test.mjs": 10,
-  "tests/content/muse-b3eacc4.test.mjs": 6
+  "tests/security/safe-next.test.mjs": 3
 }

@@ -17,6 +17,7 @@ import { safeNext } from '@/lib/auth/safe-next';
 const LOGIN_ERRORS: Record<string, string> = {
   auth: 'Sign-in failed. Please try again.',
   link_expired: 'That sign-in link has expired or was already used. Enter your email below to get a new one.',
+  link_used: 'That sign-in link was already used, or a newer link was sent (only the newest one works). Enter your email below to get a new one.',
   no_auth_data: 'That sign-in link was incomplete. Enter your email below to get a new one.',
   missing_tokens: 'That sign-in link was incomplete. Enter your email below to get a new one.',
 };
@@ -159,7 +160,7 @@ function LoginContent() {
                 {signup ? ' confirm your email and finish creating your account.' : ' sign in. New here? The same link creates your free account.'}
               </p>
               <div className="bg-muted/30 rounded-lg p-4 text-sm text-muted-foreground space-y-1">
-                <p>The link works once and expires in 24 hours.</p>
+                <p>The link works once and stays valid for 24 hours. Only the newest link works: asking for another one cancels the earlier ones.</p>
                 <p>Check your spam folder if you don&apos;t see it.</p>
               </div>
               <button

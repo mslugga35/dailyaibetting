@@ -28,10 +28,26 @@ export function callbackUrl(next: unknown): string {
   return `${SITE}/auth/callback${path !== '/' ? `?next=${encodeURIComponent(path)}` : ''}`;
 }
 
+/** Verification types a DailyAI email link may carry (anything else is refused). */
+export const LINK_TYPES = new Set(['magiclink', 'signup']);
+
 /**
- * Creates the account if the address is new (unconfirmed until the link is opened)
+ * Our own confirm page, NOT Supabase's /verify URL. Supabase's link is consumed by the first
+ * GET, so a mail scanner or link preview could burn it. /auth/confirm only spends the token
+ * when the person presses the button (DAI-05).
+ */
+export function confirmUrl(tokenHash: string, type: string, next: unknown): string {
+  const path = safeNext(typeof next === 'string' ? next : null);
+  const q = new URLSearchParams({ token_hash: tokenHash, type });
+  if (path !== '/') q.set('next', path);
+  return `${SITE}/auth/confirm?${q.toString()}`;
+}
+
+/**
+ * Creates the account if the address is new (unconfirmed until the link is used)
  * and returns the one-time link. `isNew` only picks the email wording; it is never
- * returned to the visitor (no account enumeration).
+ * returned to the visitor (no account enumeration). Each call replaces the address's
+ * previous token, so only the newest emailed link works.
  */
 export async function generateEmailLink(
   admin: SupabaseClient,
@@ -43,11 +59,12 @@ export async function generateEmailLink(
     email,
     options: { redirectTo: callbackUrl(next) },
   });
-  const actionLink = data?.properties?.action_link;
-  if (error || !actionLink || !actionLink.startsWith('https://')) {
-    throw new Error(`generateLink failed: ${error?.message ?? 'no link'}`);
+  const tokenHash = data?.properties?.hashed_token;
+  const type = data?.properties?.verification_type;
+  if (error || !tokenHash || !/^[A-Za-z0-9_-]{16,}$/.test(tokenHash) || !type || !LINK_TYPES.has(type)) {
+    throw new Error(`generateLink failed: ${error?.message ?? 'no token'}`);
   }
-  return { actionLink, isNew: data.properties.verification_type === 'signup' };
+  return { actionLink: confirmUrl(tokenHash, type, next), isNew: type === 'signup' };
 }
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -59,7 +76,7 @@ export function linkEmailContent(actionLink: string, isNew: boolean) {
     ? 'Click below to confirm your email and finish creating your free DailyAI Betting account.'
     : 'Click below to sign in to DailyAI Betting.';
   const button = isNew ? 'Confirm email and sign in' : 'Sign in';
-  const foot = 'The link works once and expires in 24 hours. If you did not ask for it, ignore this email: nothing happens without the click.';
+  const foot = 'The link works once and stays valid for 24 hours. Only the newest link works: asking for another one cancels this one. If you did not ask for it, ignore this email: nothing happens without the click.';
   const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto">
 <p>${lead}</p>
 <p><a href="${esc(actionLink)}" style="display:inline-block;background:#047857;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">${button}</a></p>
