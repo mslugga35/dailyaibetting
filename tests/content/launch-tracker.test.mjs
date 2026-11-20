@@ -44,7 +44,8 @@ test('DAI-05 login page and email say only the newest link works (no bare "expir
     assert.match(s, /Only the newest link works/, f);
     assert.doesNotMatch(s, /expires in 24 hours/, f);
   }
-  assert.match(src('src/app/login/page.tsx'), /link_used:/);
+  // Browser and server accept the same links: one shared rule, no copy that can drift.
+  for (const f of ['src/app/auth/confirm/page.tsx', 'src/lib/auth/email-link.ts']) assert.match(src(f), /isLinkToken\(/, f);
 });
 
 // DAI-01: /props explains props are not offered (no bare 404, no feature promise); no blog claim of prop parlays.

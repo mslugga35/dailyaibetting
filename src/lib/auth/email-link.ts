@@ -10,6 +10,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { safeNext } from '@/lib/auth/safe-next';
+import { isLinkToken, LINK_TYPES } from '@/lib/auth/link-token';
 
 const SITE = 'https://dailyaibetting.com';
 
@@ -28,8 +29,7 @@ export function callbackUrl(next: unknown): string {
   return `${SITE}/auth/callback${path !== '/' ? `?next=${encodeURIComponent(path)}` : ''}`;
 }
 
-/** Verification types a DailyAI email link may carry (anything else is refused). */
-export const LINK_TYPES = new Set(['magiclink', 'signup']);
+export { LINK_TYPES };
 
 /**
  * Our own confirm page, NOT Supabase's /verify URL. Supabase's link is consumed by the first
@@ -61,7 +61,7 @@ export async function generateEmailLink(
   });
   const tokenHash = data?.properties?.hashed_token;
   const type = data?.properties?.verification_type;
-  if (error || !tokenHash || !/^[A-Za-z0-9_-]{16,}$/.test(tokenHash) || !type || !LINK_TYPES.has(type)) {
+  if (error || !tokenHash || !type || !isLinkToken(tokenHash, type)) {
     throw new Error(`generateLink failed: ${error?.message ?? 'no token'}`);
   }
   return { actionLink: confirmUrl(tokenHash, type, next), isNew: type === 'signup' };

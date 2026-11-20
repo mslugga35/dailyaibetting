@@ -6,8 +6,8 @@ import { RecordDisclosure, type Disclosure } from '@/components/results/RecordDi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Target, Trophy, TrendingUp, Flame, BarChart3 } from 'lucide-react';
-import { ConfidenceBadge, getConfidenceInfo, getConfidenceTier, type ConfidenceTier } from '@/components/ConfidenceBadge';
+import { Loader2, Target, TrendingUp, Flame, BarChart3 } from 'lucide-react';
+import { getConfidenceInfo, getConfidenceTier, type ConfidenceTier } from '@/components/ConfidenceBadge';
 import { ProGateSection } from '@/components/pro/ProGateSection';
 
 interface GradedPick {

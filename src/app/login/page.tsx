@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, Mail, Loader2, CheckCircle } from 'lucide-react';
+import { Brain, Loader2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { safeNext } from '@/lib/auth/safe-next';
 
@@ -17,7 +17,6 @@ import { safeNext } from '@/lib/auth/safe-next';
 const LOGIN_ERRORS: Record<string, string> = {
   auth: 'Sign-in failed. Please try again.',
   link_expired: 'That sign-in link has expired or was already used. Enter your email below to get a new one.',
-  link_used: 'That sign-in link was already used, or a newer link was sent (only the newest one works). Enter your email below to get a new one.',
   no_auth_data: 'That sign-in link was incomplete. Enter your email below to get a new one.',
   missing_tokens: 'That sign-in link was incomplete. Enter your email below to get a new one.',
 };

@@ -9,8 +9,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { safeNext } from '@/lib/auth/safe-next';
+import { isLinkToken } from '@/lib/auth/link-token';
 
-const TYPES = new Set(['magiclink', 'signup']);
 type Link_ = { tokenHash: string; type: string; next: string; valid: boolean };
 
 export default function AuthConfirmPage() {
@@ -24,17 +24,22 @@ export default function AuthConfirmPage() {
     const tokenHash = p.get('token_hash') || '';
     const type = p.get('type') || '';
     const next = safeNext(p.get('next'));
-    setLink({ tokenHash, type, next, valid: /^[A-Za-z0-9_-]{16,}$/.test(tokenHash) && TYPES.has(type) });
+    setLink({ tokenHash, type, next, valid: isLinkToken(tokenHash, type) });
     window.history.replaceState(null, '', '/auth/confirm');
   }, []);
 
   async function signIn() {
     if (!link) return;
     setBusy(true);
-    const { createClient } = await import('@/lib/supabase/client');
-    const { error } = await createClient().auth.verifyOtp({ token_hash: link.tokenHash, type: link.type as 'magiclink' | 'signup' });
-    if (error) { setFailed(true); setBusy(false); return; }
-    window.location.replace(link.next);
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const { error } = await createClient().auth.verifyOtp({ token_hash: link.tokenHash, type: link.type as 'magiclink' | 'signup' });
+      if (error) throw error;
+      window.location.replace(link.next);
+    } catch {
+      // Spent, superseded, expired, or the request never completed: show the clear failure page.
+      setFailed(true); setBusy(false);
+    }
   }
 
   let body: React.ReactNode = null;
