@@ -1,0 +1,57 @@
+{
+ "label": "run1",
+ "phase": "request",
+ "sha": "4a339570eea6212db22ebc5f2ec56b89d43891a3",
+ "at": "2026-11-20T17:55:12.238Z",
+ "expected": 9,
+ "ran": 9,
+ "pass": 9,
+ "fail": 0,
+ "results": [
+  {
+   "check": "deployed build is the one under test",
+   "pass": true,
+   "info": "4a339570eea6212db22ebc5f2ec56b89d43891a3"
+  },
+  {
+   "check": "FREE: real /login form -> \"Check your inbox\" with the request time",
+   "pass": true,
+   "info": "Requested at 12:53 PM ET. Each email's subject shows when it was sent; use the most recent one."
+  },
+  {
+   "check": "FREE: immediate second request shows the same screen (no hint, nothing new sent)",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: real /login form -> \"Check your inbox\"",
+   "pass": true,
+   "info": "Requested at 12:53 PM ET. Each email's subject shows when it was sent; use the most recent one."
+  },
+  {
+   "check": "PRO: real /login form -> \"Check your inbox\"",
+   "pass": true,
+   "info": "Requested at 12:53 PM ET. Each email's subject shows when it was sent; use the most recent one."
+  },
+  {
+   "check": "FREE: request after 65 s accepted",
+   "pass": true,
+   "info": "Requested at 12:55 PM ET. Each email's subject shows when it was sent; use the most recent one."
+  },
+  {
+   "check": "FREE: audit shows exactly 2 links minted for 3 requests (duplicate suppressed)",
+   "pass": true,
+   "info": "{\"user_recovery_requested\":2}"
+  },
+  {
+   "check": "ADMIN: audit shows exactly 1 link minted",
+   "pass": true,
+   "info": "{\"user_recovery_requested\":1}"
+  },
+  {
+   "check": "no page errors in any browser context",
+   "pass": true,
+   "info": ""
+  }
+ ]
+}

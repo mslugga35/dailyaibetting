@@ -1,0 +1,112 @@
+{
+ "label": "run1",
+ "phase": "use",
+ "sha": "4a339570eea6212db22ebc5f2ec56b89d43891a3",
+ "at": "2026-11-20T18:16:26.564Z",
+ "expected": 25,
+ "ran": 20,
+ "pass": 19,
+ "fail": 1,
+ "results": [
+  {
+   "check": "deployed build is the one under test",
+   "pass": true,
+   "info": "4a339570eea6212db22ebc5f2ec56b89d43891a3"
+  },
+  {
+   "check": "every delivered link is https://dailyaibetting.com/auth/confirm#token_hash=..&sent=..",
+   "pass": true,
+   "info": "8093dda8,f1129e11,335bcf79,b02faa6a"
+  },
+  {
+   "check": "no two emails to the same address share a subject",
+   "pass": true,
+   "info": "FREE: 12:53 PM ET, 12:55 PM ET | ADMIN: 12:53 PM ET | PRO: 12:53 PM ET"
+  },
+  {
+   "check": "no two emails share a Gmail conversation",
+   "pass": true,
+   "info": "1a1fa17c946249b1,1a1fa19104efb2a9,1a1fa17e7191dc14,1a1fa17fdb021f4e"
+  },
+  {
+   "check": "FREE: older link shows its own send time",
+   "pass": true,
+   "info": "This link was sent at 12:53 PM ET."
+  },
+  {
+   "check": "FREE: token scrubbed from the address bar on load",
+   "pass": true,
+   "info": "https://dailyaibetting.com/auth/confirm"
+  },
+  {
+   "check": "FREE: older link refused with the clear message",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE: newer link opened in the SAME tab shows the sign-in button again",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE: newer link signs in",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE: signed-in browser opening the older link is told it no longer works (not \"already signed in\")",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: after a reload the link still offers sign-in (no false \"no longer works\")",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: a network failure says \"couldn't reach\", keeps the link",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: retry signs in",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: the same link in a second tab -> \"already signed in\", not an error",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "ADMIN: used link from another browser is refused",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "PRO: link pressed 20 min after opening signs in",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "FREE: audit shows exactly 1 login and no new link minted during use",
+   "pass": true,
+   "info": "{\"login\":1}"
+  },
+  {
+   "check": "ADMIN: audit shows exactly 1 login and no new link minted during use",
+   "pass": true,
+   "info": "{\"login\":1}"
+  },
+  {
+   "check": "token never sent anywhere except Supabase /verify (body only)",
+   "pass": true,
+   "info": ""
+  },
+  {
+   "check": "no page errors in any browser context",
+   "pass": false,
+   "info": "FREE-same-tab: Failed to load resource: the server responded with a status of 403 () | FREE-same-tab: Failed to load resource: the server responded with a status of 404 () | FREE-same-tab: Failed to load resource: the server responded with "
+  }
+ ]
+}

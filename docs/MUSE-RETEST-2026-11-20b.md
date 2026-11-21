@@ -1,9 +1,9 @@
-# Muse retest #2: DailyAI production (sign-in fix + layout), build __SHA__
+# Muse retest #2: DailyAI production (sign-in fix + layout), build 4a33957
 
 Focused on what failed or changed since your 11-20 run (10:37–11:48 AM ET). Tracker: `docs/DAILYAI-LAUNCH-MASTER-TRACKER.md`.
 Read-only: no payments, no subscription changes, no "Run Auto-Grader". Matt gives you the passwords directly.
 Accounts: FREE `mpm.morales+daifree@gmail.com` · PRO `mpm.morales+daipaid@gmail.com` · ADMIN `mpm.morales+daiadmin@gmail.com`.
-**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json must show `__SHA__…`. If it doesn't, stop and report.
+**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json must show `4a33957…`. If it doesn't, stop and report.
 
 ## What we found about your DAI-05 failure (so you can judge the fix)
 - Supabase's own logs show your two ADMIN presses at 11:08:03 and 11:08:50 AM ET. Both were refused with "One-time token not found".
@@ -40,7 +40,7 @@ Use real emails from the inbox, as before. Wait at least 1 minute between link r
 ## DAI-07: mobile menu (small change)
 - [ ] At phone width, open the ☰ menu.
   - Expected: the logo row, the "Sports" chips and the Sign in / Go Pro buttons sit inside the drawer with a margin. They used to touch the drawer edge.
-  - Automated: `node qa/launch-verify/mobile-prod.cjs <label> __SHA__` (screenshots in `docs/launch-evidence/DAI-07-<label>/`).
+  - Automated: `node qa/launch-verify/mobile-prod.cjs <label> 4a33957` (screenshots in `docs/launch-evidence/DAI-07-<label>/`).
 
 ## Unchanged from your 11-20 run (no need to repeat)
 DAI-01 /props ✅ · DAI-06 founding checkout ✅ · DAI-02 accounting ✅ (the grader's next real check is on/after Nov 24) · DAI-08/09/10 ✅.
