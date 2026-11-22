@@ -237,12 +237,17 @@ async function assertPriceMatches(priceId: string, plan: PlanKey) {
  * atomically reserves (or reuses) a seat. Throws on a config or database error:
  * the caller must not fall back to another price silently.
  */
-export async function chooseCheckoutPlan(customerId: string, userId: string | null): Promise<CheckoutPlan> {
+export async function chooseCheckoutPlan(customerId: string, userId: string | null, opts: { forceRegular?: boolean } = {}): Promise<CheckoutPlan> {
   const cfg = pricingConfig();
   if (cfg.mode === 'legacy') {
     return { ok: true, plan: 'legacy', priceId: cfg.prices.legacy, firstTimeTrialDays: TRIAL_DAYS, seatId: null, newSeat: false };
   }
   if (cfg.mode === 'regular') {
+    await assertPriceMatches(cfg.prices.regular, 'regular');
+    return { ok: true, plan: 'regular', priceId: cfg.prices.regular, firstTimeTrialDays: TRIAL_DAYS, seatId: null, newSeat: false };
+  }
+  if (opts.forceRegular) {
+    // The customer asked for the regular price (e.g. after "founding is busy"): no seat is reserved.
     await assertPriceMatches(cfg.prices.regular, 'regular');
     return { ok: true, plan: 'regular', priceId: cfg.prices.regular, firstTimeTrialDays: TRIAL_DAYS, seatId: null, newSeat: false };
   }

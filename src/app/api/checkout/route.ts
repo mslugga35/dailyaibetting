@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited } from '@/lib/api-helpers';
+import { createHash } from 'crypto';
+import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited, getClientIp } from '@/lib/api-helpers';
+import { holdLimitReached, recordHold } from '@/lib/pricing/hold-limit';
 import { isProStatus } from '@/lib/constants/subscription';
 import { getUserSubscription, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import {
@@ -10,6 +12,7 @@ import {
   hasActiveSubscription,
   hasEverSubscribed,
   hasEverSubscribedByEmail,
+  findLiveSubscriptionCustomerByEmail,
 } from '@/lib/guest-checkout';
 import {
   chooseCheckoutPlan,
@@ -27,7 +30,8 @@ function parseExpectedCents(v: unknown): number | null {
 }
 import type Stripe from 'stripe';
 
-const BUSY = 'Founding Member checkouts are busy right now. Please try again in a few minutes.';
+const BUSY = 'Founding Member checkouts are busy right now. Please try again in a few minutes, or subscribe at the regular price.';
+const IP_BUSY = 'Too many Founding Member checkouts were started from your network. Please try again later, or subscribe at the regular price.';
 
 /**
  * Create the Checkout Session for the plan on sale. Founding: a seat is reserved
@@ -44,10 +48,24 @@ async function createCheckout(opts: {
   cancelUrl: string;
   /** Monthly cents the page showed the customer; checkout refuses to charge anything else. */
   expectedCents: number | null;
+  /** Client asked for the regular price instead of a Founding seat. */
+  forceRegular?: boolean;
+  /** Client IP, for the per-IP limit on new seat holds. */
+  ip?: string;
 }): Promise<NextResponse> {
-  const choice = await chooseCheckoutPlan(opts.customerId, opts.userId);
+  const choice = await chooseCheckoutPlan(opts.customerId, opts.userId, { forceRegular: opts.forceRegular });
   if (!choice.ok) {
-    return NextResponse.json({ error: BUSY, busy: true }, { status: 409 });
+    // regularPriceAvailable: the UI can offer the regular price (POST again with plan: 'regular').
+    return NextResponse.json({ error: BUSY, busy: true, regularPriceAvailable: true }, { status: 409 });
+  }
+  // DAI-14: one network cannot park many unpaid Founding seats. Only NEW holds count (an
+  // existing hold of this customer is reused, not added).
+  if (choice.seatId != null && choice.newSeat && opts.ip) {
+    if (holdLimitReached(opts.ip)) {
+      await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+      return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
+    }
+    recordHold(opts.ip);
   }
   if (opts.expectedCents != null && opts.expectedCents !== PLANS[choice.plan].cents) {
     // The price changed since the page loaded (mode flipped, spots ran out, returning member).
@@ -114,7 +132,21 @@ async function createCheckout(opts: {
       holdUntil: new Date(expires * 1000).toISOString(),
     });
   }
+  // DAI-11: one open Checkout per user. Older open sessions of this customer are expired AFTER the new
+  // one is bound to the seat (an expiry event releases a seat only for the session bound to it).
+  // Only sessions older than this one, so two concurrent requests leave exactly one open.
+  if (opts.userId) await expireOlderOpenSessions(opts.customerId, opts.userId, session).catch((e) => console.error('[checkout] expire older sessions failed:', (e as { message?: string })?.message));
   return NextResponse.json(opts.guestEmail ? { url: session.url, guest: true } : { url: session.url });
+}
+
+async function expireOlderOpenSessions(customerId: string, userId: string, keep: Stripe.Checkout.Session) {
+  const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
+  for (const s of open.data) {
+    if (s.id === keep.id || s.mode !== 'subscription' || s.metadata?.user_id !== userId) continue;
+    const older = (s.created ?? 0) < (keep.created ?? 0) || ((s.created ?? 0) === (keep.created ?? 0) && s.id < keep.id);
+    if (!older) continue;
+    try { await stripe.checkout.sessions.expire(s.id); } catch { /* already expired or completed */ }
+  }
 }
 
 /**
@@ -172,12 +204,25 @@ export async function POST(request: Request) {
       );
     }
 
+    // DAI-13: the login may not be mapped to the payer's Stripe customer. If any Stripe customer with
+    // this email already holds a live DailyAI subscription, a second one must not be sold.
+    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId);
+    if (holder) {
+      console.error(`[billing-alert] checkout_refused_existing_subscription user=${user.id} customer=${holder}`);
+      return NextResponse.json(
+        { error: 'This email already has a DailyAI subscription. Manage it under Account > Manage Subscription, or contact support@dailyaibetting.com and we will link it to your login.', manage: true, existingSubscription: true },
+        { status: 409 },
+      );
+    }
+
     let customerId = existing.stripeCustomerId;
     if (!customerId) {
+      // DAI-11: idempotency key from the user id, so two concurrent first checkouts get ONE customer.
+      const emailTag = createHash('sha256').update((user.email || '').toLowerCase()).digest('hex').slice(0, 12);
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id },
-      });
+      }, { idempotencyKey: `dai-customer:${user.id}:${emailTag}` });
       customerId = customer.id;
 
       // Persist the customer id so a retried checkout reuses it (B3). 'inactive' is the
@@ -209,6 +254,8 @@ export async function POST(request: Request) {
       successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${baseUrl}/pro`,
       expectedCents: parseExpectedCents(body?.expectedCents),
+      forceRegular: body?.plan === 'regular',
+      ip: getClientIp(request),
     });
   } catch (error) {
     const e = error as { code?: string; message?: string } | null;

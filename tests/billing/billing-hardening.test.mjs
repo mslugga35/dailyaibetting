@@ -153,7 +153,7 @@ test('DAI-13: signed-in user whose email already has a live DailyAI subscription
   const res = await checkout({ headers: u.headers });
   assert.equal(res.status, 409);
   const j = await body(res);
-  assert.match(j.error, /already have a DailyAI subscription/i);
+  assert.match(j.error, /already has a DailyAI subscription/i);
   assert.equal(j.manage, true);
   assert.equal(h.stripe.callsTo('customers.create').length, 0);
   assert.equal(h.stripe.sessions.length, 0);

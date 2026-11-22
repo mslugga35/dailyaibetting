@@ -42,13 +42,39 @@ export async function hasEverSubscribed(stripe: Stripe, customerId: string): Pro
  * person are caught later by the card-fingerprint check in the webhook.)
  */
 export async function hasEverSubscribedByEmail(stripe: Stripe, email: string | null | undefined): Promise<boolean> {
-  const e = (email || '').trim();
-  if (!e) return false;
-  const variants = Array.from(new Set([e, e.toLowerCase()]));
-  const lists = await Promise.all(variants.map((v) => stripe.customers.list({ email: v, limit: 100 })));
-  const ids = Array.from(new Set(lists.flatMap((l) => l.data.map((c) => c.id))));
+  const ids = await customerIdsByEmail(stripe, email);
   const subs = await Promise.all(ids.map((id) => dailyAiSubscriptions(stripe, id)));
   return subs.some((x) => x.length > 0);
+}
+
+/** Every Stripe customer id carrying this email (exact and lower-cased: Stripe's filter is case-sensitive). */
+async function customerIdsByEmail(stripe: Stripe, email: string | null | undefined): Promise<string[]> {
+  const e = (email || '').trim();
+  if (!e) return [];
+  const variants = Array.from(new Set([e, e.toLowerCase()]));
+  const lists = await Promise.all(variants.map((v) => stripe.customers.list({ email: v, limit: 100 })));
+  return Array.from(new Set(lists.flatMap((l) => l.data.map((c) => c.id))));
+}
+
+const ALIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);
+
+/**
+ * DAI-13: a live DailyAI subscription (active / trialing / past_due / unpaid) on ANY Stripe
+ * customer with this email, other than `exceptCustomerId` (the user's own mapped customer, which
+ * has its own check). A payer whose login is not mapped to their Stripe customer must not be
+ * able to buy a second subscription. Only DailyAI prices count: the Stripe account is shared.
+ * Returns the customer id holding it, or null.
+ */
+export async function findLiveSubscriptionCustomerByEmail(
+  stripe: Stripe,
+  email: string | null | undefined,
+  exceptCustomerId?: string | null,
+): Promise<string | null> {
+  const ids = (await customerIdsByEmail(stripe, email)).filter((id) => id !== exceptCustomerId);
+  for (const id of ids) {
+    if ((await dailyAiSubscriptions(stripe, id)).some((s) => ALIVE.has(s.status))) return id;
+  }
+  return null;
 }
 
 /**
