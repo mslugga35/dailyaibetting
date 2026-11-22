@@ -20,7 +20,7 @@ const PRICES = new Set([process.env.STRIPE_PRICE_ID, process.env.STRIPE_PRICE_FO
 if (PRICES.size === 0) { console.error('No DailyAI price ids configured (refusing: would treat every product as DailyAI).'); process.exit(2); }
 
 const LIVE = new Set(['trialing', 'active', 'past_due', 'unpaid']);
-const DB_LIVE = new Set(['trialing', 'active', 'past_due']);
+const DB_LIVE = new Set(['trialing', 'active', 'past_due', 'unpaid']); // unpaid is a live (blocking) state: STATUS_MAP keeps it past_due, but a raw 'unpaid' row must not read as a mismatch
 const mask = (e) => { const m = /^(.)[^@]*(@.+)$/.exec(e || ''); return m ? `${m[1]}***${m[2]}` : '(no email)'; };
 
 async function stripeGet(path, params = {}) {
