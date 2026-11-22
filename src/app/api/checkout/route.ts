@@ -73,15 +73,10 @@ async function createCheckout(opts: {
   // hold of this customer is reused, not added), which is only known after the atomic reserve, so the
   // check follows it and gives back a seat it refuses. F2: the per-IP slot is checked AND taken in one
   // synchronous step (no await in between), so a parallel burst cannot all pass the check; the slot is
-  // given back if the Checkout Session is not created. Unknown client IP: no limit (it would put every
-  // unknown client in one bucket).
+  // given back if the Checkout Session is not created (see below, just before the create). Unknown client
+  // IP: no limit (it would put every unknown client in one bucket).
   const limitIp = choice.seatId != null && choice.newSeat && opts.ip && opts.ip !== 'unknown' ? opts.ip : null;
   if (choice.seatId != null && choice.newSeat && !limitIp) console.warn('[checkout] founding hold limit skipped: client IP unknown');
-  const slot = limitIp ? tryReserveHold(limitIp) : null;
-  if (slot && !slot.ok) {
-    await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
-    return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
-  }
   const trialDays = opts.trialEligible && choice.firstTimeTrialDays > 0 ? choice.firstTimeTrialDays : undefined;
   const ids: Record<string, string> = opts.userId ? { user_id: opts.userId } : { guest_email: opts.guestEmail || '' };
   const founding = choice.plan === 'founding';
@@ -122,6 +117,13 @@ async function createCheckout(opts: {
     params.custom_text = { submit: { message: [CHECKOUT_BRAND_LINE, copy.terms, copy.firstChargeRelative, copy.trialRule, copy.renewal].filter(Boolean).join(' ').slice(0, 1200) } };
   }
 
+  // N6: the slot is taken immediately before the create (nothing in between can throw) and given back in
+  // the catch below if the create fails.
+  const slot = limitIp ? tryReserveHold(limitIp) : null;
+  if (slot && !slot.ok) {
+    await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+    return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
+  }
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create(params);
@@ -215,9 +217,18 @@ export async function POST(request: Request) {
       );
     }
 
+    // N4: "another user" only while that user still exists; a lookup error fails closed (500).
+    const userExists = async (id: string): Promise<boolean> => {
+      const { data, error } = await db.auth.admin.getUserById(id);
+      if (error) {
+        if ((error as { status?: number }).status === 404) return false;
+        throw Object.assign(new Error('owner lookup failed'), { code: (error as { code?: string }).code });
+      }
+      return !!data?.user;
+    };
     // DAI-13: the login may not be mapped to the payer's Stripe customer. If any Stripe customer with
     // this email already holds a live DailyAI subscription, a second one must not be sold.
-    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId, user.id);
+    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId, user.id, userExists);
     if (holder) {
       console.error(`[billing-alert] checkout_refused_existing_subscription user=${user.id} customer=${holder}`);
       return NextResponse.json(
@@ -256,7 +267,7 @@ export async function POST(request: Request) {
     // The free trial is for first-time subscribers only (no new trial after cancelling).
     const trialEligible = !(existing.stripeSubscriptionId
       || (await hasEverSubscribed(stripe, customerId))
-      || (await hasEverSubscribedByEmail(stripe, user.email)));
+      || (await hasEverSubscribedByEmail(stripe, user.email, user.id, userExists)));
     return await createCheckout({
       customerId,
       userId: user.id,
@@ -280,7 +291,8 @@ export async function POST(request: Request) {
 
 /** Email addresses masked out of free text (a Stripe search error can echo the query). */
 function redactEmails(text: string): string {
-  return text.replace(/[^\s'"<>()@]+@[^\s'"<>()]+/g, '[email]');
+  // N5: the whole whitespace-delimited token (quotes, prefixes like email:'o'brien and all).
+  return text.replace(/\S*@\S*/g, '[email]');
 }
 
 /**

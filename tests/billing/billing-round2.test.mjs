@@ -142,6 +142,7 @@ test('F2: a provisional slot is given back when the Checkout Session cannot be c
 
 test("F3: a live sub on a customer belonging to ANOTHER user (metadata.user_id) whose email was edited to the victim's does not 409", async () => {
   const h = harness();
+  h.authUsers.push({ id: 'u_attacker', email: 'attacker@example.test' }); // the other user still exists (N4)
   const att = h.stripe.addCustomer({ email: 'victim@example.test', metadata: { user_id: 'u_attacker' } });
   h.stripe.addSubscription({ customer: att.id, status: 'active', priceId: DAILYAI_PRICE_ID });
   const { res, lines } = await checkoutLogs({ headers: bearerUser('u_victim', 'victim@example.test').headers });
@@ -295,9 +296,11 @@ test('F6: a non-Stripe error message is logged with any email address redacted',
 // ---------------------------------------------------------------- F7: a customer-typed "trial_reuse" comment is not trusted
 
 const CUTOFF = Math.floor(Date.UTC(2026, 10, 22) / 1000);
+// N2: the cutoff is configured per deploy (DAI_TRIAL_REUSE_COMMENT_CUTOFF); these tests pin it.
+const CUTOFF_ENV = { DAI_TRIAL_REUSE_COMMENT_CUTOFF: '2026-11-22T00:00:00Z' };
 
 test('F7: a subscription cancelled AFTER the cutoff with a customer-typed "trial_reuse" comment is not treated as a refused trial', async () => {
-  setup({ env: { ...FOUNDING_ENV, RESEND_API_KEY: 're_test_x' } });
+  setup({ env: { ...FOUNDING_ENV, ...CUTOFF_ENV, RESEND_API_KEY: 're_test_x' } });
   seatSql();
   const h = harness();
   const sent = captureEmails();
@@ -309,7 +312,7 @@ test('F7: a subscription cancelled AFTER the cutoff with a customer-typed "trial
 });
 
 test('F7: a comment-only refusal cancelled BEFORE the cutoff is still recognised (pre-change cancellations)', async () => {
-  setup({ env: { ...FOUNDING_ENV, RESEND_API_KEY: 're_test_x' } });
+  setup({ env: { ...FOUNDING_ENV, ...CUTOFF_ENV, RESEND_API_KEY: 're_test_x' } });
   seatSql();
   const h = harness();
   const sent = captureEmails();
@@ -320,7 +323,7 @@ test('F7: a comment-only refusal cancelled BEFORE the cutoff is still recognised
 });
 
 test('F7: /api/checkout/status honours the comment only for pre-cutoff cancellations', async () => {
-  setup({ env: FOUNDING_ENV });
+  setup({ env: { ...FOUNDING_ENV, ...CUTOFF_ENV } });
   const h = harness();
   const c = h.stripe.addCustomer({ email: 's7@example.test' });
   const sub = h.stripe.addSubscription({ customer: c.id, status: 'canceled', priceId: FOUNDING, metadata: {} });

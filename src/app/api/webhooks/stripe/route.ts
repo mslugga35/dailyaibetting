@@ -515,8 +515,23 @@ async function promoteLiveDuplicate(ended: Stripe.Subscription, userId: string) 
     }
     throw error;
   }
-  console.error(`[billing-alert] promoted_live_duplicate user=${userId} ended=${ended.id} subscription=${next.id} customer=${nextCustomer} status=${next.status} action=row_repointed`);
+  const noMeta = next.metadata?.user_id ? '' : ' no_user_metadata';
+  console.error(`[billing-alert] promoted_live_duplicate user=${userId} ended=${ended.id} subscription=${next.id} customer=${nextCustomer} status=${next.status} action=row_repointed${noMeta}`);
   await syncFoundingSeat(next, userId);
+  // G2: a promoted TRIAL gets the same one-trial-per-card check a checkout would have run.
+  if (next.status === 'trialing') await enforceOneTrialPerCard(next, await accountEmail(userId));
+}
+
+/** The account's email for a customer notice, or null (lookup failures are logged, never fatal). */
+async function accountEmail(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    if (error) throw error;
+    return (data?.user?.email || '').toLowerCase().trim() || null;
+  } catch (e) {
+    logError('account email lookup', e);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- Founding Member seats
@@ -567,28 +582,24 @@ function seatIdOf(subscription: Stripe.Subscription): number | null {
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
 
-/**
- * N1: the live subscription a seat is bound to when it is NOT this one, else null.
- * A duplicate subscription carries the same founding_seat_id (one seat per customer), and the database
- * looks a seat up by that id and re-binds it on 'started'/'paid' (and ends it on 'ended') without
- * checking which subscription it belongs to. So no webhook path may move a seat for a subscription
- * other than the one it is bound to while that one is still alive in Stripe. A seat whose bound
- * subscription has ended (or is gone) may still be claimed, as before. Read errors throw (retry).
- */
-async function liveOtherSeatOwner(subscription: Stripe.Subscription): Promise<string | null> {
+/** The subscription id this subscription's founding seat (metadata seat id) is bound to; null if unbound or no seat id. */
+async function seatBoundTo(subscription: Stripe.Subscription): Promise<string | null> {
   const seatId = seatIdOf(subscription);
-  if (seatId == null) return null; // looked up by this subscription's own id: cannot reach another's seat
+  if (seatId == null) return null;
   const { data, error } = await supabaseAdmin
     .from('dailyai_founding_seats')
     .select('id, stripe_subscription_id')
     .eq('id', seatId)
     .maybeSingle();
   if (error) throw error;
-  const bound = (data as { stripe_subscription_id: string | null } | null)?.stripe_subscription_id;
-  if (!bound || bound === subscription.id) return null;
+  return (data as { stripe_subscription_id: string | null } | null)?.stripe_subscription_id ?? null;
+}
+
+/** `id` when Stripe says that subscription is still alive, else null (gone = null; other errors throw). */
+async function aliveOrNull(id: string): Promise<string | null> {
   try {
-    const current = await stripe.subscriptions.retrieve(bound);
-    return ALIVE_STRIPE_STATUSES.has(current.status) ? bound : null;
+    const current = await stripe.subscriptions.retrieve(id);
+    return ALIVE_STRIPE_STATUSES.has(current.status) ? id : null;
   } catch (err) {
     const e = err as { code?: string; statusCode?: number };
     if (e?.code === 'resource_missing' || e?.statusCode === 404) return null;
@@ -596,14 +607,29 @@ async function liveOtherSeatOwner(subscription: Stripe.Subscription): Promise<st
   }
 }
 
+/**
+ * Seat guard, for every webhook seat path. A duplicate subscription carries the same founding_seat_id
+ * (one seat per customer) and the database looks a seat up by that id and re-binds/ends it without
+ * checking which subscription it belongs to. So:
+ *  N1  a seat bound to ANOTHER subscription that is still alive in Stripe is never moved by this one
+ *      (a seat whose bound subscription ended may still be claimed, as before);
+ *  F1  a seat not bound to this subscription is never claimed ('started'/'paid') by a duplicate: a subscription the user's
+ *      row does not track, whose user's row tracks another live subscription or whose customer holds an
+ *      OLDER live DailyAI subscription.
+ * The subscription the row tracks, or the one the seat is already bound to, is never treated as a
+ * duplicate (round 3 N1: an older untracked live sub on the customer must not freeze a member's seat).
+ * Without a seat id the database finds a seat only by this subscription's own id: nothing to guard.
+ * Read errors throw (retry).
+ */
 async function transitionSeat(event: SeatEvent, subscription: Stripe.Subscription, userId: string | null) {
-  // F1: an UNBOUND seat is claimed by the first 'started'/'paid' that reaches it, so a newer duplicate's
-  // payment arriving before the legitimate checkout would take it. A subscription whose user's row
-  // tracks another live subscription, or whose customer holds an OLDER live DailyAI subscription, is a
-  // duplicate: it never claims or converts a seat. ('ended' is guarded by liveOtherSeatOwner and by the
-  // caller's binding check.)
-  const owner = (await liveOtherSeatOwner(subscription))
-    ?? (event === 'started' || event === 'paid' ? await livePrimaryFor(subscription) : null);
+  let owner: string | null = null;
+  if (seatIdOf(subscription) != null) {
+    const bound = await seatBoundTo(subscription);
+    if (bound && bound !== subscription.id) owner = await aliveOrNull(bound);
+    if (!owner && bound !== subscription.id && (event === 'started' || event === 'paid') && !(await rowForSubscription(subscription.id))) {
+      owner = await livePrimaryFor(subscription);
+    }
+  }
   if (owner) {
     const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
     console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${subscription.id} primary=${owner} status=${subscription.status} action=none (founding seat ${seatIdOf(subscription)} stays with ${owner}; seat event '${event}' not applied)`);

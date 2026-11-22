@@ -16,7 +16,8 @@ export function setup({ env = {} } = {}) {
   delete process.env.GUEST_CHECKOUT_ENABLED;
   // Pricing switches default to unset (legacy $20 behaviour) in every test.
   for (const k of ['PRICING_MODE', 'STRIPE_PRICE_FOUNDING', 'STRIPE_PRICE_PRO', 'STRIPE_ALLOWED_PRICE_IDS', 'FOUNDING_SEAT_CAP',
-    'FOUNDING_SEAT_COUNT', 'FOUNDING_TRIAL_DAYS', 'FOUNDING_SOLD_OUT', 'FOUNDING_RETURNING', 'STRIPE_PORTAL_CONFIGURATION_ID']) delete process.env[k];
+    'FOUNDING_SEAT_COUNT', 'FOUNDING_TRIAL_DAYS', 'FOUNDING_SOLD_OUT', 'FOUNDING_RETURNING', 'STRIPE_PORTAL_CONFIGURATION_ID',
+    'DAI_TRIAL_REUSE_COMMENT_CUTOFF', 'DAI_AUTO_CANCEL_DUPLICATE_TRIAL']) delete process.env[k];
   for (const [k, v] of Object.entries(env)) {
     if (v === undefined) delete process.env[k];
     else process.env[k] = v;

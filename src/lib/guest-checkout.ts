@@ -41,10 +41,39 @@ export async function hasEverSubscribed(stripe: Stripe, customerId: string): Pro
  * trial per person means checking all of them. (Different email addresses for one
  * person are caught later by the card-fingerprint check in the webhook.)
  */
-export async function hasEverSubscribedByEmail(stripe: Stripe, email: string | null | undefined): Promise<boolean> {
-  const ids = (await customersByEmail(stripe, email)).map((c) => c.id);
+export async function hasEverSubscribedByEmail(
+  stripe: Stripe,
+  email: string | null | undefined,
+  callerUserId?: string | null,
+  userExists?: UserExists,
+): Promise<boolean> {
+  // G1: a customer of ANOTHER existing user (its email edited to this one) does not use up this user's trial.
+  const ids: string[] = [];
+  for (const c of await customersByEmail(stripe, email)) {
+    if (await ownedByOtherExistingUser(c, callerUserId, userExists)) {
+      console.error(`[billing-alert] email_conflict_other_user customer=${c.id} user=${callerUserId} context=trial`);
+      continue;
+    }
+    ids.push(c.id);
+  }
   const subs = await Promise.all(ids.map((id) => dailyAiSubscriptions(stripe, id)));
   return subs.some((x) => x.length > 0);
+}
+
+/** Resolves whether a Supabase user id still exists; throws when that cannot be determined. */
+export type UserExists = (userId: string) => Promise<boolean>;
+
+/**
+ * F3/G1/N4: true when the customer belongs to a DIFFERENT user (server-set metadata.user_id) who still
+ * exists. A customer email is editable by its owner, so such a match proves nothing about the caller. A
+ * tag naming a user that no longer exists (account deleted and re-created with the same email) is the
+ * caller's own history: false. No user_id (guest/legacy), the caller's own id, or no lookup: false.
+ * A lookup error throws (callers fail closed).
+ */
+async function ownedByOtherExistingUser(c: Stripe.Customer, callerUserId?: string | null, userExists?: UserExists): Promise<boolean> {
+  const owner = (c.metadata?.user_id || '').trim();
+  if (!owner || !callerUserId || owner === callerUserId || !userExists) return false;
+  return userExists(owner);
 }
 
 /** A value for a single-quoted Stripe search string: backslash and quote escaped with a backslash. */
@@ -86,20 +115,21 @@ const ALIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);
  *
  * F3: a customer's email is editable by the customer (Billing Portal), so an email match alone must not
  * lock a user out. A holder customer that belongs to a DIFFERENT user (server-set metadata.user_id) is
- * logged (ids only) and skipped; the caller's own mapped-customer check and the webhook's duplicate
- * backstop still apply. A holder with no user_id (guest/legacy) or the caller's own user_id still blocks.
+ * logged (ids only) and skipped, but only while that user still exists (N4); the caller's own
+ * mapped-customer check and the webhook's duplicate backstop still apply. A holder with no user_id
+ * (guest/legacy), the caller's own user_id, or a user_id that no longer exists still blocks.
  */
 export async function findLiveSubscriptionCustomerByEmail(
   stripe: Stripe,
   email: string | null | undefined,
   exceptCustomerId?: string | null,
   callerUserId?: string | null,
+  userExists?: UserExists,
 ): Promise<string | null> {
   const customers = (await customersByEmail(stripe, email)).filter((c) => c.id !== exceptCustomerId);
   for (const c of customers) {
     if (!(await dailyAiSubscriptions(stripe, c.id)).some((s) => ALIVE.has(s.status))) continue;
-    const owner = (c.metadata?.user_id || '').trim();
-    if (owner && callerUserId && owner !== callerUserId) {
+    if (await ownedByOtherExistingUser(c, callerUserId, userExists)) {
       console.error(`[billing-alert] email_conflict_other_user customer=${c.id} user=${callerUserId}`);
       continue;
     }
