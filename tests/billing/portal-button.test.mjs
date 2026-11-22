@@ -7,8 +7,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const { portalErrorMessage } = await import('../../src/components/subscription/ManageSubscriptionButton.tsx');
-const SRC = readFileSync(new URL('../../src/components/subscription/ManageSubscriptionButton.tsx', import.meta.url), 'utf8');
-const ACCOUNT = readFileSync(new URL('../../src/app/account/page.tsx', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('../../src/components/subscription/ManageSubscriptionButton.tsx', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const ACCOUNT = readFileSync(new URL('../../src/app/account/page.tsx', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 test('each failure status gets a distinct, honest message', () => {
   assert.match(portalErrorMessage(401), /sign in again/i);
