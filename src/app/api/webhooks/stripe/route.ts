@@ -193,6 +193,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     await updateBySubscription(subscription);
     await syncFoundingSeat(subscription, session.metadata?.user_id || null);
     await enforceOneTrialPerCard(subscription, sessionEmail(session));
+    await expireOtherOpenSessions(customerId, session.id);
     return;
   }
 
@@ -205,7 +206,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!isGuestCheckoutEnabled()) {
       // B2: guest provisioning is off. Do not create accounts from arbitrary checkouts.
       // A paid DailyAI subscription with no account needs a person to reconcile it.
-      console.error(`[Stripe Webhook] MANUAL RECONCILE: guest checkout disabled; paid subscription ${subscriptionId} has no DailyAI account`);
+      console.error(`[billing-alert] guest_provisioning_disabled subscription=${subscriptionId} customer=${customerId} action=none (no account created, no email sent; MANUAL RECONCILE)`);
       return;
     }
     guestEmail = (
@@ -259,10 +260,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (priorLive && prior?.stripe_subscription_id) {
     if (LIVE_STATUSES.has(incoming.status)) {
       console.error(`[Stripe Webhook] MANUAL RECONCILE: user already has live subscription ${prior.stripe_subscription_id}; second live subscription ${subscriptionId} not recorded (possible double billing)`);
+      await handleDuplicateSubscription(subscription, prior.stripe_subscription_id);
     } else {
       console.warn(`[Stripe Webhook] Not replacing live subscription ${prior.stripe_subscription_id} with ${incoming.status} subscription ${subscriptionId}`);
     }
     return;
+  }
+  // The row may not show it, but Stripe may: an older live DailyAI subscription on this customer.
+  if (LIVE_STATUSES.has(incoming.status)) {
+    const older = await olderLiveSubscriptionOnCustomer(subscription);
+    if (older) {
+      await handleDuplicateSubscription(subscription, older);
+      return;
+    }
   }
 
   const { error } = await supabaseAdmin
@@ -278,6 +288,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     logError('Supabase upsert error', error);
     throw error;
   }
+  await expireOtherOpenSessions(customerId, session.id);
   await syncFoundingSeat(subscription, userId);
   // A cancelled reused-card trial gets the "no charge" email instead of the access email.
   if (await enforceOneTrialPerCard(subscription, guestEmail || sessionEmail(session))) return;
@@ -291,6 +302,65 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } catch (e) {
       logError('Failed to send guest access email', e);
     }
+  }
+}
+
+// ---------------------------------------------------------------- duplicate subscriptions (DAI-11)
+
+const DUPLICATE_COMMENT = 'duplicate_trial: second live subscription cancelled without charge';
+const ALIVE_STRIPE_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid']);
+
+/**
+ * After a checkout completes, the customer's other still-open DailyAI Checkout Sessions
+ * (a second tab) must not be completable into a second subscription. Best effort: a
+ * failure here never fails the webhook (the duplicate detection below is the backstop).
+ */
+async function expireOtherOpenSessions(customerId: string | null, keepSessionId: string) {
+  if (!customerId) return;
+  try {
+    const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
+    for (const s of open.data) {
+      if (s.id === keepSessionId || s.mode !== 'subscription' || !s.metadata?.user_id) continue;
+      try { await stripe.checkout.sessions.expire(s.id); } catch (e) { logError(`expire open session ${s.id}`, e); }
+    }
+  } catch (e) {
+    logError('list open sessions to expire', e);
+  }
+}
+
+/** An OLDER live DailyAI subscription on the same Stripe customer, or null. */
+async function olderLiveSubscriptionOnCustomer(subscription: Stripe.Subscription): Promise<string | null> {
+  const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+  if (!customer) return null;
+  const subs = await stripe.subscriptions.list({ customer, status: 'all', limit: 100 });
+  const allowed = allowedPriceIds();
+  const older = subs.data
+    .filter((s) => s.id !== subscription.id && ALIVE_STRIPE_STATUSES.has(s.status) && hasDailyAiPrice(s, allowed))
+    .filter((s) => (s.created ?? 0) < (subscription.created ?? 0) || ((s.created ?? 0) === (subscription.created ?? 0) && s.id < subscription.id))
+    .sort((a, b) => (a.created ?? 0) - (b.created ?? 0));
+  return older[0]?.id ?? null;
+}
+
+/**
+ * A second live DailyAI subscription appeared. Always alert (ids only). A duplicate that is
+ * still a free TRIAL (nothing charged yet) is cancelled without invoice or proration ONLY
+ * when DAI_AUTO_CANCEL_DUPLICATE_TRIAL=true. A paid duplicate is never cancelled here.
+ */
+async function handleDuplicateSubscription(duplicate: Stripe.Subscription, primaryId: string) {
+  const customer = typeof duplicate.customer === 'string' ? duplicate.customer : duplicate.customer?.id;
+  const autoCancel = process.env.DAI_AUTO_CANCEL_DUPLICATE_TRIAL === 'true' && duplicate.status === 'trialing';
+  console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${duplicate.id} primary=${primaryId} status=${duplicate.status} action=${autoCancel ? 'cancel_trial' : 'none'}`);
+  if (!autoCancel) return;
+  try {
+    await stripe.subscriptions.cancel(duplicate.id, {
+      invoice_now: false,
+      prorate: false,
+      cancellation_details: { comment: DUPLICATE_COMMENT },
+    });
+  } catch (err) {
+    // A concurrent delivery may have cancelled it first.
+    const current = await stripe.subscriptions.retrieve(duplicate.id);
+    if (current.status !== 'canceled') throw err;
   }
 }
 
@@ -321,7 +391,9 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
 
 async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
   // A founding seat follows its subscription even when no row was ever written.
-  if (isFoundingSubscription(payload)) await transitionSeat('ended', payload, null);
+  // A cancelled duplicate shares the first subscription's seat (one seat per customer): its end must not release it.
+  const isCancelledDuplicate = (payload.cancellation_details?.comment || '').startsWith('duplicate_trial');
+  if (isFoundingSubscription(payload) && !isCancelledDuplicate) await transitionSeat('ended', payload, null);
   // Only touch a row we track (any price); nothing to cancel otherwise.
   if (!(await rowForSubscription(payload.id))) return;
   const { error } = await supabaseAdmin
