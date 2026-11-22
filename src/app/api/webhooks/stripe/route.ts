@@ -186,6 +186,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // A duplicate we (or an operator) cancelled is never recorded: a redelivered checkout for it must
+  // not upsert it over the user's row nor touch the seat it shares with the first subscription.
+  if (subscription.status === 'canceled' && isCancelledDuplicate(subscription)) {
+    console.warn(`[Stripe Webhook] Ignoring checkout for cancelled duplicate subscription ${subscriptionId}`);
+    return;
+  }
+
   // Redelivery of a checkout we already recorded: refresh its state and stop. No
   // account provisioning (a new magic link would supersede the one already emailed)
   // and no second email (B5).
@@ -193,7 +200,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     await updateBySubscription(subscription);
     await syncFoundingSeat(subscription, session.metadata?.user_id || null);
     await enforceOneTrialPerCard(subscription, sessionEmail(session));
-    await expireOtherOpenSessions(customerId, session.id);
     return;
   }
 
@@ -288,7 +294,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     logError('Supabase upsert error', error);
     throw error;
   }
-  await expireOtherOpenSessions(customerId, session.id);
+  await expireOtherOpenSessions(customerId, session);
   await syncFoundingSeat(subscription, userId);
   // A cancelled reused-card trial gets the "no charge" email instead of the access email.
   if (await enforceOneTrialPerCard(subscription, guestEmail || sessionEmail(session))) return;
@@ -308,6 +314,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 // ---------------------------------------------------------------- duplicate subscriptions (DAI-11)
 
 const DUPLICATE_COMMENT = 'duplicate_trial: second live subscription cancelled without charge';
+
+/**
+ * Why WE cancelled a subscription is recorded in SERVER-ONLY subscription metadata (`dai_cancel_reason`),
+ * never trusted from cancellation_details.comment, which a customer can type in the Billing Portal.
+ * The old comment prefix is read only for 'trial_reuse' (cancelled before this change); duplicate
+ * cancellations are new, so they have no comment fallback.
+ */
+const CANCEL_REASON_KEY = 'dai_cancel_reason';
+function cancelReason(sub: Stripe.Subscription, reason: 'duplicate_trial' | 'trial_reuse'): boolean {
+  if (sub.metadata?.[CANCEL_REASON_KEY] === reason) return true;
+  return reason === 'trial_reuse' && (sub.cancellation_details?.comment || '').startsWith('trial_reuse');
+}
+function isCancelledDuplicate(sub: Stripe.Subscription): boolean {
+  return cancelReason(sub, 'duplicate_trial');
+}
 const ALIVE_STRIPE_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid']);
 
 /**
@@ -315,12 +336,17 @@ const ALIVE_STRIPE_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid
  * (a second tab) must not be completable into a second subscription. Best effort: a
  * failure here never fails the webhook (the duplicate detection below is the backstop).
  */
-async function expireOtherOpenSessions(customerId: string | null, keepSessionId: string) {
-  if (!customerId) return;
+async function expireOtherOpenSessions(customerId: string | null, completed: Stripe.Checkout.Session) {
+  const userId = completed.metadata?.user_id;
+  if (!customerId || !userId) return; // guest/unknown owner: expire nothing
   try {
     const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
     for (const s of open.data) {
-      if (s.id === keepSessionId || s.mode !== 'subscription' || !s.metadata?.user_id) continue;
+      // The Stripe account is shared with other products: only this user's DailyAI-marked sessions,
+      // and never one created AFTER the completed one (a newer attempt). Sessions created before the
+      // marker existed lack metadata.app and are skipped.
+      if (s.id === completed.id || s.mode !== 'subscription' || s.metadata?.app !== 'dailyai' || s.metadata?.user_id !== userId) continue;
+      if (typeof completed.created === 'number' && typeof s.created === 'number' && s.created > completed.created) continue;
       try { await stripe.checkout.sessions.expire(s.id); } catch (e) { logError(`expire open session ${s.id}`, e); }
     }
   } catch (e) {
@@ -352,6 +378,7 @@ async function handleDuplicateSubscription(duplicate: Stripe.Subscription, prima
   console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${duplicate.id} primary=${primaryId} status=${duplicate.status} action=${autoCancel ? 'cancel_trial' : 'none'}`);
   if (!autoCancel) return;
   try {
+    await stripe.subscriptions.update(duplicate.id, { metadata: { [CANCEL_REASON_KEY]: 'duplicate_trial' } });
     await stripe.subscriptions.cancel(duplicate.id, {
       invoice_now: false,
       prorate: false,
@@ -391,9 +418,15 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
 
 async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
   // A founding seat follows its subscription even when no row was ever written.
-  // A cancelled duplicate shares the first subscription's seat (one seat per customer): its end must not release it.
-  const isCancelledDuplicate = (payload.cancellation_details?.comment || '').startsWith('duplicate_trial');
-  if (isFoundingSubscription(payload) && !isCancelledDuplicate) await transitionSeat('ended', payload, null);
+  // A duplicate subscription shares the first one's seat (one seat per customer) and the database moves
+  // a seat by its id without checking the subscription, so ending the seat for ANY deleted subscription
+  // would release the legitimate one (cancelled by us, or by hand in the Dashboard). Only the subscription the
+  // seat or the user's row is bound to may end it.
+  // FOLLOW-UP (migration, not written here): dailyai_founding_transition should refuse 'ended' when
+  // p_subscription is given and differs from the seat's stripe_subscription_id.
+  if (isFoundingSubscription(payload) && (await isBoundToSeatOrRow(payload.id))) {
+    await transitionSeat('ended', payload, null);
+  }
   // Only touch a row we track (any price); nothing to cancel otherwise.
   if (!(await rowForSubscription(payload.id))) return;
   const { error } = await supabaseAdmin
@@ -411,6 +444,18 @@ async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
 }
 
 // ---------------------------------------------------------------- Founding Member seats
+
+/** True when this subscription is the one a user row or a founding seat is bound to. */
+async function isBoundToSeatOrRow(subscriptionId: string): Promise<boolean> {
+  if (await rowForSubscription(subscriptionId)) return true;
+  const { data, error } = await supabaseAdmin
+    .from('dailyai_founding_seats')
+    .select('id')
+    .eq('stripe_subscription_id', subscriptionId)
+    .limit(1);
+  if (error) throw error;
+  return Array.isArray(data) && data.length > 0;
+}
 
 function foundingPriceId(): string {
   return (process.env.STRIPE_PRICE_FOUNDING || '').trim();
@@ -519,7 +564,7 @@ async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: 
   // Only the new plans: a legacy $20 subscription is never modified automatically.
   if (!subscription.items.data.some((i) => newPlanPrices().includes(i.price?.id))) return false;
   // Redelivery after a refusal: finish what a failed attempt may have left undone.
-  if (subscription.status === 'canceled' && (subscription.cancellation_details?.comment || '').startsWith('trial_reuse')) {
+  if (subscription.status === 'canceled' && cancelReason(subscription, 'trial_reuse')) {
     await finishTrialRefusal(subscription, email);
     return true;
   }
@@ -544,6 +589,7 @@ async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: 
   // invoice_now:false + prorate:false: no final invoice, no charge, no credit.
   let cancelled: Stripe.Subscription;
   try {
+    await stripe.subscriptions.update(subscription.id, { metadata: { [CANCEL_REASON_KEY]: 'trial_reuse' } });
     cancelled = await stripe.subscriptions.cancel(subscription.id, {
       invoice_now: false,
       prorate: false,
