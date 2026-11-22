@@ -1,0 +1,28 @@
+== check3 2026-11-22T22:09:56Z
+PASS commit-info shows 2265871
+PASS GET / 200
+PASS GET /pricing 200
+PASS GET /results 200
+PASS GET /stats 200
+PASS GET /history 200
+PASS GET /props 200
+PASS GET /login 200
+PASS GET /account signed-out -> login
+PASS signed-out checkout refused 401 signIn
+PASS signed-out regular-plan checkout refused 401
+PASS unsigned webhook rejected 400
+2265871
+PM2 online restarts 65 uptime_s 170
+GUEST_CHECKOUT_ENABLED=false
+DAI_TRIAL_REUSE_COMMENT_CUTOFF=2026-11-22T22:45:00Z
+BRANDING_IN_BUILD 1
+CUTOFF_WARN 0
+ERRLOG_SINCE_START none
+PASS server HEAD 2265871
+PASS pm2 online
+PASS guest flag false
+PASS cutoff set
+PASS auto-cancel unset (off)
+PASS branding in built checkout route
+PASS no error-log writes since process start
+== check3: 19 pass / 0 fail

@@ -1,0 +1,27 @@
+== check1 2026-11-22T22:07:38Z
+PASS commit-info shows 2265871
+PASS GET / 200
+PASS GET /pricing 200
+PASS GET /results 200
+PASS GET /stats 200
+PASS GET /history 200
+PASS GET /props 200
+FAIL GET /account 307
+PASS GET /login 200
+PASS signed-out checkout refused 401 signIn
+PASS signed-out regular-plan checkout refused 401
+PASS unsigned webhook rejected 400
+2265871
+PM2 online restarts 65 uptime_s 30
+GUEST_CHECKOUT_ENABLED=false
+DAI_TRIAL_REUSE_COMMENT_CUTOFF=2026-11-22T22:45:00Z
+BRANDING_IN_BUILD 0
+CUTOFF_WARN 0
+ERRLINES 41
+PASS server HEAD 2265871
+PASS pm2 online
+PASS guest flag false
+PASS cutoff set
+PASS auto-cancel unset (off)
+FAIL branding not found in build
+== check1: 16 pass / 2 fail
