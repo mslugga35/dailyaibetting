@@ -104,6 +104,8 @@ async function createCheckout(opts: {
     // A promotion code on top of the founding price is not part of the offer, and a
     // 100%-off code would make a "paying" seat that never pays.
     allow_promotion_codes: !founding,
+    // Names the product at the top of Checkout; the Stripe account is shared with other products.
+    branding_settings: { display_name: 'DailyAI Betting' },
   };
   if (founding) {
     const copy = offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: trialDays ?? 0, founding: null });
