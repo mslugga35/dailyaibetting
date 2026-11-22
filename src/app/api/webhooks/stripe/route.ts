@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
-import { provisionGuestAndMagicLink, sendGuestAccessEmail, sendTrialNotAvailableEmail, isGuestCheckoutEnabled } from '@/lib/guest-checkout';
+import { provisionGuestAndMagicLink, sendGuestAccessEmail, sendTrialNotAvailableEmail, isGuestCheckoutEnabled, stripeSearchQuote } from '@/lib/guest-checkout';
 import { allowedPriceIds, hasDailyAiPrice } from '@/lib/stripe-prices';
 import { transitionFoundingSeat, type SeatEvent } from '@/lib/pricing/offer';
+import { cancelledFor, CANCEL_REASON_KEY } from '@/lib/cancel-reason';
 
 /** DailyAI's own prices only (shared Stripe account, B2): see lib/stripe-prices. */
 function isDailyAiSubscription(subscription: Stripe.Subscription): boolean {
@@ -186,6 +187,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // A duplicate we (or an operator) cancelled is never recorded: a redelivered checkout for it must
+  // not upsert it over the user's row nor touch the seat it shares with the first subscription.
+  if (subscription.status === 'canceled' && isCancelledDuplicate(subscription)) {
+    console.warn(`[Stripe Webhook] Ignoring checkout for cancelled duplicate subscription ${subscriptionId}`);
+    return;
+  }
+
   // Redelivery of a checkout we already recorded: refresh its state and stop. No
   // account provisioning (a new magic link would supersede the one already emailed)
   // and no second email (B5).
@@ -205,7 +213,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (!isGuestCheckoutEnabled()) {
       // B2: guest provisioning is off. Do not create accounts from arbitrary checkouts.
       // A paid DailyAI subscription with no account needs a person to reconcile it.
-      console.error(`[Stripe Webhook] MANUAL RECONCILE: guest checkout disabled; paid subscription ${subscriptionId} has no DailyAI account`);
+      console.error(`[billing-alert] guest_provisioning_disabled subscription=${subscriptionId} customer=${customerId} action=none (no account created, no email sent; MANUAL RECONCILE)`);
       return;
     }
     guestEmail = (
@@ -259,10 +267,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (priorLive && prior?.stripe_subscription_id) {
     if (LIVE_STATUSES.has(incoming.status)) {
       console.error(`[Stripe Webhook] MANUAL RECONCILE: user already has live subscription ${prior.stripe_subscription_id}; second live subscription ${subscriptionId} not recorded (possible double billing)`);
+      await handleDuplicateSubscription(subscription, prior.stripe_subscription_id);
     } else {
       console.warn(`[Stripe Webhook] Not replacing live subscription ${prior.stripe_subscription_id} with ${incoming.status} subscription ${subscriptionId}`);
     }
     return;
+  }
+  // The row may not show it, but Stripe may: an older live DailyAI subscription on this customer.
+  if (LIVE_STATUSES.has(incoming.status)) {
+    const older = await olderLiveSubscriptionOnCustomer(subscription);
+    if (older) {
+      await handleDuplicateSubscription(subscription, older);
+      return;
+    }
   }
 
   const { error } = await supabaseAdmin
@@ -278,6 +295,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     logError('Supabase upsert error', error);
     throw error;
   }
+  await expireOtherOpenSessions(customerId, session);
   await syncFoundingSeat(subscription, userId);
   // A cancelled reused-card trial gets the "no charge" email instead of the access email.
   if (await enforceOneTrialPerCard(subscription, guestEmail || sessionEmail(session))) return;
@@ -291,6 +309,77 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } catch (e) {
       logError('Failed to send guest access email', e);
     }
+  }
+}
+
+// ---------------------------------------------------------------- duplicate subscriptions (DAI-11)
+
+const DUPLICATE_COMMENT = 'duplicate_trial: second live subscription cancelled without charge';
+
+/** Why WE cancelled: server-only metadata; the customer-typable comment only before the cutoff (F7). See lib/cancel-reason. */
+const cancelReason = cancelledFor;
+function isCancelledDuplicate(sub: Stripe.Subscription): boolean {
+  return cancelReason(sub, 'duplicate_trial');
+}
+const ALIVE_STRIPE_STATUSES = new Set(['trialing', 'active', 'past_due', 'unpaid']);
+
+/**
+ * After a checkout completes, the customer's other still-open DailyAI Checkout Sessions
+ * (a second tab) must not be completable into a second subscription. Best effort: a
+ * failure here never fails the webhook (the duplicate detection below is the backstop).
+ */
+async function expireOtherOpenSessions(customerId: string | null, completed: Stripe.Checkout.Session) {
+  const userId = completed.metadata?.user_id;
+  if (!customerId || !userId) return; // guest/unknown owner: expire nothing
+  try {
+    const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
+    for (const s of open.data) {
+      // The Stripe account is shared with other products: only this user's DailyAI-marked sessions,
+      // and never one created AFTER the completed one (a newer attempt). Sessions created before the
+      // marker existed lack metadata.app and are skipped.
+      if (s.id === completed.id || s.mode !== 'subscription' || s.metadata?.app !== 'dailyai' || s.metadata?.user_id !== userId) continue;
+      if (typeof completed.created === 'number' && typeof s.created === 'number' && s.created > completed.created) continue;
+      try { await stripe.checkout.sessions.expire(s.id); } catch (e) { logError(`expire open session ${s.id}`, e); }
+    }
+  } catch (e) {
+    logError('list open sessions to expire', e);
+  }
+}
+
+/** An OLDER live DailyAI subscription on the same Stripe customer, or null. */
+async function olderLiveSubscriptionOnCustomer(subscription: Stripe.Subscription): Promise<string | null> {
+  const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+  if (!customer) return null;
+  const subs = await stripe.subscriptions.list({ customer, status: 'all', limit: 100 });
+  const allowed = allowedPriceIds();
+  const older = subs.data
+    .filter((s) => s.id !== subscription.id && ALIVE_STRIPE_STATUSES.has(s.status) && hasDailyAiPrice(s, allowed))
+    .filter((s) => (s.created ?? 0) < (subscription.created ?? 0) || ((s.created ?? 0) === (subscription.created ?? 0) && s.id < subscription.id))
+    .sort((a, b) => (a.created ?? 0) - (b.created ?? 0));
+  return older[0]?.id ?? null;
+}
+
+/**
+ * A second live DailyAI subscription appeared. Always alert (ids only). A duplicate that is
+ * still a free TRIAL (nothing charged yet) is cancelled without invoice or proration ONLY
+ * when DAI_AUTO_CANCEL_DUPLICATE_TRIAL=true. A paid duplicate is never cancelled here.
+ */
+async function handleDuplicateSubscription(duplicate: Stripe.Subscription, primaryId: string) {
+  const customer = typeof duplicate.customer === 'string' ? duplicate.customer : duplicate.customer?.id;
+  const autoCancel = process.env.DAI_AUTO_CANCEL_DUPLICATE_TRIAL === 'true' && duplicate.status === 'trialing';
+  console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${duplicate.id} primary=${primaryId} status=${duplicate.status} action=${autoCancel ? 'cancel_trial' : 'none'}`);
+  if (!autoCancel) return;
+  try {
+    await stripe.subscriptions.update(duplicate.id, { metadata: { [CANCEL_REASON_KEY]: 'duplicate_trial' } });
+    await stripe.subscriptions.cancel(duplicate.id, {
+      invoice_now: false,
+      prorate: false,
+      cancellation_details: { comment: DUPLICATE_COMMENT },
+    });
+  } catch (err) {
+    // A concurrent delivery may have cancelled it first.
+    const current = await stripe.subscriptions.retrieve(duplicate.id);
+    if (current.status !== 'canceled') throw err;
   }
 }
 
@@ -312,6 +401,15 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
   // it instead of retrying for days.
   const subscription = await stripe.subscriptions.retrieve(payload.id);
   if (!LIVE_STATUSES.has(mapStatus(subscription.status))) return;
+  // N3: a live DUPLICATE never gets a row, so waiting for its checkout would only make Stripe retry
+  // for an hour. Once it is identified (the user's row or this customer already holds an older live
+  // subscription) and alerted, acknowledge it: the legitimate subscription's row is untouched.
+  // Read errors while checking still throw (5xx, retried).
+  const primary = await livePrimaryFor(subscription);
+  if (primary) {
+    await handleDuplicateSubscription(subscription, primary);
+    return;
+  }
   const ageSeconds = typeof subscription.created === 'number' ? Date.now() / 1000 - subscription.created : 0;
   if (ageSeconds < ROW_WAIT_SECONDS) {
     throw new RetryableWebhookError(`no user_subscriptions row yet for ${subscription.id}`);
@@ -319,11 +417,48 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
   console.error(`[Stripe Webhook] MANUAL RECONCILE: live DailyAI subscription ${subscription.id} has no user_subscriptions row`);
 }
 
+/**
+ * The OTHER live DailyAI subscription this (untracked) one duplicates, or null: the one the user's row
+ * tracks (user from server-set subscription metadata; confirmed live in Stripe, since the row can lag a
+ * missed deletion), else an older live DailyAI subscription on the same customer.
+ */
+async function livePrimaryFor(subscription: Stripe.Subscription): Promise<string | null> {
+  const userId = subscription.metadata?.user_id;
+  if (userId) {
+    const { data, error } = await supabaseAdmin
+      .from('user_subscriptions')
+      .select('stripe_subscription_id, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    const row = data as { stripe_subscription_id: string | null; status: string } | null;
+    if (row?.stripe_subscription_id && row.stripe_subscription_id !== subscription.id && LIVE_STATUSES.has(row.status)) {
+      try {
+        const current = await stripe.subscriptions.retrieve(row.stripe_subscription_id);
+        if (LIVE_STATUSES.has(mapStatus(current.status))) return row.stripe_subscription_id;
+      } catch (err) {
+        const e = err as { code?: string; statusCode?: number };
+        if (!(e?.code === 'resource_missing' || e?.statusCode === 404)) throw err;
+      }
+    }
+  }
+  return olderLiveSubscriptionOnCustomer(subscription);
+}
+
 async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
   // A founding seat follows its subscription even when no row was ever written.
-  if (isFoundingSubscription(payload)) await transitionSeat('ended', payload, null);
+  // A duplicate subscription shares the first one's seat (one seat per customer) and the database moves
+  // a seat by its id without checking the subscription, so ending the seat for ANY deleted subscription
+  // would release the legitimate one (cancelled by us, or by hand in the Dashboard). Only the subscription the
+  // seat or the user's row is bound to may end it.
+  // transitionSeat also refuses to move a seat bound to another LIVE subscription (N1), for every event.
+  // Defence in depth (not applied, optional): dailyai_founding_transition could refuse the same in SQL.
+  if (isFoundingSubscription(payload) && (await isBoundToSeatOrRow(payload))) {
+    await transitionSeat('ended', payload, null);
+  }
   // Only touch a row we track (any price); nothing to cancel otherwise.
-  if (!(await rowForSubscription(payload.id))) return;
+  const tracked = await rowForSubscription(payload.id);
+  if (!tracked) return;
   const { error } = await supabaseAdmin
     .from('user_subscriptions')
     .update({
@@ -336,9 +471,100 @@ async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
     logError('Subscription delete error', error);
     throw error;
   }
+  await promoteLiveDuplicate(payload, tracked.user_id);
+}
+
+/**
+ * F4: the tracked subscription ended, but a live duplicate of it (acknowledged without a row) may still
+ * be billing the user. Exactly one live DailyAI candidate (same customer, or the same user in its
+ * server-set metadata) takes over the row; two or more are left for a person. Its seat then follows the
+ * usual rules (syncFoundingSeat -> transitionSeat): it may claim only its own or a free seat.
+ * Idempotent: a redelivery finds the row already moved (rowForSubscription is null) and stops above.
+ */
+async function promoteLiveDuplicate(ended: Stripe.Subscription, userId: string) {
+  const customer = typeof ended.customer === 'string' ? ended.customer : ended.customer?.id;
+  const allowed = allowedPriceIds();
+  const [onCustomer, byUser] = await Promise.all([
+    customer ? stripe.subscriptions.list({ customer, status: 'all', limit: 100 }) : Promise.resolve({ data: [] as Stripe.Subscription[] }),
+    stripe.subscriptions.search({ query: `metadata['user_id']:${stripeSearchQuote(userId)}`, limit: 100 }),
+  ]);
+  const candidates = new Map<string, Stripe.Subscription>();
+  for (const s of onCustomer.data) {
+    const owner = s.metadata?.user_id;
+    if (!owner || owner === userId) candidates.set(s.id, s);
+  }
+  for (const s of byUser.data) if (s.metadata?.user_id === userId) candidates.set(s.id, s);
+  const live = [...candidates.values()].filter((s) => s.id !== ended.id && ALIVE_STRIPE_STATUSES.has(s.status) && hasDailyAiPrice(s, allowed));
+  if (live.length === 0) return;
+  if (live.length > 1) {
+    console.error(`[billing-alert] promoted_live_duplicate user=${userId} ended=${ended.id} candidates=${live.map((s) => s.id).join(',')} action=none (ambiguous: MANUAL RECONCILE)`);
+    return;
+  }
+  const next = await stripe.subscriptions.retrieve(live[0].id); // Stripe's current state
+  if (!ALIVE_STRIPE_STATUSES.has(next.status)) return;
+  const nextCustomer = typeof next.customer === 'string' ? next.customer : next.customer?.id;
+  const { error } = await supabaseAdmin
+    .from('user_subscriptions')
+    .update({ stripe_subscription_id: next.id, stripe_customer_id: nextCustomer, ...periodFields(next) })
+    .eq('user_id', userId)
+    .eq('stripe_subscription_id', ended.id);
+  if (error) {
+    if ((error as { code?: string }).code === '23505') { // that customer/subscription is already on another row
+      console.error(`[billing-alert] promoted_live_duplicate user=${userId} ended=${ended.id} subscription=${next.id} action=none (conflicting row: MANUAL RECONCILE)`);
+      return;
+    }
+    throw error;
+  }
+  const noMeta = next.metadata?.user_id ? '' : ' no_user_metadata';
+  console.error(`[billing-alert] promoted_live_duplicate user=${userId} ended=${ended.id} subscription=${next.id} customer=${nextCustomer} status=${next.status} action=row_repointed${noMeta}`);
+  await syncFoundingSeat(next, userId);
+  // G2: a promoted TRIAL gets the same one-trial-per-card check a checkout would have run.
+  if (next.status === 'trialing') await enforceOneTrialPerCard(next, await accountEmail(userId));
+}
+
+/** The account's email for a customer notice, or null (lookup failures are logged, never fatal). */
+async function accountEmail(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+    if (error) throw error;
+    return (data?.user?.email || '').toLowerCase().trim() || null;
+  } catch (e) {
+    logError('account email lookup', e);
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------- Founding Member seats
+
+/**
+ * True when this subscription may end its founding seat: a user row or a seat is bound to it, or (F5)
+ * its own seat is still an unbound 'reserved' hold of the same customer (deleted before its checkout
+ * was processed) and no other live DailyAI subscription of that customer could still claim it.
+ */
+async function isBoundToSeatOrRow(subscription: Stripe.Subscription): Promise<boolean> {
+  if (await rowForSubscription(subscription.id)) return true;
+  const { data, error } = await supabaseAdmin
+    .from('dailyai_founding_seats')
+    .select('id')
+    .eq('stripe_subscription_id', subscription.id)
+    .limit(1);
+  if (error) throw error;
+  if (Array.isArray(data) && data.length > 0) return true;
+  const seatId = seatIdOf(subscription);
+  const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+  if (seatId == null || !customer) return false;
+  const { data: own, error: ownError } = await supabaseAdmin
+    .from('dailyai_founding_seats')
+    .select('id, status, stripe_subscription_id, stripe_customer_id')
+    .eq('id', seatId)
+    .maybeSingle();
+  if (ownError) throw ownError;
+  const s = own as { status: string; stripe_subscription_id: string | null; stripe_customer_id: string } | null;
+  if (!s || s.status !== 'reserved' || s.stripe_subscription_id || s.stripe_customer_id !== customer) return false;
+  const subs = await stripe.subscriptions.list({ customer, status: 'all', limit: 100 });
+  const allowed = allowedPriceIds();
+  return !subs.data.some((x) => x.id !== subscription.id && ALIVE_STRIPE_STATUSES.has(x.status) && hasDailyAiPrice(x, allowed));
+}
 
 function foundingPriceId(): string {
   return (process.env.STRIPE_PRICE_FOUNDING || '').trim();
@@ -356,7 +582,59 @@ function seatIdOf(subscription: Stripe.Subscription): number | null {
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
 
+/** The subscription id this subscription's founding seat (metadata seat id) is bound to; null if unbound or no seat id. */
+async function seatBoundTo(subscription: Stripe.Subscription): Promise<string | null> {
+  const seatId = seatIdOf(subscription);
+  if (seatId == null) return null;
+  const { data, error } = await supabaseAdmin
+    .from('dailyai_founding_seats')
+    .select('id, stripe_subscription_id')
+    .eq('id', seatId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as { stripe_subscription_id: string | null } | null)?.stripe_subscription_id ?? null;
+}
+
+/** `id` when Stripe says that subscription is still alive, else null (gone = null; other errors throw). */
+async function aliveOrNull(id: string): Promise<string | null> {
+  try {
+    const current = await stripe.subscriptions.retrieve(id);
+    return ALIVE_STRIPE_STATUSES.has(current.status) ? id : null;
+  } catch (err) {
+    const e = err as { code?: string; statusCode?: number };
+    if (e?.code === 'resource_missing' || e?.statusCode === 404) return null;
+    throw err; // Stripe unreachable: retry rather than guess
+  }
+}
+
+/**
+ * Seat guard, for every webhook seat path. A duplicate subscription carries the same founding_seat_id
+ * (one seat per customer) and the database looks a seat up by that id and re-binds/ends it without
+ * checking which subscription it belongs to. So:
+ *  N1  a seat bound to ANOTHER subscription that is still alive in Stripe is never moved by this one
+ *      (a seat whose bound subscription ended may still be claimed, as before);
+ *  F1  a seat not bound to this subscription is never claimed ('started'/'paid') by a duplicate: a subscription the user's
+ *      row does not track, whose user's row tracks another live subscription or whose customer holds an
+ *      OLDER live DailyAI subscription.
+ * The subscription the row tracks, or the one the seat is already bound to, is never treated as a
+ * duplicate (round 3 N1: an older untracked live sub on the customer must not freeze a member's seat).
+ * Without a seat id the database finds a seat only by this subscription's own id: nothing to guard.
+ * Read errors throw (retry).
+ */
 async function transitionSeat(event: SeatEvent, subscription: Stripe.Subscription, userId: string | null) {
+  let owner: string | null = null;
+  if (seatIdOf(subscription) != null) {
+    const bound = await seatBoundTo(subscription);
+    if (bound && bound !== subscription.id) owner = await aliveOrNull(bound);
+    if (!owner && bound !== subscription.id && (event === 'started' || event === 'paid') && !(await rowForSubscription(subscription.id))) {
+      owner = await livePrimaryFor(subscription);
+    }
+  }
+  if (owner) {
+    const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+    console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${subscription.id} primary=${owner} status=${subscription.status} action=none (founding seat ${seatIdOf(subscription)} stays with ${owner}; seat event '${event}' not applied)`);
+    return;
+  }
   const r = await transitionFoundingSeat({ event, seatId: seatIdOf(subscription), subscriptionId: subscription.id, userId });
   if (!r && subscription.status !== 'canceled' && subscription.status !== 'incomplete_expired') {
     // A founding-price subscription that never had a seat (created in the Dashboard, or a
@@ -447,11 +725,14 @@ async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: 
   // Only the new plans: a legacy $20 subscription is never modified automatically.
   if (!subscription.items.data.some((i) => newPlanPrices().includes(i.price?.id))) return false;
   // Redelivery after a refusal: finish what a failed attempt may have left undone.
-  if (subscription.status === 'canceled' && (subscription.cancellation_details?.comment || '').startsWith('trial_reuse')) {
+  if (subscription.status === 'canceled' && cancelReason(subscription, 'trial_reuse')) {
     await finishTrialRefusal(subscription, email);
     return true;
   }
   if (subscription.status !== 'trialing') return false;
+  // Idempotent (DAI-12): a trial that already passed the check is never re-judged. A redelivered
+  // event after the customer changed card must not cancel a trial we already approved.
+  if (subscription.metadata?.trial_card_checked === '1') return false;
   const markChecked = async () => {
     if (subscription.metadata?.trial_card_checked === '1') return;
     await stripe.subscriptions.update(subscription.id, { metadata: { trial_card_checked: '1' } });
@@ -469,6 +750,7 @@ async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: 
   // invoice_now:false + prorate:false: no final invoice, no charge, no credit.
   let cancelled: Stripe.Subscription;
   try {
+    await stripe.subscriptions.update(subscription.id, { metadata: { [CANCEL_REASON_KEY]: 'trial_reuse' } });
     cancelled = await stripe.subscriptions.cancel(subscription.id, {
       invoice_now: false,
       prorate: false,

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
-import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited } from '@/lib/api-helpers';
+import { createHash } from 'crypto';
+import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited, getClientIp } from '@/lib/api-helpers';
+import { tryReserveHold } from '@/lib/pricing/hold-limit';
 import { isProStatus } from '@/lib/constants/subscription';
 import { getUserSubscription, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import {
@@ -10,6 +12,7 @@ import {
   hasActiveSubscription,
   hasEverSubscribed,
   hasEverSubscribedByEmail,
+  findLiveSubscriptionCustomerByEmail,
 } from '@/lib/guest-checkout';
 import {
   chooseCheckoutPlan,
@@ -27,7 +30,8 @@ function parseExpectedCents(v: unknown): number | null {
 }
 import type Stripe from 'stripe';
 
-const BUSY = 'Founding Member checkouts are busy right now. Please try again in a few minutes.';
+const BUSY = 'Founding Member checkouts are busy right now. Please try again in a few minutes, or subscribe at the regular price.';
+const IP_BUSY = 'Too many Founding Member checkouts were started from your network. Please try again later, or subscribe at the regular price.';
 
 /**
  * Create the Checkout Session for the plan on sale. Founding: a seat is reserved
@@ -44,10 +48,15 @@ async function createCheckout(opts: {
   cancelUrl: string;
   /** Monthly cents the page showed the customer; checkout refuses to charge anything else. */
   expectedCents: number | null;
+  /** Client asked for the regular price instead of a Founding seat. */
+  forceRegular?: boolean;
+  /** Client IP, for the per-IP limit on new seat holds. */
+  ip?: string;
 }): Promise<NextResponse> {
-  const choice = await chooseCheckoutPlan(opts.customerId, opts.userId);
+  const choice = await chooseCheckoutPlan(opts.customerId, opts.userId, { forceRegular: opts.forceRegular });
   if (!choice.ok) {
-    return NextResponse.json({ error: BUSY, busy: true }, { status: 409 });
+    // regularPriceAvailable: the UI can offer the regular price (POST again with plan: 'regular').
+    return NextResponse.json({ error: BUSY, busy: true, regularPriceAvailable: true }, { status: 409 });
   }
   if (opts.expectedCents != null && opts.expectedCents !== PLANS[choice.plan].cents) {
     // The price changed since the page loaded (mode flipped, spots ran out, returning member).
@@ -60,6 +69,14 @@ async function createCheckout(opts: {
       amountCents: PLANS[choice.plan].cents,
     }, { status: 409 });
   }
+  // DAI-14: one network cannot park many unpaid Founding seats. Only NEW holds count (an existing
+  // hold of this customer is reused, not added), which is only known after the atomic reserve, so the
+  // check follows it and gives back a seat it refuses. F2: the per-IP slot is checked AND taken in one
+  // synchronous step (no await in between), so a parallel burst cannot all pass the check; the slot is
+  // given back if the Checkout Session is not created (see below, just before the create). Unknown client
+  // IP: no limit (it would put every unknown client in one bucket).
+  const limitIp = choice.seatId != null && choice.newSeat && opts.ip && opts.ip !== 'unknown' ? opts.ip : null;
+  if (choice.seatId != null && choice.newSeat && !limitIp) console.warn('[checkout] founding hold limit skipped: client IP unknown');
   const trialDays = opts.trialEligible && choice.firstTimeTrialDays > 0 ? choice.firstTimeTrialDays : undefined;
   const ids: Record<string, string> = opts.userId ? { user_id: opts.userId } : { guest_email: opts.guestEmail || '' };
   const founding = choice.plan === 'founding';
@@ -80,12 +97,15 @@ async function createCheckout(opts: {
       ...(trialDays ? { trial_period_days: trialDays } : {}),
       metadata,
     },
-    metadata,
+    // app: marks DailyAI sessions on the shared Stripe account so expiry never touches another product's.
+    metadata: { ...metadata, app: 'dailyai' },
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
     // A promotion code on top of the founding price is not part of the offer, and a
     // 100%-off code would make a "paying" seat that never pays.
     allow_promotion_codes: !founding,
+    // Names the product at the top of Checkout; the Stripe account is shared with other products.
+    branding_settings: { display_name: 'DailyAI Betting' },
   };
   if (founding) {
     const copy = offerCopy({ mode: 'founding', plan: 'founding', amountCents: PLANS.founding.cents, trialDays: trialDays ?? 0, founding: null });
@@ -97,10 +117,18 @@ async function createCheckout(opts: {
     params.custom_text = { submit: { message: [CHECKOUT_BRAND_LINE, copy.terms, copy.firstChargeRelative, copy.trialRule, copy.renewal].filter(Boolean).join(' ').slice(0, 1200) } };
   }
 
+  // N6: the slot is taken immediately before the create (nothing in between can throw) and given back in
+  // the catch below if the create fails.
+  const slot = limitIp ? tryReserveHold(limitIp) : null;
+  if (slot && !slot.ok) {
+    await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+    return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
+  }
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create(params);
   } catch (err) {
+    if (slot?.ok) slot.release(); // no session: the IP slot was never used
     // Give back a seat this request just reserved (not one an earlier open checkout holds).
     if (choice.seatId != null && choice.newSeat) {
       await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
@@ -114,7 +142,24 @@ async function createCheckout(opts: {
       holdUntil: new Date(expires * 1000).toISOString(),
     });
   }
+  // DAI-11: one open Checkout per user. Older open sessions of this customer are expired AFTER the new
+  // one is bound to the seat (an expiry event releases a seat only for the session bound to it).
+  // Only sessions older than this one, so two concurrent requests leave exactly one open.
+  // Residual race (documented, not fixed): two requests whose list calls run before either session is
+  // created can both leave their session open for a sub-second window; the webhook's duplicate-subscription
+  // alert (and optional trial cancel) is the backstop if both are completed.
+  if (opts.userId) await expireOlderOpenSessions(opts.customerId, opts.userId, session).catch((e) => console.error('[checkout] expire older sessions failed:', (e as { message?: string })?.message));
   return NextResponse.json(opts.guestEmail ? { url: session.url, guest: true } : { url: session.url });
+}
+
+async function expireOlderOpenSessions(customerId: string, userId: string, keep: Stripe.Checkout.Session) {
+  const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
+  for (const s of open.data) {
+    if (s.id === keep.id || s.mode !== 'subscription' || s.metadata?.app !== 'dailyai' || s.metadata?.user_id !== userId) continue;
+    const older = (s.created ?? 0) < (keep.created ?? 0) || ((s.created ?? 0) === (keep.created ?? 0) && s.id < keep.id);
+    if (!older) continue;
+    try { await stripe.checkout.sessions.expire(s.id); } catch { /* already expired or completed */ }
+  }
 }
 
 /**
@@ -172,12 +217,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // N4: "another user" only while that user still exists; a lookup error fails closed (500).
+    const userExists = async (id: string): Promise<boolean> => {
+      const { data, error } = await db.auth.admin.getUserById(id);
+      if (error) {
+        if ((error as { status?: number }).status === 404) return false;
+        throw Object.assign(new Error('owner lookup failed'), { code: (error as { code?: string }).code });
+      }
+      return !!data?.user;
+    };
+    // DAI-13: the login may not be mapped to the payer's Stripe customer. If any Stripe customer with
+    // this email already holds a live DailyAI subscription, a second one must not be sold.
+    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId, user.id, userExists);
+    if (holder) {
+      console.error(`[billing-alert] checkout_refused_existing_subscription user=${user.id} customer=${holder}`);
+      return NextResponse.json(
+        { error: 'This email already has a DailyAI subscription. Manage it under Account > Manage Subscription, or contact support@dailyaibetting.com and we will link it to your login.', manage: true, existingSubscription: true },
+        { status: 409 },
+      );
+    }
+
     let customerId = existing.stripeCustomerId;
     if (!customerId) {
+      // DAI-11: idempotency key from the user id, so two concurrent first checkouts get ONE customer.
+      const emailTag = createHash('sha256').update((user.email || '').toLowerCase()).digest('hex').slice(0, 12);
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id },
-      });
+      }, { idempotencyKey: `dai-customer:${user.id}:${emailTag}` });
       customerId = customer.id;
 
       // Persist the customer id so a retried checkout reuses it (B3). 'inactive' is the
@@ -200,7 +267,7 @@ export async function POST(request: Request) {
     // The free trial is for first-time subscribers only (no new trial after cancelling).
     const trialEligible = !(existing.stripeSubscriptionId
       || (await hasEverSubscribed(stripe, customerId))
-      || (await hasEverSubscribedByEmail(stripe, user.email)));
+      || (await hasEverSubscribedByEmail(stripe, user.email, user.id, userExists)));
     return await createCheckout({
       customerId,
       userId: user.id,
@@ -209,14 +276,34 @@ export async function POST(request: Request) {
       successUrl: `${baseUrl}/pro/success?session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${baseUrl}/pro`,
       expectedCents: parseExpectedCents(body?.expectedCents),
+      forceRegular: body?.plan === 'regular',
+      ip: getClientIp(request),
     });
   } catch (error) {
-    const e = error as { code?: string; message?: string } | null;
-    if (error instanceof PricingConfigError) console.error('Checkout pricing config error:', e?.message);
-    console.error('Checkout error:', e?.code || '(no code)', e?.message || String(error));
+    if (error instanceof PricingConfigError) console.error('Checkout pricing config error:', redactEmails((error as Error).message));
+    console.error('Checkout error:', describeError(error));
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 },
     );
   }
+}
+
+/** Email addresses masked out of free text (a Stripe search error can echo the query). */
+function redactEmails(text: string): string {
+  // N5: the whole whitespace-delimited token (quotes, prefixes like email:'o'brien and all).
+  return text.replace(/\S*@\S*/g, '[email]');
+}
+
+/**
+ * F6: what to log about a checkout failure. Stripe errors: type, code and request id only (their message
+ * can echo a customers.search query containing the user's email). Anything else: code and message with
+ * any email address redacted.
+ */
+function describeError(error: unknown): string {
+  const e = error as { type?: string; code?: string; requestId?: string; message?: string } | null;
+  if (e && typeof e.type === 'string' && e.type.startsWith('Stripe')) {
+    return `${e.type} code=${e.code || '(none)'} request=${e.requestId || '(none)'}`;
+  }
+  return `${e?.code || '(no code)'} ${redactEmails(e?.message || String(error))}`;
 }

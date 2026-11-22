@@ -36,6 +36,18 @@ export function makeClient(url, key, { sessionUser } = {}) {
       return { data: { session: user ? { user } : null }, error: null };
     },
     admin: {
+      /** Like GoTrue: a missing user is a 404 AuthApiError; `authAdminOutage` simulates a network failure. */
+      async getUserById(id) {
+        const hh = harness();
+        hh.db.log.push({ table: 'auth.users', op: 'getUserById', key: client.kind });
+        if (client.kind !== 'service') return { data: { user: null }, error: { message: 'not allowed', status: 403 } };
+        if (hh.authAdminOutage) return { data: { user: null }, error: netError() };
+        const user = hh.authUsers.find((u) => u.id === id)
+          || [...hh.bearerUsers.values()].find((u) => u.id === id)
+          || (hh.cookieUser?.id === id ? hh.cookieUser : null);
+        if (!user) return { data: { user: null }, error: { name: 'AuthApiError', message: 'User not found', status: 404, code: 'user_not_found' } };
+        return { data: { user }, error: null };
+      },
       async createUser({ email }) {
         const hh = harness();
         hh.db.log.push({ table: 'auth.users', op: 'createUser', key: client.kind });

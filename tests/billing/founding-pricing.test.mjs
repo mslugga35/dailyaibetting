@@ -129,7 +129,8 @@ test('legacy checkout is unchanged: $20 price, trial, promotion codes allowed, n
   assert.deepEqual(s.line_items, [{ price: DAILYAI_PRICE_ID, quantity: 1 }]);
   assert.equal(s.allow_promotion_codes, true);
   assert.equal(s.expires_at, undefined);
-  assert.deepEqual(s.metadata, { user_id: 'u_legacy' });
+  assert.deepEqual(s.metadata, { user_id: 'u_legacy', app: 'dailyai' });
+  assert.deepEqual(s.subscription_data.metadata, { user_id: 'u_legacy' }, 'subscription metadata unchanged');
   assert.equal(rpcCalls('dailyai_founding_reserve').length, 0);
 });
 
@@ -352,6 +353,7 @@ test('subscription deleted → seat ended (released if never paid, decided by th
   setup({ env: FOUNDING_ENV });
   seatRpc();
   const sub = foundingSub();
+  harness().db.seed('dailyai_founding_seats', [{ id: 41, stripe_subscription_id: sub.id, status: 'trialing' }]); // the seat is bound to this subscription
   await deliver(subscriptionEvent('customer.subscription.deleted', { ...sub, status: 'canceled' }));
   assert.equal(rpcCalls('dailyai_founding_transition')[0].p_event, 'ended');
 });
@@ -607,8 +609,8 @@ test('/api/checkout/status: the truth, only once settled (trial refused / triali
   assert.deepEqual((await ask(done)).json, { state: 'pending' });
   live().metadata = { ...live().metadata, trial_card_checked: '1' };
   assert.deepEqual((await ask(done)).json, { state: 'trialing' });
-  // the webhook refused it for card reuse
-  Object.assign(live(), { status: 'canceled', cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
+  // the webhook refused it for card reuse (a comment-only refusal from before the metadata marker: canceled_at before the F7 cutoff)
+  Object.assign(live(), { status: 'canceled', canceled_at: Math.floor(Date.UTC(2026, 10, 21) / 1000), cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
   const r = await ask(done);
   assert.deepEqual(r.json, { state: 'trial_not_started' });
   assert.deepEqual(Object.keys(r.json), ['state'], 'no personal data');

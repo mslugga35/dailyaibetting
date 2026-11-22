@@ -1,6 +1,9 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
   "src/lib/consensus/team-mappings.test.ts": 36,
+  "tests/billing/billing-hardening.test.mjs": 41,
+  "tests/billing/billing-round2.test.mjs": 19,
+  "tests/billing/billing-round3.test.mjs": 12,
   "tests/billing/checkout.test.mjs": 14,
   "tests/billing/entitlement-client.test.mjs": 6,
   "tests/billing/entitlement.test.mjs": 15,

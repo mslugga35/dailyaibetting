@@ -34,6 +34,7 @@ test('signed-in new user → one Stripe customer, session carries user_id metada
   assert.equal(s.metadata.user_id, 'u_new');
   assert.equal(s.subscription_data.metadata.user_id, 'u_new');
   assert.equal(s.subscription_data.trial_period_days, 7);
+  assert.deepEqual(s.branding_settings, { display_name: 'DailyAI Betting' });
   assert.equal(s.customer, harness().stripe.customers[0].id);
 });
 

@@ -26,6 +26,10 @@ export class FakeStripeState {
     this.charges = {};
     /** payment_intent id -> invoice id (invoicePayments.list). */
     this.invoicePayments = {};
+    this.idempotent = new Map();
+    /** Customer ids customers.search does not return yet (search index lag). */
+    this.searchLag = new Set();
+    this.createdSeq = Math.floor(Date.now() / 1000);
     this.calls = [];
     this.failures = [];
   }
@@ -59,6 +63,7 @@ export class FakeStripeState {
     const priceId = fields.priceId || DAILYAI_PRICE_ID;
     const s = {
       id: fields.id || id('sub'),
+      created: fields.created ?? this.nextCreated(),
       object: 'subscription',
       customer: fields.customer,
       status: fields.status || 'active',
@@ -74,6 +79,10 @@ export class FakeStripeState {
     };
     this.subscriptions.push(s);
     return s;
+  }
+
+  nextCreated() {
+    return ++this.createdSeq;
   }
 
   newId(prefix) {

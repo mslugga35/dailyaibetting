@@ -24,9 +24,29 @@ const fakeStripe = {
       const hit = st().customers.filter((c) => !params?.email || c.email === params.email);
       return list(hit.slice(0, params?.limit ?? 10));
     },
-    async create(params) {
-      st().record('customers.create', params);
-      return st().addCustomer({ email: params?.email ?? null, metadata: params?.metadata ?? {} });
+    /**
+     * Search: only the `email:'...'` form is modelled. Stripe's `:` operator is case-INSENSITIVE and,
+     * on a string field, matches any value CONTAINING the query's words in order (docs.stripe.com/search),
+     * so it can return more than an exact match: modelled as a lower-cased substring match.
+     * Quotes inside the value are escaped with a backslash.
+     * `st().searchLag` (ids) models eventual consistency: those customers are not yet indexed.
+     */
+    async search(params) {
+      st().record('customers.search', params);
+      const m = /^email:'((?:[^'\\]|\\.)*)'$/.exec(params?.query ?? '');
+      if (!m) throw Object.assign(new Error(`[harness] unsupported customers.search query: ${params?.query}`), { type: 'StripeInvalidRequestError', statusCode: 400 });
+      const want = m[1].replace(/\\(.)/g, '$1').toLowerCase();
+      const lag = st().searchLag || new Set();
+      const hit = st().customers.filter((c) => !lag.has(c.id) && (c.email || '').toLowerCase().includes(want));
+      return { object: 'search_result', data: hit.slice(0, params?.limit ?? 10), has_more: false, next_page: null };
+    },
+    async create(params, options) {
+      st().record('customers.create', { ...params, _idempotencyKey: options?.idempotencyKey ?? null });
+      const key = options?.idempotencyKey;
+      if (key && st().idempotent.has(key)) return st().idempotent.get(key);
+      const c = st().addCustomer({ email: params?.email ?? null, metadata: params?.metadata ?? {} });
+      if (key) st().idempotent.set(key, c);
+      return c;
     },
   },
   subscriptions: {
@@ -36,6 +56,16 @@ const fakeStripe = {
         (s) => (!params?.customer || s.customer === params.customer) && (!params?.status || params.status === 'all' || s.status === params.status),
       );
       return list(hit.slice(0, params?.limit ?? 10));
+    },
+    /** Search: only `metadata['user_id']:'...'` is modelled (token field: exact match). Honors searchLag by subscription id. */
+    async search(params) {
+      st().record('subscriptions.search', params);
+      const m = /^metadata\['user_id'\]:'((?:[^'\\]|\\.)*)'$/.exec(params?.query ?? '');
+      if (!m) throw Object.assign(new Error(`[harness] unsupported subscriptions.search query: ${params?.query}`), { type: 'StripeInvalidRequestError', statusCode: 400 });
+      const want = m[1].replace(/\\(.)/g, '$1');
+      const lag = st().searchLag || new Set();
+      const hit = st().subscriptions.filter((s) => !lag.has(s.id) && s.metadata?.user_id === want);
+      return { object: 'search_result', data: JSON.parse(JSON.stringify(hit.slice(0, params?.limit ?? 10))), has_more: false, next_page: null };
     },
     async update(subId, params) {
       st().record('subscriptions.update', { id: subId, params });
@@ -105,9 +135,22 @@ const fakeStripe = {
     sessions: {
       async create(params) {
         st().record('checkout.sessions.create', params);
-        const s = { id: st().newId('cs'), object: 'checkout.session', url: `https://checkout.stripe.test/${st().sessions.length + 1}`, ...params };
+        const s = { id: st().newId('cs'), object: 'checkout.session', status: 'open', created: st().nextCreated(), url: `https://checkout.stripe.test/${st().sessions.length + 1}`, ...params };
         st().sessions.push(s);
         return s;
+      },
+      async list(params) {
+        st().record('checkout.sessions.list', params);
+        const hit = st().sessions.filter((x) => (!params?.customer || x.customer === params.customer) && (!params?.status || x.status === params.status));
+        return list(JSON.parse(JSON.stringify(hit.slice(0, params?.limit ?? 10))));
+      },
+      async expire(id) {
+        st().record('checkout.sessions.expire', { id });
+        const s = st().sessions.find((x) => x.id === id);
+        if (!s) throw Object.assign(new Error(`No such checkout.session: '${id}'`), { type: 'StripeInvalidRequestError', statusCode: 404 });
+        if (s.status !== 'open') throw Object.assign(new Error('Only open Checkout Sessions can be expired.'), { type: 'StripeInvalidRequestError', statusCode: 400 });
+        s.status = 'expired';
+        return JSON.parse(JSON.stringify(s));
       },
       async retrieve(id, params) {
         st().record('checkout.sessions.retrieve', { id, params });
