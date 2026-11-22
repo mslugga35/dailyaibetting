@@ -79,15 +79,53 @@ test('DAI-11b: a new checkout expires the user\'s older open sessions (only the 
   assert.equal(s2.status, 'open');
 });
 
-test('DAI-11c: checkout.session.completed expires the customer\'s other open sessions', async () => {
+test('DAI-11b: every DailyAI Checkout Session carries metadata.app=dailyai; a session without the marker (another product) is never expired', async () => {
+  const h = harness();
+  const u = bearerUser('u_marker');
+  assert.equal((await checkout({ headers: u.headers })).status, 200);
+  assert.equal(h.stripe.sessions[0].metadata.app, 'dailyai');
+  h.stripe.sessions.unshift({ id: 'cs_foreign', object: 'checkout.session', status: 'open', mode: 'subscription', customer: h.stripe.customers[0].id, created: 1, metadata: { user_id: 'u_marker' } });
+  assert.equal((await checkout({ headers: u.headers })).status, 200);
+  assert.equal(h.stripe.sessions.find((x) => x.id === 'cs_foreign').status, 'open');
+  assert.ok(h.stripe.sessions.some((x) => x.metadata?.app === 'dailyai' && x.status === 'expired'), 'the older DailyAI session was expired');
+});
+
+function completedWithOpenSessions(extra) {
   const h = harness();
   const c = h.stripe.addCustomer({ email: 'tabs@example.test' });
-  const other = await h.stripe.sessions.push({ id: 'cs_other_open', object: 'checkout.session', status: 'open', mode: 'subscription', customer: c.id, created: 1, metadata: { user_id: 'u_tabs2' } });
+  const mk = (id, o) => h.stripe.sessions.push({ id, object: 'checkout.session', status: 'open', mode: 'subscription', customer: c.id, created: 100, metadata: { app: 'dailyai', user_id: 'u_tabs2' }, ...o });
+  extra(mk);
   const sub = h.stripe.addSubscription({ customer: c.id, status: 'trialing', metadata: { user_id: 'u_tabs2' } });
   const evt = checkoutCompletedEvent({ sub, userId: 'u_tabs2', customerId: c.id });
+  evt.data.object.created = 200;
+  return { h, evt, sub, c };
+}
+const sessionStatus = (h, id) => h.stripe.sessions.find((x) => x.id === id).status;
+
+test("DAI-11c: checkout.session.completed expires the same user's OLDER DailyAI open sessions, and only those", async () => {
+  const { h, evt } = completedWithOpenSessions((mk) => {
+    mk('cs_older_same');
+    mk('cs_other_user', { metadata: { app: 'dailyai', user_id: 'someone_else' } });
+    mk('cs_no_marker', { metadata: { user_id: 'u_tabs2' } });
+    mk('cs_newer', { created: 300 });
+  });
   assert.equal((await deliver(evt)).status, 200);
-  assert.equal(h.stripe.sessions.find((s) => s.id === 'cs_other_open').status, 'expired');
-  void other;
+  assert.equal(sessionStatus(h, 'cs_older_same'), 'expired');
+  assert.equal(sessionStatus(h, 'cs_other_user'), 'open');
+  assert.equal(sessionStatus(h, 'cs_no_marker'), 'open');
+  assert.equal(sessionStatus(h, 'cs_newer'), 'open', 'a newer attempt is never expired');
+});
+
+test('DAI-11c: a completed session with no user_id (guest) expires nothing; a redelivery does not expire either', async () => {
+  const g = completedWithOpenSessions((mk) => mk('cs_x'));
+  g.evt.data.object.metadata = { guest_email: 'g@example.test' };
+  await deliver(g.evt);
+  assert.equal(sessionStatus(g.h, 'cs_x'), 'open');
+  setup();
+  const { h, evt, sub } = completedWithOpenSessions((mk) => mk('cs_y'));
+  h.db.seed('user_subscriptions', [{ user_id: 'u_tabs2', stripe_customer_id: sub.customer, stripe_subscription_id: sub.id, status: 'trialing' }]);
+  await deliver(evt);
+  assert.equal(sessionStatus(h, 'cs_y'), 'open');
 });
 
 function twoLiveSubs(secondStatus) {
@@ -143,6 +181,67 @@ test('DAI-11d: deleting the cancelled duplicate does not end the first subscript
   assert.equal(rpcCalls('dailyai_founding_transition').filter((c) => c.p_event === 'ended').length, 0);
 });
 
+test("review #1: a duplicate cancelled by hand (NO comment, flag off) never ends the legitimate subscription's seat", async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const { h, primary, dup } = twoLiveSubs('trialing');
+  dup.metadata.founding_seat_id = '41'; dup.items.data[0].price.id = FOUNDING;
+  primary.metadata.founding_seat_id = '41'; primary.items.data[0].price.id = FOUNDING;
+  h.db.seed('dailyai_founding_seats', [{ id: 41, stripe_subscription_id: primary.id, status: 'trialing' }]);
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...JSON.parse(JSON.stringify(dup)), status: 'canceled' }));
+  assert.equal(rpcCalls('dailyai_founding_transition').filter((c) => c.p_event === 'ended').length, 0);
+  // the bound subscription ending DOES end the seat
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...JSON.parse(JSON.stringify(primary)), status: 'canceled' }));
+  assert.equal(rpcCalls('dailyai_founding_transition').filter((c) => c.p_event === 'ended').length, 1);
+});
+
+test('review #2: why we cancelled is recorded in server-only metadata BEFORE the cancel; a customer-typed comment is not trusted', async () => {
+  setup({ env: { ...FOUNDING_ENV, DAI_AUTO_CANCEL_DUPLICATE_TRIAL: 'true' } });
+  seatRpc();
+  const { h, customer, dup } = twoLiveSubs('trialing');
+  await deliver(checkoutCompletedEvent({ sub: dup, userId: 'u_dup', customerId: customer.id }));
+  const calls = h.stripe.calls.map((c) => c.method);
+  const upd = h.stripe.callsTo('subscriptions.update').find((c) => c.args.params?.metadata?.dai_cancel_reason);
+  assert.equal(upd.args.params.metadata.dai_cancel_reason, 'duplicate_trial');
+  assert.ok(calls.indexOf('subscriptions.update') < calls.indexOf('subscriptions.cancel'));
+  assert.equal(h.stripe.subscriptions.find((x) => x.id === dup.id).metadata.dai_cancel_reason, 'duplicate_trial');
+  // a customer who cancels their OWN bound subscription in the portal typing "duplicate_trial" still ends their seat
+  const { sub: own } = seedSubscription({ userId: 'u_typed', status: 'trialing', priceId: FOUNDING });
+  own.metadata.founding_seat_id = '42';
+  h.db.seed('dailyai_founding_seats', [{ id: 42, stripe_subscription_id: own.id, status: 'trialing' }]);
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...JSON.parse(JSON.stringify(own)), status: 'canceled', cancellation_details: { comment: 'duplicate_trial: typed by the customer' } }));
+  assert.ok(rpcCalls('dailyai_founding_transition').some((c) => c.p_event === 'ended' && c.p_seat === 42));
+});
+
+test('review #2: trial-reuse cancellation also writes dai_cancel_reason=trial_reuse and is recognised from metadata alone', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  captureEmails();
+  const h = harness();
+  h.stripe.paymentMethods.pm_1 = { type: 'card', card: { fingerprint: 'fp_used' } };
+  h.db.rpcHandlers.set('dailyai_claim_trial_fingerprint', async () => 'reused');
+  const c = h.stripe.addCustomer({ email: 'r@example.test' });
+  const sub = h.stripe.addSubscription({ customer: c.id, status: 'trialing', priceId: FOUNDING, default_payment_method: 'pm_1', metadata: { user_id: 'u_r', founding_seat_id: '41' } });
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_r', customerEmail: 'r@example.test' }));
+  assert.equal(h.stripe.subscriptions.find((x) => x.id === sub.id).metadata.dai_cancel_reason, 'trial_reuse');
+  h.stripe.subscriptions.find((x) => x.id === sub.id).cancellation_details = { comment: null };
+  await deliver(checkoutCompletedEvent({ sub, userId: 'u_r', customerEmail: 'r@example.test' }));
+  assert.equal(h.stripe.callsTo('subscriptions.cancel').length, 1);
+  assert.equal(h.stripe.callsTo('subscriptions.update').filter((x) => x.args.params?.metadata?.trial_reuse_notified).length, 1, 'email marked once; a metadata-only refusal is not re-run');
+});
+
+test("review #4: a redelivered checkout for an already-cancelled duplicate never upserts it over the user's row nor ends the shared seat", async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const h = harness();
+  const { customer, sub: primary } = seedSubscription({ userId: 'u_gone', status: 'canceled', priceId: FOUNDING });
+  const dup = h.stripe.addSubscription({ customer: customer.id, status: 'canceled', priceId: FOUNDING, metadata: { user_id: 'u_gone', founding_seat_id: '41', dai_cancel_reason: 'duplicate_trial' } });
+  const res = await deliver(checkoutCompletedEvent({ sub: dup, userId: 'u_gone', customerId: customer.id }));
+  assert.equal(res.status, 200);
+  assert.equal(h.db.rows('user_subscriptions').find((r) => r.user_id === 'u_gone').stripe_subscription_id, primary.id);
+  assert.equal(rpcCalls('dailyai_founding_transition').length, 0);
+});
+
 // ---------------------------------------------------------------- DAI-13
 
 test('DAI-13: signed-in user whose email already has a live DailyAI subscription on an unmapped customer → 409, nothing created', async () => {
@@ -168,11 +267,23 @@ test('DAI-13: a live subscription for ANOTHER product on that email does not blo
   assert.equal((await checkout({ headers: u.headers })).status, 200);
 });
 
-test('DAI-13: the email match is case-insensitive in effect (mixed-case customer email is found)', async () => {
+test('DAI-13: login typed in mixed case still finds a customer stored in lower case (the lower-cased lookup)', async () => {
   const h = harness();
-  const old = h.stripe.addCustomer({ email: 'Mixed@Example.test' });
+  const old = h.stripe.addCustomer({ email: 'john@gmail.com' });
   h.stripe.addSubscription({ customer: old.id, status: 'trialing', priceId: DAILYAI_PRICE_ID });
-  const u = bearerUser('u_mixed', 'Mixed@Example.test');
+  const u = bearerUser('u_mixed', 'John@Gmail.com');
+  assert.equal((await checkout({ headers: u.headers })).status, 409);
+});
+
+// Known gap: Stripe's customers.list email filter is documented case-sensitive (see CustomersResource.d.ts) and
+// the types do not say whether customers.search is case-insensitive, so it is not assumed. A customer stored as
+// "John@Gmail.com" is not found for a login "john@gmail.com". The reconcile script's MULTIPLE_LIVE_SAME_EMAIL
+// (lower-cased) catches it after the fact. Plus/dot aliases are out of scope.
+test('DAI-13 known gap: customer "John@Gmail.com" with a live sub, login "john@gmail.com" should be refused', { todo: 'OPEN needs a case-insensitive Stripe customer lookup (list is case-sensitive; search not confirmed)' }, async () => {
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: 'John@Gmail.com' });
+  h.stripe.addSubscription({ customer: old.id, status: 'active', priceId: DAILYAI_PRICE_ID });
+  const u = bearerUser('u_gap', 'john@gmail.com');
   assert.equal((await checkout({ headers: u.headers })).status, 409);
 });
 
@@ -275,4 +386,28 @@ test('DAI-14: when all hold slots are busy the response says the regular price i
   const j = await body(res);
   assert.equal(j.busy, true);
   assert.equal(j.regularPriceAvailable, true);
+});
+
+test('review #5: IPv6 clients are limited by /64; an unknown IP is never limited', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  for (let i = 0; i < 3; i++) assert.equal((await checkout({ headers: bearerUser(`u_v6${i}`).headers, ip: `2001:db8:1:2::${i + 1}` })).status, 200);
+  assert.equal((await checkout({ headers: bearerUser('u_v6x').headers, ip: '2001:db8:1:2:ffff::9' })).status, 429);
+  assert.equal((await checkout({ headers: bearerUser('u_v6y').headers, ip: '2001:db8:1:3::1' })).status, 200, 'a different /64 is unaffected');
+  for (let i = 0; i < 5; i++) assert.equal((await checkout({ headers: { ...bearerUser(`u_unk${i}`).headers, 'x-forwarded-for': '' } })).status, 200);
+});
+
+test('review #5: a hold counts only once its Checkout Session exists (failed creates and price-changed 409s do not use up the limit)', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatRpc();
+  const ip = '198.51.100.77';
+  for (let i = 0; i < 3; i++) {
+    const r = await checkout({ headers: bearerUser(`u_pc${i}`).headers, ip, body: { expectedCents: 2000 } });
+    assert.equal(r.status, 409);
+    assert.equal((await body(r)).priceChanged, true);
+  }
+  harness().stripe.fail({ method: 'checkout.sessions.create', times: 3 });
+  for (let i = 0; i < 3; i++) assert.equal((await checkout({ headers: bearerUser(`u_fail${i}`).headers, ip })).status, 500);
+  for (let i = 0; i < 3; i++) assert.equal((await checkout({ headers: bearerUser(`u_ok${i}`).headers, ip })).status, 200);
+  assert.equal((await checkout({ headers: bearerUser('u_over').headers, ip })).status, 429);
 });
