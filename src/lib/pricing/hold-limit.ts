@@ -18,6 +18,22 @@ export function holdLimitConfig() {
   };
 }
 
+/**
+ * The bucket for an address: IPv4 as is; IPv6 by its /64 (one subscriber gets a whole /64, so
+ * per-address limits are trivially dodged); IPv4-mapped IPv6 as the IPv4. Unknown -> null (no limit).
+ */
+export function ipKey(raw: string): string | null {
+  const ip = (raw || '').trim().toLowerCase();
+  if (!ip || ip === 'unknown') return null;
+  if (ip.startsWith('::ffff:') && ip.includes('.')) return ip.slice(7);
+  if (!ip.includes(':')) return ip;
+  const [head, tail] = ip.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail ? tail.split(':') : [];
+  const groups = ip.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return groups.slice(0, 4).map((g) => g.padStart(4, '0')).join(':') + '::/64';
+}
+
 function recent(ip: string, now: number, windowMs: number): number[] {
   const list = (holds.get(ip) || []).filter((t) => now - t < windowMs);
   if (list.length) holds.set(ip, list); else holds.delete(ip);
@@ -25,13 +41,17 @@ function recent(ip: string, now: number, windowMs: number): number[] {
 }
 
 /** True when this IP already created its allowance of new holds inside the window. */
-export function holdLimitReached(ip: string, now = Date.now()): boolean {
+export function holdLimitReached(rawIp: string, now = Date.now()): boolean {
+  const ip = ipKey(rawIp);
+  if (!ip) return false;
   const { max, windowMs } = holdLimitConfig();
   return recent(ip, now, windowMs).length >= max;
 }
 
 /** Count one new hold against the IP. */
-export function recordHold(ip: string, now = Date.now()): void {
+export function recordHold(rawIp: string, now = Date.now()): void {
+  const ip = ipKey(rawIp);
+  if (!ip) return;
   const { windowMs } = holdLimitConfig();
   const list = recent(ip, now, windowMs);
   list.push(now);

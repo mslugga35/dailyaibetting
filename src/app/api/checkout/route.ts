@@ -58,15 +58,6 @@ async function createCheckout(opts: {
     // regularPriceAvailable: the UI can offer the regular price (POST again with plan: 'regular').
     return NextResponse.json({ error: BUSY, busy: true, regularPriceAvailable: true }, { status: 409 });
   }
-  // DAI-14: one network cannot park many unpaid Founding seats. Only NEW holds count (an
-  // existing hold of this customer is reused, not added).
-  if (choice.seatId != null && choice.newSeat && opts.ip) {
-    if (holdLimitReached(opts.ip)) {
-      await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
-      return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
-    }
-    recordHold(opts.ip);
-  }
   if (opts.expectedCents != null && opts.expectedCents !== PLANS[choice.plan].cents) {
     // The price changed since the page loaded (mode flipped, spots ran out, returning member).
     if (choice.seatId != null && choice.newSeat) {
@@ -77,6 +68,17 @@ async function createCheckout(opts: {
       priceChanged: true,
       amountCents: PLANS[choice.plan].cents,
     }, { status: 409 });
+  }
+  // DAI-14: one network cannot park many unpaid Founding seats. Only NEW holds count (an existing
+  // hold of this customer is reused, not added), which is only known after the atomic reserve, so the
+  // check follows it and gives back a seat it refuses. The hold is RECORDED only after the Checkout
+  // Session exists. Unknown client IP: no limit (it would put every unknown client in one bucket).
+  // Residual: concurrent requests can pass the check together, overshooting by a request or two.
+  const limitIp = choice.seatId != null && choice.newSeat && opts.ip && opts.ip !== 'unknown' ? opts.ip : null;
+  if (choice.seatId != null && choice.newSeat && !limitIp) console.warn('[checkout] founding hold limit skipped: client IP unknown');
+  if (limitIp && holdLimitReached(limitIp)) {
+    await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
+    return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
   }
   const trialDays = opts.trialEligible && choice.firstTimeTrialDays > 0 ? choice.firstTimeTrialDays : undefined;
   const ids: Record<string, string> = opts.userId ? { user_id: opts.userId } : { guest_email: opts.guestEmail || '' };
@@ -98,7 +100,8 @@ async function createCheckout(opts: {
       ...(trialDays ? { trial_period_days: trialDays } : {}),
       metadata,
     },
-    metadata,
+    // app: marks DailyAI sessions on the shared Stripe account so expiry never touches another product's.
+    metadata: { ...metadata, app: 'dailyai' },
     success_url: opts.successUrl,
     cancel_url: opts.cancelUrl,
     // A promotion code on top of the founding price is not part of the offer, and a
@@ -127,6 +130,7 @@ async function createCheckout(opts: {
     }
     throw err;
   }
+  if (limitIp) recordHold(limitIp);
   if (choice.seatId != null) {
     const expires = (session.expires_at ?? params.expires_at ?? 0) + FOUNDING_HOLD_GRACE_SECONDS;
     await transitionFoundingSeat({
@@ -137,6 +141,9 @@ async function createCheckout(opts: {
   // DAI-11: one open Checkout per user. Older open sessions of this customer are expired AFTER the new
   // one is bound to the seat (an expiry event releases a seat only for the session bound to it).
   // Only sessions older than this one, so two concurrent requests leave exactly one open.
+  // Residual race (documented, not fixed): two requests whose list calls run before either session is
+  // created can both leave their session open for a sub-second window; the webhook's duplicate-subscription
+  // alert (and optional trial cancel) is the backstop if both are completed.
   if (opts.userId) await expireOlderOpenSessions(opts.customerId, opts.userId, session).catch((e) => console.error('[checkout] expire older sessions failed:', (e as { message?: string })?.message));
   return NextResponse.json(opts.guestEmail ? { url: session.url, guest: true } : { url: session.url });
 }
@@ -144,7 +151,7 @@ async function createCheckout(opts: {
 async function expireOlderOpenSessions(customerId: string, userId: string, keep: Stripe.Checkout.Session) {
   const open = await stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 });
   for (const s of open.data) {
-    if (s.id === keep.id || s.mode !== 'subscription' || s.metadata?.user_id !== userId) continue;
+    if (s.id === keep.id || s.mode !== 'subscription' || s.metadata?.app !== 'dailyai' || s.metadata?.user_id !== userId) continue;
     const older = (s.created ?? 0) < (keep.created ?? 0) || ((s.created ?? 0) === (keep.created ?? 0) && s.id < keep.id);
     if (!older) continue;
     try { await stripe.checkout.sessions.expire(s.id); } catch { /* already expired or completed */ }
