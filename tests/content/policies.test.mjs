@@ -84,5 +84,5 @@ test('confirmed operator 2026-11-19: individual trading as DailyAI Betting, DAIL
   // Without the type flag the operator is not described as an individual.
   const co = withEnv({ ...OP, POLICY_OPERATOR_TYPE: null }, () => text(P.termsPolicy()));
   assert.doesNotMatch(co, /, an individual,/);
-  assert.match(text(P.TERMS), /Charges appear on your card statement as DAILYAI\./);
+  assert.match(text(P.TERMS), /Charges show on your card statement with DAILYAI in the description\./);
 });

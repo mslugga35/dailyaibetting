@@ -57,7 +57,7 @@ export const TERMS: Policy = {
       'Keep your sign-in email and password secure; you are responsible for activity on your account. One person per account. We may suspend accounts used for abuse, scraping, reselling picks or getting around free-trial limits.',
     ] },
     { heading: 'DailyAI Pro subscription', paragraphs: [
-      `Pro is a monthly subscription billed through Stripe. The first 100 paying members get the Founding Member price of ${founding}; after those spots are gone, new members pay ${regular}. Members who joined before the founding offer keep the price they signed up at. Charges appear on your card statement as DAILYAI.`,
+      `Pro is a monthly subscription billed through Stripe. The first 100 paying members get the Founding Member price of ${founding}; after those spots are gone, new members pay ${regular}. Members who joined before the founding offer keep the price they signed up at. Charges show on your card statement with DAILYAI in the description.`,
       'First-time members get a 7-day free trial. Your card is charged at the end of the trial unless you cancel before then, and every month after that until you cancel. One free trial per customer: a payment card that was already used for a DailyAI free trial cannot start another, and that second trial is cancelled right away without a charge.',
       'The Founding Member price stays the same for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment cannot be collected after Stripe\'s retries), the founding price ends with it, and rejoining later is at the regular price.',
       'Cancellation and refunds are covered in the Refund and Cancellation Policy.',
@@ -133,7 +133,7 @@ export const PRIVACY: Policy = {
       'To run your account and subscription, send sign-in links and service emails, prevent fraud and trial abuse, answer your messages, and understand which parts of the site are used. If you joined the email list, to send picks and updates; every email has an unsubscribe link.',
     ] },
     { heading: 'Services that process data for us', paragraphs: [
-      'Supabase (accounts and database), Stripe (payments), Resend (email delivery), Cloudflare (network and security), our hosting provider (servers), Google Analytics (site analytics), and Google AdSense (advertising). Google may use cookies to measure and personalize ads; you can manage ad personalization in your Google account settings.',
+      'Supabase (accounts and database), Stripe (payments), Resend (email delivery), Cloudflare (network and security), our hosting provider (servers), Google Analytics (site analytics), Google AdSense (advertising), and HarborSEO (a script that manages site content and search optimization). Google may use cookies to measure and personalize ads; you can manage ad personalization in your Google account settings.',
       'Some links to sportsbooks are affiliate links: if you sign up through one we may earn a commission. The sportsbook may set its own cookies when you click.',
       'We do not sell your personal information.',
     ] },
