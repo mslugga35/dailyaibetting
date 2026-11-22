@@ -452,6 +452,9 @@ async function enforceOneTrialPerCard(subscription: Stripe.Subscription, email: 
     return true;
   }
   if (subscription.status !== 'trialing') return false;
+  // Idempotent (DAI-12): a trial that already passed the check is never re-judged. A redelivered
+  // event after the customer changed card must not cancel a trial we already approved.
+  if (subscription.metadata?.trial_card_checked === '1') return false;
   const markChecked = async () => {
     if (subscription.metadata?.trial_card_checked === '1') return;
     await stripe.subscriptions.update(subscription.id, { metadata: { trial_card_checked: '1' } });
