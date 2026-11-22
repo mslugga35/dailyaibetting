@@ -409,11 +409,48 @@ async function handleSubscriptionUpdated(payload: Stripe.Subscription) {
   // it instead of retrying for days.
   const subscription = await stripe.subscriptions.retrieve(payload.id);
   if (!LIVE_STATUSES.has(mapStatus(subscription.status))) return;
+  // N3: a live DUPLICATE never gets a row, so waiting for its checkout would only make Stripe retry
+  // for an hour. Once it is identified (the user's row or this customer already holds an older live
+  // subscription) and alerted, acknowledge it: the legitimate subscription's row is untouched.
+  // Read errors while checking still throw (5xx, retried).
+  const primary = await livePrimaryFor(subscription);
+  if (primary) {
+    await handleDuplicateSubscription(subscription, primary);
+    return;
+  }
   const ageSeconds = typeof subscription.created === 'number' ? Date.now() / 1000 - subscription.created : 0;
   if (ageSeconds < ROW_WAIT_SECONDS) {
     throw new RetryableWebhookError(`no user_subscriptions row yet for ${subscription.id}`);
   }
   console.error(`[Stripe Webhook] MANUAL RECONCILE: live DailyAI subscription ${subscription.id} has no user_subscriptions row`);
+}
+
+/**
+ * The OTHER live DailyAI subscription this (untracked) one duplicates, or null: the one the user's row
+ * tracks (user from server-set subscription metadata; confirmed live in Stripe, since the row can lag a
+ * missed deletion), else an older live DailyAI subscription on the same customer.
+ */
+async function livePrimaryFor(subscription: Stripe.Subscription): Promise<string | null> {
+  const userId = subscription.metadata?.user_id;
+  if (userId) {
+    const { data, error } = await supabaseAdmin
+      .from('user_subscriptions')
+      .select('stripe_subscription_id, status')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    const row = data as { stripe_subscription_id: string | null; status: string } | null;
+    if (row?.stripe_subscription_id && row.stripe_subscription_id !== subscription.id && LIVE_STATUSES.has(row.status)) {
+      try {
+        const current = await stripe.subscriptions.retrieve(row.stripe_subscription_id);
+        if (LIVE_STATUSES.has(mapStatus(current.status))) return row.stripe_subscription_id;
+      } catch (err) {
+        const e = err as { code?: string; statusCode?: number };
+        if (!(e?.code === 'resource_missing' || e?.statusCode === 404)) throw err;
+      }
+    }
+  }
+  return olderLiveSubscriptionOnCustomer(subscription);
 }
 
 async function handleSubscriptionDeleted(payload: Stripe.Subscription) {

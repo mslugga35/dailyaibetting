@@ -431,6 +431,49 @@ test('N1: a seat read error is retried (5xx) and the seat is not moved', async (
   assert.equal(seat().stripe_subscription_id, primary.id);
 });
 
+// ---------------------------------------------------------------- N3: a recorded duplicate is acknowledged
+
+test('N3: subscription.updated for a live duplicate on the same customer → 2xx + duplicate alert (no hour of retries); primary row unchanged', async () => {
+  const { h, primary, dup } = twoLiveSubs('active');
+  const { res, lines } = await deliverLogs(subscriptionEvent('customer.subscription.updated', dup));
+  assert.equal(res.status, 200);
+  assert.ok(lines.some((l) => l.includes('[billing-alert] duplicate_subscription') && l.includes(dup.id) && l.includes(primary.id)), lines.join('\n'));
+  assert.equal(h.db.rows('user_subscriptions').find((r) => r.user_id === 'u_dup').stripe_subscription_id, primary.id);
+  assert.equal(h.db.rows('user_subscriptions').length, 1);
+  assert.equal(h.stripe.callsTo('subscriptions.cancel').length, 0);
+});
+
+test('N3: subscription.updated for a duplicate on ANOTHER customer of the same user (metadata.user_id) → 2xx + alert', async () => {
+  const h = harness();
+  const { sub: primary } = seedSubscription({ userId: 'u_x', status: 'active' });
+  const other = h.stripe.addCustomer({ email: 'u_x@example.test' });
+  const dup = h.stripe.addSubscription({ customer: other.id, status: 'trialing', metadata: { user_id: 'u_x' } });
+  const { res, lines } = await deliverLogs(subscriptionEvent('customer.subscription.updated', dup));
+  assert.equal(res.status, 200);
+  assert.ok(lines.some((l) => l.includes('[billing-alert] duplicate_subscription') && l.includes(dup.id) && l.includes(primary.id)), lines.join('\n'));
+  assert.equal(h.db.rows('user_subscriptions').find((r) => r.user_id === 'u_x').stripe_subscription_id, primary.id);
+});
+
+test('N3: a transient Stripe read error while checking for a duplicate is still retried (5xx)', async () => {
+  const { h, dup } = twoLiveSubs('active');
+  dup.metadata = {}; // no user to look up: only the same-customer check (a Stripe list) can identify it
+  h.stripe.subscriptions.find((s) => s.id === dup.id).metadata = {};
+  const ev = subscriptionEvent('customer.subscription.updated', dup);
+  h.stripe.fail({ method: 'subscriptions.list', times: 1 });
+  const res = await deliver(ev);
+  assert.ok(res.status >= 500, `HTTP ${res.status}`);
+  assert.equal((await deliver(ev)).status, 200);
+});
+
+test('N3: a new subscription that is NOT a duplicate (prior one ended) still waits for its checkout (retryable 503)', async () => {
+  const h = harness();
+  seedSubscription({ userId: 'u_re', status: 'canceled' });
+  const c = h.stripe.addCustomer({ email: 'u_re2@example.test' });
+  const fresh = h.stripe.addSubscription({ customer: c.id, status: 'active', metadata: { user_id: 'u_re' } });
+  const res = await deliver(subscriptionEvent('customer.subscription.updated', fresh));
+  assert.equal(res.status, 503);
+});
+
 // ---------------------------------------------------------------- DAI-15
 
 test('DAI-15: guest flag unset → disabled by default', async () => {
