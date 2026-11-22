@@ -3,6 +3,7 @@ import { stripe } from '@/lib/stripe';
 import type Stripe from 'stripe';
 import { rateLimitGuard } from '@/lib/api-helpers';
 import { allowedPriceIds, hasDailyAiPrice } from '@/lib/stripe-prices';
+import { cancelledFor } from '@/lib/cancel-reason';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,8 +47,8 @@ export async function GET(request: NextRequest) {
     const sub = session.subscription as Stripe.Subscription | string | null;
     if (!sub || typeof sub === 'string') return json('pending');
     if (!hasDailyAiPrice(sub, allowed)) return json('unknown');
-    // Server-only metadata is the trust signal; the comment prefix is a fallback for subscriptions cancelled before it existed.
-    if (sub.status === 'canceled' && (sub.metadata?.dai_cancel_reason === 'trial_reuse' || /^trial_reuse\b/.test(sub.cancellation_details?.comment || ''))) return json('trial_not_started');
+    // Server-only metadata is the trust signal; the customer-typable comment counts only for pre-cutoff cancellations (F7).
+    if (sub.status === 'canceled' && cancelledFor(sub, 'trial_reuse')) return json('trial_not_started');
     if (sub.status === 'active') return json('active');
     if (sub.status === 'trialing') {
       // Until the webhook has checked the card, a refusal is still possible: do not welcome yet.

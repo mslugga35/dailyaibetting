@@ -609,8 +609,8 @@ test('/api/checkout/status: the truth, only once settled (trial refused / triali
   assert.deepEqual((await ask(done)).json, { state: 'pending' });
   live().metadata = { ...live().metadata, trial_card_checked: '1' };
   assert.deepEqual((await ask(done)).json, { state: 'trialing' });
-  // the webhook refused it for card reuse
-  Object.assign(live(), { status: 'canceled', cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
+  // the webhook refused it for card reuse (a comment-only refusal from before the metadata marker: canceled_at before the F7 cutoff)
+  Object.assign(live(), { status: 'canceled', canceled_at: Math.floor(Date.UTC(2026, 10, 21) / 1000), cancellation_details: { comment: 'trial_reuse: card already used for a DailyAI free trial; cancelled without charge' } });
   const r = await ask(done);
   assert.deepEqual(r.json, { state: 'trial_not_started' });
   assert.deepEqual(Object.keys(r.json), ['state'], 'no personal data');

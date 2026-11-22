@@ -42,7 +42,7 @@ export async function hasEverSubscribed(stripe: Stripe, customerId: string): Pro
  * person are caught later by the card-fingerprint check in the webhook.)
  */
 export async function hasEverSubscribedByEmail(stripe: Stripe, email: string | null | undefined): Promise<boolean> {
-  const ids = await customerIdsByEmail(stripe, email);
+  const ids = (await customersByEmail(stripe, email)).map((c) => c.id);
   const subs = await Promise.all(ids.map((id) => dailyAiSubscriptions(stripe, id)));
   return subs.some((x) => x.length > 0);
 }
@@ -60,7 +60,7 @@ export function stripeSearchQuote(value: string): string {
  * field also matches values that merely CONTAIN the words, so its hits are kept only on an exact
  * case-insensitive match. Any failure throws: callers fail closed.
  */
-export async function customerIdsByEmail(stripe: Stripe, email: string | null | undefined): Promise<string[]> {
+export async function customersByEmail(stripe: Stripe, email: string | null | undefined): Promise<Stripe.Customer[]> {
   const e = (email || '').trim();
   if (!e) return [];
   const want = e.toLowerCase();
@@ -70,7 +70,9 @@ export async function customerIdsByEmail(stripe: Stripe, email: string | null | 
     stripe.customers.search({ query: `email:${stripeSearchQuote(want)}`, limit: 100 }),
   ]);
   const searched = found.data.filter((c) => (c.email || '').trim().toLowerCase() === want);
-  return Array.from(new Set([...lists.flatMap((l) => l.data), ...searched].map((c) => c.id)));
+  const byId = new Map<string, Stripe.Customer>();
+  for (const c of [...lists.flatMap((l) => l.data), ...searched]) if (!byId.has(c.id)) byId.set(c.id, c);
+  return [...byId.values()];
 }
 
 const ALIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);
@@ -81,15 +83,27 @@ const ALIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);
  * has its own check). A payer whose login is not mapped to their Stripe customer must not be
  * able to buy a second subscription. Only DailyAI prices count: the Stripe account is shared.
  * Returns the customer id holding it, or null.
+ *
+ * F3: a customer's email is editable by the customer (Billing Portal), so an email match alone must not
+ * lock a user out. A holder customer that belongs to a DIFFERENT user (server-set metadata.user_id) is
+ * logged (ids only) and skipped; the caller's own mapped-customer check and the webhook's duplicate
+ * backstop still apply. A holder with no user_id (guest/legacy) or the caller's own user_id still blocks.
  */
 export async function findLiveSubscriptionCustomerByEmail(
   stripe: Stripe,
   email: string | null | undefined,
   exceptCustomerId?: string | null,
+  callerUserId?: string | null,
 ): Promise<string | null> {
-  const ids = (await customerIdsByEmail(stripe, email)).filter((id) => id !== exceptCustomerId);
-  for (const id of ids) {
-    if ((await dailyAiSubscriptions(stripe, id)).some((s) => ALIVE.has(s.status))) return id;
+  const customers = (await customersByEmail(stripe, email)).filter((c) => c.id !== exceptCustomerId);
+  for (const c of customers) {
+    if (!(await dailyAiSubscriptions(stripe, c.id)).some((s) => ALIVE.has(s.status))) continue;
+    const owner = (c.metadata?.user_id || '').trim();
+    if (owner && callerUserId && owner !== callerUserId) {
+      console.error(`[billing-alert] email_conflict_other_user customer=${c.id} user=${callerUserId}`);
+      continue;
+    }
+    return c.id;
   }
   return null;
 }

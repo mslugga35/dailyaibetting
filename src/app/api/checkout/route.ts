@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createHash } from 'crypto';
 import { resolveUser, getSupabaseAdmin, rateLimitGuard, isRateLimited, getClientIp } from '@/lib/api-helpers';
-import { holdLimitReached, recordHold } from '@/lib/pricing/hold-limit';
+import { tryReserveHold } from '@/lib/pricing/hold-limit';
 import { isProStatus } from '@/lib/constants/subscription';
 import { getUserSubscription, EntitlementUnavailableError } from '@/lib/auth/subscription';
 import {
@@ -71,12 +71,14 @@ async function createCheckout(opts: {
   }
   // DAI-14: one network cannot park many unpaid Founding seats. Only NEW holds count (an existing
   // hold of this customer is reused, not added), which is only known after the atomic reserve, so the
-  // check follows it and gives back a seat it refuses. The hold is RECORDED only after the Checkout
-  // Session exists. Unknown client IP: no limit (it would put every unknown client in one bucket).
-  // Residual: concurrent requests can pass the check together, overshooting by a request or two.
+  // check follows it and gives back a seat it refuses. F2: the per-IP slot is checked AND taken in one
+  // synchronous step (no await in between), so a parallel burst cannot all pass the check; the slot is
+  // given back if the Checkout Session is not created. Unknown client IP: no limit (it would put every
+  // unknown client in one bucket).
   const limitIp = choice.seatId != null && choice.newSeat && opts.ip && opts.ip !== 'unknown' ? opts.ip : null;
   if (choice.seatId != null && choice.newSeat && !limitIp) console.warn('[checkout] founding hold limit skipped: client IP unknown');
-  if (limitIp && holdLimitReached(limitIp)) {
+  const slot = limitIp ? tryReserveHold(limitIp) : null;
+  if (slot && !slot.ok) {
     await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
     return NextResponse.json({ error: IP_BUSY, busy: true, regularPriceAvailable: true }, { status: 429, headers: { 'Retry-After': '1800' } });
   }
@@ -124,13 +126,13 @@ async function createCheckout(opts: {
   try {
     session = await stripe.checkout.sessions.create(params);
   } catch (err) {
+    if (slot?.ok) slot.release(); // no session: the IP slot was never used
     // Give back a seat this request just reserved (not one an earlier open checkout holds).
     if (choice.seatId != null && choice.newSeat) {
       await transitionFoundingSeat({ event: 'abandon', seatId: choice.seatId }).catch(() => {});
     }
     throw err;
   }
-  if (limitIp) recordHold(limitIp);
   if (choice.seatId != null) {
     const expires = (session.expires_at ?? params.expires_at ?? 0) + FOUNDING_HOLD_GRACE_SECONDS;
     await transitionFoundingSeat({
@@ -215,7 +217,7 @@ export async function POST(request: Request) {
 
     // DAI-13: the login may not be mapped to the payer's Stripe customer. If any Stripe customer with
     // this email already holds a live DailyAI subscription, a second one must not be sold.
-    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId);
+    const holder = await findLiveSubscriptionCustomerByEmail(stripe, user.email, existing.stripeCustomerId, user.id);
     if (holder) {
       console.error(`[billing-alert] checkout_refused_existing_subscription user=${user.id} customer=${holder}`);
       return NextResponse.json(
@@ -267,12 +269,29 @@ export async function POST(request: Request) {
       ip: getClientIp(request),
     });
   } catch (error) {
-    const e = error as { code?: string; message?: string } | null;
-    if (error instanceof PricingConfigError) console.error('Checkout pricing config error:', e?.message);
-    console.error('Checkout error:', e?.code || '(no code)', e?.message || String(error));
+    if (error instanceof PricingConfigError) console.error('Checkout pricing config error:', redactEmails((error as Error).message));
+    console.error('Checkout error:', describeError(error));
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500 },
     );
   }
+}
+
+/** Email addresses masked out of free text (a Stripe search error can echo the query). */
+function redactEmails(text: string): string {
+  return text.replace(/[^\s'"<>()@]+@[^\s'"<>()]+/g, '[email]');
+}
+
+/**
+ * F6: what to log about a checkout failure. Stripe errors: type, code and request id only (their message
+ * can echo a customers.search query containing the user's email). Anything else: code and message with
+ * any email address redacted.
+ */
+function describeError(error: unknown): string {
+  const e = error as { type?: string; code?: string; requestId?: string; message?: string } | null;
+  if (e && typeof e.type === 'string' && e.type.startsWith('Stripe')) {
+    return `${e.type} code=${e.code || '(none)'} request=${e.requestId || '(none)'}`;
+  }
+  return `${e?.code || '(no code)'} ${redactEmails(e?.message || String(error))}`;
 }

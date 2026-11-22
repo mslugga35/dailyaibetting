@@ -57,6 +57,16 @@ const fakeStripe = {
       );
       return list(hit.slice(0, params?.limit ?? 10));
     },
+    /** Search: only `metadata['user_id']:'...'` is modelled (token field: exact match). Honors searchLag by subscription id. */
+    async search(params) {
+      st().record('subscriptions.search', params);
+      const m = /^metadata\['user_id'\]:'((?:[^'\\]|\\.)*)'$/.exec(params?.query ?? '');
+      if (!m) throw Object.assign(new Error(`[harness] unsupported subscriptions.search query: ${params?.query}`), { type: 'StripeInvalidRequestError', statusCode: 400 });
+      const want = m[1].replace(/\\(.)/g, '$1');
+      const lag = st().searchLag || new Set();
+      const hit = st().subscriptions.filter((s) => !lag.has(s.id) && s.metadata?.user_id === want);
+      return { object: 'search_result', data: JSON.parse(JSON.stringify(hit.slice(0, params?.limit ?? 10))), has_more: false, next_page: null };
+    },
     async update(subId, params) {
       st().record('subscriptions.update', { id: subId, params });
       const s = st().subscriptions.find((x) => x.id === subId);
