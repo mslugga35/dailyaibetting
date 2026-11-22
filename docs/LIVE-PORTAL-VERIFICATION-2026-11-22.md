@@ -14,16 +14,16 @@ Who runs it: Matt, with his own card. Claude watches the webhook, database and S
 ## Before you start (Claude)
 1. `commit-info.json` shows the build being tested.
 2. Read-only snapshot: founding seat counter, open Checkout Sessions = 0, DailyAI live subscriptions (count only).
-3. Decide which portal configuration is live. Today the app uses the account **default** (`bpc_1TIA…`). If the DailyAI-specific configuration (decision B2) is approved first, test that one instead.
+3. Decide which portal configuration is live. Today the app uses the account **default** (`bpc_1TIA…`). If the DailyAI-specific configuration (decision B3) is approved first, test that one instead.
 
 ## Steps (Matt, ordinary browser window)
 | # | Action | Expected | Evidence |
 |---|---|---|---|
 | 1 | Sign in as the FREE tester (`+daifree`) | Free tier, "Upgrade to Pro" | screenshot |
-| 2 | /pricing → Founding → Checkout. Pay with your own card | Checkout top shows the name decided in B1. "$0.00 due today", trial ends on <date+7>, then $9.99/mo. The statement line includes DAILYAI | screenshot of Checkout before paying |
+| 2 | /pricing → Founding → Checkout. Pay with your own card | Checkout top shows the name decided in B3. "$0.00 due today", trial ends on <date+7>, then $9.99/mo. The statement line includes DAILYAI | screenshot of Checkout before paying |
 | 3 | Return to the site | "Your Pro Account", trial end date shown on /account | screenshot |
 | 4 | /account → Manage Subscription | The Stripe portal opens in about 3 s with no "Opening portal…" hang | screenshot |
-| 5 | In the portal check: plan "DailyAI Pro", $9.99/month, trial end date, card ending ••••, invoice list ($0 trial invoice). **No** switch-plan option. Headline and terms/privacy links per decision B2 | screenshot |
+| 5 | In the portal check: plan "DailyAI Pro", $9.99/month, trial end date, card ending ••••, invoice list ($0 trial invoice). **No** switch-plan option. Headline and terms/privacy links per decision B3 | screenshot |
 | 6 | Cancel → confirm | "Cancels on <trial end>". Back on /account: still Pro until that date, "cancels on …" shown | screenshot |
 | 7 | Tell Claude "done". Claude (or you in the Dashboard) cancels the subscription **immediately**, with no invoice and no proration | Stripe: status canceled, amount paid $0. DB: row status canceled, account back to Free, founding seat `ended` (counter back) | Claude's read-only queries |
 
