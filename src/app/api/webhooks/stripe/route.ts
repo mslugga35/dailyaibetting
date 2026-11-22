@@ -422,8 +422,8 @@ async function handleSubscriptionDeleted(payload: Stripe.Subscription) {
   // a seat by its id without checking the subscription, so ending the seat for ANY deleted subscription
   // would release the legitimate one (cancelled by us, or by hand in the Dashboard). Only the subscription the
   // seat or the user's row is bound to may end it.
-  // FOLLOW-UP (migration, not written here): dailyai_founding_transition should refuse 'ended' when
-  // p_subscription is given and differs from the seat's stripe_subscription_id.
+  // transitionSeat also refuses to move a seat bound to another LIVE subscription (N1), for every event.
+  // Defence in depth (not applied, optional): dailyai_founding_transition could refuse the same in SQL.
   if (isFoundingSubscription(payload) && (await isBoundToSeatOrRow(payload.id))) {
     await transitionSeat('ended', payload, null);
   }
@@ -473,7 +473,42 @@ function seatIdOf(subscription: Stripe.Subscription): number | null {
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
 
+/**
+ * N1: the live subscription a seat is bound to when it is NOT this one, else null.
+ * A duplicate subscription carries the same founding_seat_id (one seat per customer), and the database
+ * looks a seat up by that id and re-binds it on 'started'/'paid' (and ends it on 'ended') without
+ * checking which subscription it belongs to. So no webhook path may move a seat for a subscription
+ * other than the one it is bound to while that one is still alive in Stripe. A seat whose bound
+ * subscription has ended (or is gone) may still be claimed, as before. Read errors throw (retry).
+ */
+async function liveOtherSeatOwner(subscription: Stripe.Subscription): Promise<string | null> {
+  const seatId = seatIdOf(subscription);
+  if (seatId == null) return null; // looked up by this subscription's own id: cannot reach another's seat
+  const { data, error } = await supabaseAdmin
+    .from('dailyai_founding_seats')
+    .select('id, stripe_subscription_id')
+    .eq('id', seatId)
+    .maybeSingle();
+  if (error) throw error;
+  const bound = (data as { stripe_subscription_id: string | null } | null)?.stripe_subscription_id;
+  if (!bound || bound === subscription.id) return null;
+  try {
+    const current = await stripe.subscriptions.retrieve(bound);
+    return ALIVE_STRIPE_STATUSES.has(current.status) ? bound : null;
+  } catch (err) {
+    const e = err as { code?: string; statusCode?: number };
+    if (e?.code === 'resource_missing' || e?.statusCode === 404) return null;
+    throw err; // Stripe unreachable: retry rather than guess
+  }
+}
+
 async function transitionSeat(event: SeatEvent, subscription: Stripe.Subscription, userId: string | null) {
+  const owner = await liveOtherSeatOwner(subscription);
+  if (owner) {
+    const customer = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
+    console.error(`[billing-alert] duplicate_subscription customer=${customer} subscription=${subscription.id} primary=${owner} status=${subscription.status} action=none (founding seat ${seatIdOf(subscription)} stays with ${owner}; seat event '${event}' not applied)`);
+    return;
+  }
   const r = await transitionFoundingSeat({ event, seatId: seatIdOf(subscription), subscriptionId: subscription.id, userId });
   if (!r && subscription.status !== 'canceled' && subscription.status !== 'incomplete_expired') {
     // A founding-price subscription that never had a seat (created in the Dashboard, or a

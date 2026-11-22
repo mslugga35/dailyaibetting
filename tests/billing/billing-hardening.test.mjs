@@ -338,6 +338,99 @@ test('DAI-13 case: one free trial per person also across a mixed-case customer (
   assert.equal(h.stripe.sessions.at(-1).subscription_data.trial_period_days, undefined, 'a second trial was offered');
 });
 
+// ---------------------------------------------------------------- N1: a duplicate never takes the seat
+
+/** dailyai_founding_transition's state machine (supabase/migrations/20261117000000), over the seeded seats table. */
+function seatSql() {
+  const h = harness();
+  h.stripe.prices[FOUNDING] = { unit_amount: 999 };
+  h.stripe.prices[REGULAR] = { unit_amount: 1999 };
+  h.db.rpcHandlers.set('dailyai_founding_transition', async (a) => {
+    const seats = h.db.rows('dailyai_founding_seats');
+    let v = a.p_seat != null ? seats.find((s) => s.id === a.p_seat) : null;
+    if (!v && a.p_subscription) v = seats.find((s) => s.stripe_subscription_id === a.p_subscription);
+    if (!v) return [];
+    const bindNew = () => { v.stripe_subscription_id = a.p_subscription ?? v.stripe_subscription_id; };
+    if (a.p_event === 'started' && ['reserved', 'released'].includes(v.status)) { v.status = 'trialing'; bindNew(); }
+    else if (a.p_event === 'paid' && ['reserved', 'trialing', 'released'].includes(v.status)) { v.status = 'converted'; bindNew(); }
+    else if (['started', 'paid'].includes(a.p_event) && ['trialing', 'converted'].includes(v.status)) { v.stripe_subscription_id = v.stripe_subscription_id ?? a.p_subscription; }
+    else if (a.p_event === 'ended') {
+      if (v.status === 'converted') v.status = 'ended';
+      else if (['reserved', 'trialing'].includes(v.status)) v.status = 'released';
+    }
+    return [{ seat_id: v.id, status: v.status, over_cap: false }];
+  });
+}
+
+function foundingPair({ primaryStatus = 'trialing', seatStatus = 'trialing' } = {}) {
+  const h = harness();
+  const { customer, sub: primary } = seedSubscription({ userId: 'u_seat', status: primaryStatus, priceId: FOUNDING });
+  primary.metadata.founding_seat_id = '41';
+  h.db.seed('dailyai_founding_seats', [{ id: 41, stripe_customer_id: customer.id, user_id: 'u_seat', stripe_subscription_id: primary.id, status: seatStatus }]);
+  h.stripe.invoices.in_dup = { status: 'paid', amount_paid: 999 };
+  const dup = h.stripe.addSubscription({ customer: customer.id, status: 'active', priceId: FOUNDING, latest_invoice: 'in_dup', metadata: { user_id: 'u_seat', founding_seat_id: '41' } });
+  const seat = () => h.db.rows('dailyai_founding_seats').find((s) => s.id === 41);
+  const paid = (sub, id) => stripeEvent('invoice.paid', { id, object: 'invoice', amount_paid: 999, parent: { subscription_details: { subscription: sub.id } } });
+  return { h, customer, primary, dup, seat, paid };
+}
+
+test("N1: a PAID duplicate's invoice.paid never re-binds the live subscription's seat; cancelling the duplicate leaks nothing", async () => {
+  setup({ env: FOUNDING_ENV });
+  seatSql();
+  const { primary, dup, seat, paid } = foundingPair();
+  const { res, lines } = await deliverLogs(paid(dup, 'in_dup'));
+  assert.equal(res.status, 200);
+  assert.equal(seat().stripe_subscription_id, primary.id, 'seat re-bound to the duplicate');
+  assert.equal(seat().status, 'trialing');
+  assert.ok(lines.some((l) => l.includes('[billing-alert] duplicate_subscription') && l.includes(dup.id) && l.includes(primary.id)), lines.join('\n'));
+  // the duplicate is cancelled (refund or by hand): the legitimate seat is untouched
+  assert.equal((await deliver(subscriptionEvent('customer.subscription.deleted', { ...JSON.parse(JSON.stringify(dup)), status: 'canceled' }))).status, 200);
+  assert.equal(seat().stripe_subscription_id, primary.id);
+  assert.equal(seat().status, 'trialing');
+});
+
+test('N1: the legitimate subscription keeps converting and ending its own seat as before', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatSql();
+  const { h, primary, dup, seat, paid } = foundingPair();
+  await deliver(paid(dup, 'in_dup'));
+  h.stripe.invoices.in_primary = { status: 'paid', amount_paid: 999 };
+  const p = h.stripe.subscriptions.find((s) => s.id === primary.id);
+  p.status = 'active'; p.latest_invoice = 'in_primary';
+  assert.equal((await deliver(paid(primary, 'in_primary'))).status, 200);
+  assert.equal(seat().status, 'converted');
+  assert.equal(seat().stripe_subscription_id, primary.id);
+  // a renewal of the duplicate still changes nothing
+  assert.equal((await deliver(paid(dup, 'in_dup'))).status, 200);
+  assert.equal(seat().stripe_subscription_id, primary.id);
+  // the bound subscription ending ends the seat
+  await deliver(subscriptionEvent('customer.subscription.deleted', { ...JSON.parse(JSON.stringify(p)), status: 'canceled' }));
+  assert.equal(seat().status, 'ended');
+});
+
+test('N1: a seat whose bound subscription has ENDED may still be re-claimed by a new subscription (unchanged)', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatSql();
+  const { h, primary, dup, seat, paid } = foundingPair({ primaryStatus: 'canceled', seatStatus: 'released' });
+  assert.equal(h.stripe.subscriptions.find((s) => s.id === primary.id).status, 'canceled');
+  assert.equal((await deliver(paid(dup, 'in_dup'))).status, 200);
+  assert.equal(seat().stripe_subscription_id, dup.id);
+  assert.equal(seat().status, 'converted');
+});
+
+test('N1: a seat read error is retried (5xx) and the seat is not moved', async () => {
+  setup({ env: FOUNDING_ENV });
+  seatSql();
+  const { h, primary, dup, seat, paid } = foundingPair();
+  h.db.fail({ table: 'dailyai_founding_seats', op: 'select', times: 1 });
+  const ev = paid(dup, 'in_dup');
+  assert.ok((await deliver(ev)).status >= 500);
+  assert.equal(seat().stripe_subscription_id, primary.id);
+  assert.equal(rpcCalls('dailyai_founding_transition').length, 0);
+  assert.equal((await deliver(ev)).status, 200);
+  assert.equal(seat().stripe_subscription_id, primary.id);
+});
+
 // ---------------------------------------------------------------- DAI-15
 
 test('DAI-15: guest flag unset → disabled by default', async () => {
