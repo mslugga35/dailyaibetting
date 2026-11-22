@@ -24,6 +24,22 @@ const fakeStripe = {
       const hit = st().customers.filter((c) => !params?.email || c.email === params.email);
       return list(hit.slice(0, params?.limit ?? 10));
     },
+    /**
+     * Search: only the `email:'...'` form is modelled. Stripe's `:` operator is case-INSENSITIVE and,
+     * on a string field, matches any value CONTAINING the query's words in order (docs.stripe.com/search),
+     * so it can return more than an exact match: modelled as a lower-cased substring match.
+     * Quotes inside the value are escaped with a backslash.
+     * `st().searchLag` (ids) models eventual consistency: those customers are not yet indexed.
+     */
+    async search(params) {
+      st().record('customers.search', params);
+      const m = /^email:'((?:[^'\\]|\\.)*)'$/.exec(params?.query ?? '');
+      if (!m) throw Object.assign(new Error(`[harness] unsupported customers.search query: ${params?.query}`), { type: 'StripeInvalidRequestError', statusCode: 400 });
+      const want = m[1].replace(/\\(.)/g, '$1').toLowerCase();
+      const lag = st().searchLag || new Set();
+      const hit = st().customers.filter((c) => !lag.has(c.id) && (c.email || '').toLowerCase().includes(want));
+      return { object: 'search_result', data: hit.slice(0, params?.limit ?? 10), has_more: false, next_page: null };
+    },
     async create(params, options) {
       st().record('customers.create', { ...params, _idempotencyKey: options?.idempotencyKey ?? null });
       const key = options?.idempotencyKey;

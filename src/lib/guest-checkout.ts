@@ -47,13 +47,30 @@ export async function hasEverSubscribedByEmail(stripe: Stripe, email: string | n
   return subs.some((x) => x.length > 0);
 }
 
-/** Every Stripe customer id carrying this email (exact and lower-cased: Stripe's filter is case-sensitive). */
-async function customerIdsByEmail(stripe: Stripe, email: string | null | undefined): Promise<string[]> {
+/** A value for a single-quoted Stripe search string: backslash and quote escaped with a backslash. */
+export function stripeSearchQuote(value: string): string {
+  return `'${value.replace(/[\\']/g, (c) => `\\${c}`)}'`;
+}
+
+/**
+ * Every Stripe customer id whose email equals this one, ignoring case.
+ * customers.list's email filter is case-sensitive, so the exact and lower-cased values are listed
+ * (immediately consistent) AND customers.search `email:'...'` is asked (case-insensitive, finds
+ * "John@X.com" for "john@x.com", but eventually consistent, ~1 minute). Search's `:` on a string
+ * field also matches values that merely CONTAIN the words, so its hits are kept only on an exact
+ * case-insensitive match. Any failure throws: callers fail closed.
+ */
+export async function customerIdsByEmail(stripe: Stripe, email: string | null | undefined): Promise<string[]> {
   const e = (email || '').trim();
   if (!e) return [];
-  const variants = Array.from(new Set([e, e.toLowerCase()]));
-  const lists = await Promise.all(variants.map((v) => stripe.customers.list({ email: v, limit: 100 })));
-  return Array.from(new Set(lists.flatMap((l) => l.data.map((c) => c.id))));
+  const want = e.toLowerCase();
+  const variants = Array.from(new Set([e, want]));
+  const [lists, found] = await Promise.all([
+    Promise.all(variants.map((v) => stripe.customers.list({ email: v, limit: 100 }))),
+    stripe.customers.search({ query: `email:${stripeSearchQuote(want)}`, limit: 100 }),
+  ]);
+  const searched = found.data.filter((c) => (c.email || '').trim().toLowerCase() === want);
+  return Array.from(new Set([...lists.flatMap((l) => l.data), ...searched].map((c) => c.id)));
 }
 
 const ALIVE = new Set(['active', 'trialing', 'past_due', 'unpaid']);

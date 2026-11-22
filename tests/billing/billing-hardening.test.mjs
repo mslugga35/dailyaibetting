@@ -275,16 +275,67 @@ test('DAI-13: login typed in mixed case still finds a customer stored in lower c
   assert.equal((await checkout({ headers: u.headers })).status, 409);
 });
 
-// Known gap: Stripe's customers.list email filter is documented case-sensitive (see CustomersResource.d.ts) and
-// the types do not say whether customers.search is case-insensitive, so it is not assumed. A customer stored as
-// "John@Gmail.com" is not found for a login "john@gmail.com". The reconcile script's MULTIPLE_LIVE_SAME_EMAIL
-// (lower-cased) catches it after the fact. Plus/dot aliases are out of scope.
-test('DAI-13 known gap: customer "John@Gmail.com" with a live sub, login "john@gmail.com" should be refused', { todo: 'OPEN needs a case-insensitive Stripe customer lookup (list is case-sensitive; search not confirmed)' }, async () => {
+// Case gap (closed): customers.list's email filter is case-sensitive (CustomersResource.d.ts), so the lookup also
+// runs customers.search with `email:'...'`: Stripe search's `:` is case-insensitive (docs.stripe.com/search) but on a
+// string field matches values CONTAINING the words, so hits are re-checked for an exact lower-cased match. Search is
+// eventually consistent (~1 min), so the exact and lower-cased list calls stay. Plus/dot aliases are out of scope.
+test('DAI-13 case: customer "John@Gmail.com" with a live sub, login "john@gmail.com" is refused', async () => {
   const h = harness();
   const old = h.stripe.addCustomer({ email: 'John@Gmail.com' });
   h.stripe.addSubscription({ customer: old.id, status: 'active', priceId: DAILYAI_PRICE_ID });
   const u = bearerUser('u_gap', 'john@gmail.com');
   assert.equal((await checkout({ headers: u.headers })).status, 409);
+  assert.equal(h.stripe.sessions.length, 0);
+});
+
+test('DAI-13 case: a mixed-case customer holding only ANOTHER product (or a canceled DailyAI sub) does not block', async () => {
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: 'Mary@Example.test' });
+  h.stripe.addSubscription({ customer: old.id, status: 'active', priceId: 'price_someone_else' });
+  h.stripe.addSubscription({ customer: old.id, status: 'canceled', priceId: DAILYAI_PRICE_ID });
+  assert.equal((await checkout({ headers: bearerUser('u_mary', 'mary@example.test').headers })).status, 200);
+});
+
+test('DAI-13 case: a search hit whose email only CONTAINS the login (not equal) does not block', async () => {
+  const h = harness();
+  const near = h.stripe.addCustomer({ email: 'Ann@Example.test.other' });
+  h.stripe.addSubscription({ customer: near.id, status: 'active', priceId: DAILYAI_PRICE_ID });
+  assert.equal((await checkout({ headers: bearerUser('u_ann', 'ann@example.test').headers })).status, 200);
+});
+
+test('DAI-13 case: the exact list lookup still catches a customer the search index has not picked up yet', async () => {
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: 'fresh@example.test' });
+  h.stripe.searchLag.add(old.id);
+  h.stripe.addSubscription({ customer: old.id, status: 'trialing', priceId: DAILYAI_PRICE_ID });
+  assert.equal((await checkout({ headers: bearerUser('u_fresh', 'fresh@example.test').headers })).status, 409);
+});
+
+test('DAI-13 case: quotes and backslashes in the email are escaped in the search query', async () => {
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: "O'Brien@Example.test" });
+  h.stripe.addSubscription({ customer: old.id, status: 'active', priceId: DAILYAI_PRICE_ID });
+  assert.equal((await checkout({ headers: bearerUser('u_ob', "o'brien@example.test").headers })).status, 409);
+  const q = h.stripe.callsTo('customers.search').map((c) => c.args.query);
+  assert.ok(q.includes("email:'o\\'brien@example.test'"), q.join(' | '));
+});
+
+test('DAI-13 case: a failed search fails CLOSED (no customer, no Checkout Session)', async () => {
+  const h = harness();
+  h.stripe.fail({ method: 'customers.search' });
+  const res = await checkout({ headers: bearerUser('u_sfail', 'sfail@example.test').headers });
+  assert.ok(res.status >= 500, `HTTP ${res.status}`);
+  assert.equal(h.stripe.callsTo('customers.search').length, 1, 'search was attempted');
+  assert.equal(h.stripe.callsTo('customers.create').length, 0);
+  assert.equal(h.stripe.sessions.length, 0);
+});
+
+test('DAI-13 case: one free trial per person also across a mixed-case customer (no second trial)', async () => {
+  const h = harness();
+  const old = h.stripe.addCustomer({ email: 'Trial@Example.test' });
+  h.stripe.addSubscription({ customer: old.id, status: 'canceled', priceId: DAILYAI_PRICE_ID });
+  assert.equal((await checkout({ headers: bearerUser('u_trial', 'trial@example.test').headers })).status, 200);
+  assert.equal(h.stripe.sessions.at(-1).subscription_data.trial_period_days, undefined, 'a second trial was offered');
 });
 
 // ---------------------------------------------------------------- DAI-15

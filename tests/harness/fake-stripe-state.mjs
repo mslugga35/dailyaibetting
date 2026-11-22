@@ -27,6 +27,8 @@ export class FakeStripeState {
     /** payment_intent id -> invoice id (invoicePayments.list). */
     this.invoicePayments = {};
     this.idempotent = new Map();
+    /** Customer ids customers.search does not return yet (search index lag). */
+    this.searchLag = new Set();
     this.createdSeq = Math.floor(Date.now() / 1000);
     this.calls = [];
     this.failures = [];
