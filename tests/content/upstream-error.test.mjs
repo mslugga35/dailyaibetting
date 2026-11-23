@@ -25,6 +25,23 @@ test('a Cloudflare block page becomes one short line with the Ray ID and no HTML
   assert.match(d.summary, /^Failed to fetch capper: blocked by the database provider's firewall \(Cloudflare ray a5d223430e2fe627\)$/);
 });
 
+test('any HTML error page (no doctype, e.g. a bare 502) is never passed through', () => {
+  for (const raw of ['Failed to fetch capper: <html><head><title>502 Bad Gateway</title></head><body><h1>502 Bad Gateway</h1></body></html>',
+                     'Failed to fetch capper: <html><head><title>Error</title></head></html>', 'x <body>oops</body>']) {
+    const d = describeUpstreamError(new Error(raw));
+    assert.equal(d.html, true, raw);
+    assert.doesNotMatch(d.summary, /</, raw);
+  }
+  assert.equal(describeUpstreamError(new Error('Failed to fetch capper: <html><head><title>502 Bad Gateway</title>')).summary,
+    'Failed to fetch capper: upstream returned an HTML error page (502 Bad Gateway)');
+});
+
+test('non-Error values: an object with a message is used; others are safe', () => {
+  assert.equal(describeUpstreamError({ message: 'boom', code: 'PGRST204' }).summary, 'boom');
+  assert.equal(describeUpstreamError(null).summary, 'Unknown error');
+  assert.equal(describeUpstreamError('plain text').summary, 'plain text');
+});
+
 test('an ordinary database error is kept (short, unchanged meaning) and not marked blocked', () => {
   const d = describeUpstreamError(new Error('Failed to fetch capper: relation "x" does not exist'));
   assert.equal(d.blocked, false);
@@ -35,7 +52,7 @@ test('an ordinary database error is kept (short, unchanged meaning) and not mark
 test('the cappers API logs the summary and never returns the raw upstream message', () => {
   assert.match(API, /const upstream = describeUpstreamError\(error\);/);
   assert.match(API, /console\.error\(`Cappers API error: \$\{upstream\.summary\}`\)/);
-  assert.match(API, /upstream\.blocked \? 'Capper data is temporarily unavailable\.' : upstream\.summary/);
+  assert.match(API, /upstream\.html \? 'Capper data is temporarily unavailable\.' : upstream\.summary/);
   assert.doesNotMatch(API, /console\.error\('Cappers API error:', error\)/);
   assert.doesNotMatch(API, /error instanceof Error \? error\.message : 'Unknown error'/);
 });
@@ -51,6 +68,15 @@ test('retry: a 5xx then 200 succeeds on the single retry', async () => {
   const f = seq(503, 200);
   const r = await fetchWithOneRetry('u', {}, { fetchImpl: f.impl, delayMs: 1 });
   assert.equal(r.status, 200); assert.equal(f.calls.length, 2);
+});
+
+test('retry: the discarded 5xx body is cancelled before retrying', async () => {
+  let cancelled = 0;
+  const first = new Response(new ReadableStream({ cancel() { cancelled++; } }), { status: 503 });
+  const calls = [];
+  const impl = async () => { calls.push(1); return calls.length === 1 ? first : new Response('{}', { status: 200 }); };
+  const r = await fetchWithOneRetry('u', {}, { fetchImpl: impl, delayMs: 1 });
+  assert.equal(r.status, 200); assert.equal(cancelled, 1);
 });
 
 test('retry: a persistent 5xx is NOT masked (second 500 returned, only 2 calls)', async () => {

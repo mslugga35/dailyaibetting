@@ -401,7 +401,7 @@ export async function GET(request: NextRequest) {
     console.error(`Cappers API error: ${upstream.summary}`);
     return NextResponse.json({
       success: false,
-      error: upstream.blocked ? 'Capper data is temporarily unavailable.' : upstream.summary,
+      error: upstream.html ? 'Capper data is temporarily unavailable.' : upstream.summary,
     }, { status: 500 });
   }
 }

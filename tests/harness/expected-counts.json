@@ -23,7 +23,7 @@
   "tests/content/muse-b3eacc4.test.mjs": 6,
   "tests/content/policies.test.mjs": 8,
   "tests/content/qa-nov19-fixes.test.mjs": 7,
-  "tests/content/upstream-error.test.mjs": 8,
+  "tests/content/upstream-error.test.mjs": 11,
   "tests/data/bot-record.test.mjs": 1,
   "tests/data/capper-stats-excluded.test.mjs": 1,
   "tests/data/daily-ai-report-season.test.mjs": 13,
