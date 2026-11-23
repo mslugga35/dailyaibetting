@@ -41,3 +41,13 @@ Needs owner approval (shared Caddyfile).
 7. **Rollback (~10 s):** `cp -a /etc/caddy/Caddyfile.pre-cf-<date> /etc/caddy/Caddyfile && caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile && systemctl reload caddy`.
 
 Later options: Authenticated Origin Pulls with a per-zone cert (needs CF token rights), or a Cloudflare Tunnel for this host.
+
+## Pre-apply evidence (2026-11-22, live config untouched)
+- Host firewall (ufw): default deny in; allows 22, 80, 443, 3001 from anywhere (v4 + v6). No host rule limits 443 to Cloudflare.
+- Hetzner Cloud firewall: **UNVERIFIED**, not readable from the host and no API token used. Owner checks Hetzner Console → Firewalls. If one is attached, it must keep 80/443 open from anywhere (peptide-facts is DNS-only).
+- Cloudflare ranges fetched live from cloudflare.com/ips-v4 (15) and ips-v6 (7); v6 list matches the plan above.
+- Candidate config built in `/tmp/cf-candidate/` on the server: the diff vs live is exactly two lines (`import` at top, `import cf_only` in the dailyaibetting block only). `caddy validate`: **Valid configuration**.
+- Functional test on a throwaway localhost Caddy (admin off, ports 18471/18472, stopped afterwards): non-Cloudflare client is aborted (curl exit 52, empty reply); allowed-client control returns 200 "reached".
+- Live `/etc/caddy/Caddyfile` sha256 `d36b5208…967c` recorded for the before-state.
+
+Apply steps 1–7 above unchanged, with `/etc/caddy/cf-ranges.caddy` copied from `/tmp/cf-candidate/cf-ranges.caddy`.
