@@ -14,6 +14,8 @@ Never reopen a VERIFIED issue without new evidence. Evidence lives in `docs/laun
 
 **2026-11-23 16:20Z:** production **68045c8** (DAI-22..25 fixes; 19/19 twice 15:43Z/16:19Z). Harbor may push master again: always merge gh master before a push.
 
+**2026-11-23 21:30Z:** production **386bfe8** (DAI-26 welcome email + DAI-27 advertise; 19/19 twice).
+
 | ID | Issue | Sev | Status | Fix | Prod check 1 | Prod check 2 | Muse |
 |---|---|---|---|---|---|---|---|
 | DAI-01 | /props 404 | Med | **VERIFIED** | 50b1ca3 | 3929e85: 200 at 5 widths | 41ba76a: 200 at 5 widths | retest |
@@ -227,6 +229,8 @@ Found by the billing audit, the security review and the test review. None is a r
 | DAI-23 | Capper profile 500s: Supabase's Cloudflare WAF block page logged whole and returned in JSON | Low | **FIXED** deployed 68045c8: one-line log (Ray ID), generic client error, one 300 ms retry on 5xx/network only; persistent failures still fail | 034969c, 7790dd3 | SQL-like slug 404, real profile 200; 0 HTML errors in log after deploy | Breaker (fixed), Verifier PASS | 19/19 ×2 |
 | DAI-24 | Daily recap insert failed: `PGRST204 'sport' column` (shared blog_posts has none); PGRST103 = crawler paging (noise) | Low | **FIXED** deployed 68045c8, no schema change. Recap re-run once 16:17Z: saved `ai-consensus-picks-today-2026-11-23`, page 200 | cd3c104 | DB row + live page | Verifier PASS | 19/19 ×2 |
 | DAI-25 | Signup: n8n welcome webhook 404 (path not registered), Sheet webhook 404; no welcome/digest sender exists; signups saved first | Med | **FIXED (copy) · sender = owner** deployed 68045c8: no inbox promises ("coming soon"). Resend replacement proposed in `docs/DAI-22-25-FIXES-2026-11-23.md` (not built). `/advertise` still sells "Newsletter Sponsorship" | 67e87c9 | /blog, /expert-picks copy checked | Verifier PASS | n/a |
+| DAI-26 | Welcome email: n8n 404, no sender; repeat signup returned 500 (`.single()` on an ignored upsert) | Med | **DEPLOYED 386bfe8 · live delivery test pending** (MailSlurp expired) | ceab4a8, 7c55561, 111ba40 | forged/invalid paths live OK | Security + Breaker (fixed), Verifier PASS | 19/19 ×2 |
+| DAI-27 | /advertise sold Newsletter Sponsorship ($150-400/email), no newsletter exists | Low | **FIXED** deployed 386bfe8 | ceab4a8 | /advertise: 0 newsletter mentions | Verifier PASS | 19/19 ×2 |
 
 Billing fixes 11-22 (Builder → Breaker + Security Engineer → fix round → re-review): branch `fix/billing-dai11-15` (26dac3f..d0c08a4), harness 514/516 (1 = CRLF-only `portal-button`, 1 = open todo: Stripe email lookup is case-sensitive, caught after the fact by the reconcile script). Nothing cancels unless `DAI_AUTO_CANCEL_DUPLICATE_TRIAL=true` (default off). Not deployed. Re-review of the fix round: Security Engineer APPROVE WITH CHANGES, 7/7 required items met. Follow-ups before or soon after deploy:
   - N1 (Low-Med): a paid duplicate's `invoice.paid` can re-bind the shared founding seat (it fails safe: the seat leaks). Fix: skip when the seat is bound to another subscription, plus the DB migration in the code FOLLOW-UP note.
