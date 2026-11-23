@@ -3,6 +3,7 @@
 // GET /api/cappers?view=profile&slug=dave-price
 
 import { NextRequest, NextResponse } from 'next/server';
+import { describeUpstreamError } from '@/lib/data/upstream-error';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { rateLimitGuard, parseIntParam, resolveUser } from '@/lib/api-helpers';
 import { isPremium, EntitlementUnavailableError } from '@/lib/auth/subscription';
@@ -395,10 +396,12 @@ export async function GET(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Cappers API error:', error);
+    // DAI-23: one short line (a Cloudflare block page from Supabase used to be logged and returned whole).
+    const upstream = describeUpstreamError(error);
+    console.error(`Cappers API error: ${upstream.summary}`);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: upstream.blocked ? 'Capper data is temporarily unavailable.' : upstream.summary,
     }, { status: 500 });
   }
 }

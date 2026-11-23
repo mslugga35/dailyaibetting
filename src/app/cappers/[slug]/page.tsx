@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { authHeaders, internalBaseUrl } from '@/lib/data/server-fetch';
+import { fetchWithOneRetry } from '@/lib/data/upstream-error';
 import {
   Trophy, TrendingUp, Calendar, Target, CheckCircle, XCircle,
   MinusCircle, ArrowLeft, Flame, Snowflake, BarChart3
@@ -62,10 +63,10 @@ interface CapperProfile {
  * Memoised per render: generateMetadata and the page share one API call.
  */
 const getCapperProfile = cache(async (slug: string): Promise<CapperProfile | null> => {
-  const response = await fetch(`${internalBaseUrl()}/api/cappers?view=profile&slug=${encodeURIComponent(slug)}`, {
-    headers: await authHeaders(),
-    cache: 'no-store',
-  });
+  const url = `${internalBaseUrl()}/api/cappers?view=profile&slug=${encodeURIComponent(slug)}`;
+  // DAI-23: one bounded retry for a transient failure (network error or 5xx). A failure that persists
+  // still throws below, so the visitor gets the retryable error page, never a fake "not found".
+  const response = await fetchWithOneRetry(url, { headers: await authHeaders(), cache: 'no-store' });
   if (response.status === 404) return null;
   const result = await response.json().catch(() => null);
   if (!response.ok || !result?.success) {
