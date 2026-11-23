@@ -23,12 +23,8 @@ const opportunities = [
     description: 'Native content that matches our editorial style. Reviews, guides, or features.',
     features: ['SEO optimized', 'Social promotion', 'Permanent placement'],
   },
-  {
-    title: 'Newsletter Sponsorship',
-    price: '$150-400/email',
-    description: 'Dedicated or blended sponsorships in our email newsletter.',
-    features: ['Dedicated sponsorships', 'Blended sponsorships'],
-  },
+  // DAI-27: no newsletter is sent (daily email is disabled), so no newsletter sponsorship is offered.
+  // Re-add only when a newsletter is actually being delivered.
   {
     title: 'Exclusive Partnership',
     price: 'Custom',

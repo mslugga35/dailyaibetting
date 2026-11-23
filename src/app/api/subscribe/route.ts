@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { isRateLimited, isValidEmail, getClientIp, getSupabaseAdmin } from '@/lib/api-helpers';
+import { sendWelcomeEmail } from '@/lib/email/welcome';
+
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 200);
 
 export const dynamic = 'force-dynamic';
 
@@ -24,27 +27,6 @@ async function appendToGoogleSheet(email: string) {
   }
 }
 
-async function triggerWelcomeEmail(email: string) {
-  const webhookUrl = process.env.N8N_WELCOME_EMAIL_WEBHOOK;
-  if (!webhookUrl) return;
-
-  const res = await fetch(webhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email,
-      site: 'dailyaibetting',
-      siteName: 'DailyAI Betting',
-      ctaUrl: 'https://dailyaibetting.com/consensus',
-      ctaText: 'View Today\'s Consensus',
-    }),
-  });
-
-  if (!res.ok) {
-    console.error('[subscribe] n8n welcome email error:', res.status);
-  }
-}
-
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
@@ -61,33 +43,39 @@ export async function POST(request: Request) {
 
     const db = getSupabaseAdmin();
 
-    // Upsert: single roundtrip instead of SELECT + INSERT
-    const { data: row, error } = await db.from('email_subscribers')
+    // Insert-or-ignore on the unique email. PostgREST returns the row ONLY when this request
+    // created it, so `inserted` is the single source of "new subscriber" (no timing guess, and a
+    // repeat signup no longer errors: maybeSingle, not single).
+    const { data: inserted, error } = await db.from('email_subscribers')
       .upsert(
         { email, site: 'dailyaibetting', source: 'banner' },
         { onConflict: 'email', ignoreDuplicates: true }
       )
-      .select('subscribed_at')
-      .single();
+      .select('id')
+      .maybeSingle();
 
     if (error) {
       console.error('[subscribe] DB error:', error.message);
       return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
     }
 
-    // Only send welcome email for genuinely new subscribers (subscribed in last 5s)
-    const isNew = row?.subscribed_at && (Date.now() - new Date(row.subscribed_at).getTime()) < 5000;
-    if (isNew) {
-      Promise.allSettled([
-        appendToGoogleSheet(email),
-        triggerWelcomeEmail(email),
-      ]).then(results => {
-        results.forEach((r, i) => {
-          if (r.status === 'rejected') {
-            console.error(`[subscribe] Webhook ${i} failed:`, r.reason);
-          }
-        });
-      });
+    if (inserted?.id) {
+      // DAI-26: one transactional welcome email per new row. A send failure is logged (no address
+      // in the log) and never undoes the signup; it is not retried, so it can never duplicate.
+      try {
+        await sendWelcomeEmail({ id: inserted.id, email });
+      } catch (e) {
+        console.error(`[subscribe] welcome email not sent: ${errText(e)}`);
+      }
+      appendToGoogleSheet(email).catch((e) => console.error(`[subscribe] Sheet webhook failed: ${errText(e)}`));
+    } else {
+      // Existing address: signing up again re-subscribes after an earlier unsubscribe.
+      // No second welcome email. The response is the same either way (no address probing).
+      const { error: upErr } = await db.from('email_subscribers')
+        .update({ unsubscribed_at: null })
+        .eq('email', email)
+        .not('unsubscribed_at', 'is', null);
+      if (upErr) console.error('[subscribe] re-subscribe error:', upErr.message);
     }
 
     return NextResponse.json({ success: true });
