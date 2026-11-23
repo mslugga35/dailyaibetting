@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const tok = await import('../../src/lib/email/unsubscribe-token.ts');
 const w = await import('../../src/lib/email/welcome.ts');
+const act = await import('../../src/lib/email/subscription-actions.ts');
 const read = (p) => readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const SUB = read('src/app/api/subscribe/route.ts');
 const UNSUB = read('src/app/api/unsubscribe/route.ts');
@@ -76,29 +77,64 @@ test('send: Resend error throws (caller logs); missing config throws before any 
   assert.equal(f.calls.length, 0);
 });
 
-test('subscribe route: welcome only for a row this request inserted; repeat signup is not an error', () => {
-  assert.match(SUB, /\.select\('id'\)\s*\n\s*\.maybeSingle\(\)/);
-  assert.doesNotMatch(SUB, /\.single\(\)/);
-  assert.doesNotMatch(SUB, /N8N_WELCOME_EMAIL_WEBHOOK|triggerWelcomeEmail|< 5000/);
-  const start = SUB.indexOf('if (inserted?.id) {');
-  const elseAt = SUB.indexOf('} else {', start);
-  assert.ok(start > 0 && elseAt > start);
-  assert.match(SUB.slice(start, elseAt), /await sendWelcomeEmail\(\{ id: inserted\.id, email \}\)/);
-  const elseBranch = SUB.slice(elseAt, SUB.indexOf('return NextResponse.json({ success: true })'));
-  assert.doesNotMatch(elseBranch, /sendWelcomeEmail/);
-  assert.match(elseBranch, /update\(\{ unsubscribed_at: null \}\)/);
-  assert.equal((SUB.match(/sendWelcomeEmail\(/g) ?? []).length, 1);
-  // the failure log never contains the address
-  assert.match(SUB, /console\.error\(`\[subscribe\] welcome email not sent: \$\{errText\(e\)\}`\)/);
+const fakeDb = ({ insertedId = null, insertError = null, resubError = null, sendError = null } = {}) => {
+  const log = []; const sent = []; const resub = [];
+  return {
+    log, sent, resub,
+    deps: {
+      insertIfNew: async () => ({ id: insertedId, error: insertError }),
+      resubscribe: async (e) => { resub.push(e); return { error: resubError }; },
+      sendWelcome: async (sub) => { sent.push(sub); if (sendError) throw new Error(sendError); },
+      log: (m) => log.push(m),
+    },
+  };
+};
+
+test('signup: a NEW row gets exactly one welcome email; an existing address gets none and is re-subscribed', async () => {
+  const n = fakeDb({ insertedId: ID });
+  assert.equal(await act.handleSignup('new@example.com', n.deps), 'created');
+  assert.deepEqual(n.sent, [{ id: ID, email: 'new@example.com' }]);
+  assert.deepEqual(n.resub, []);
+  const e = fakeDb({ insertedId: null });
+  assert.equal(await act.handleSignup('old@example.com', e.deps), 'existing');
+  assert.deepEqual(e.sent, []);
+  assert.deepEqual(e.resub, ['old@example.com']);
 });
 
-test('unsubscribe route: POST only, verifies the token before writing, soft unsubscribe (no delete)', () => {
-  assert.doesNotMatch(UNSUB, /export async function GET/);
-  assert.ok(UNSUB.indexOf('verifyUnsubscribe(id, t)') > 0);
-  assert.ok(UNSUB.indexOf('verifyUnsubscribe(id, t)') < UNSUB.indexOf('.update('));
-  assert.match(UNSUB, /\.update\(\{ unsubscribed_at: new Date\(\)\.toISOString\(\) \}\)/);
+test('signup: a send failure keeps the signup, is logged once without the address, and is not retried', async () => {
+  const f = fakeDb({ insertedId: ID, sendError: 'Resend 422' });
+  assert.equal(await act.handleSignup('who@example.com', f.deps), 'created');
+  assert.equal(f.sent.length, 1);
+  assert.deepEqual(f.log, ['[subscribe] welcome email not sent: Resend 422']);
+  assert.doesNotMatch(f.log.join(' '), /who@example\.com/);
+});
+
+test('signup: a DB error sends nothing and reports an error', async () => {
+  const f = fakeDb({ insertError: 'boom' });
+  assert.equal(await act.handleSignup('x@example.com', f.deps), 'error');
+  assert.deepEqual(f.sent, []);
+});
+
+test('unsubscribe: nothing is written unless the signed token matches the row', async () => {
+  const writes = [];
+  const mark = async (id) => { writes.push(id); return { error: null }; };
+  const t = tok.signUnsubscribe(ID, SECRET);
+  assert.equal(await act.handleUnsubscribe(ID, 'x'.repeat(43), mark, SECRET), 'invalid');
+  assert.equal(await act.handleUnsubscribe('3f2b8c1e-5d4a-4b6f-9e21-0a1b2c3d4e50', t, mark, SECRET), 'invalid');
+  assert.equal(await act.handleUnsubscribe(null, null, mark, SECRET), 'invalid');
+  assert.deepEqual(writes, []);
+  assert.equal(await act.handleUnsubscribe(ID, t, mark, SECRET), 'ok');
+  assert.deepEqual(writes, [ID]);
+  assert.equal(await act.handleUnsubscribe(ID, t, async () => ({ error: 'db' }), SECRET), 'error');
+});
+
+test('routes are wired to the tested actions (insert-or-ignore + maybeSingle; soft, POST-only unsubscribe)', () => {
+  assert.match(SUB, /await handleSignup\(email, \{/);
+  assert.match(SUB, /ignoreDuplicates: true[\s\S]*\.select\('id'\)\s*\n\s*\.maybeSingle\(\)/);
+  assert.doesNotMatch(SUB, /\.single\(\)|N8N_WELCOME_EMAIL_WEBHOOK|triggerWelcomeEmail|< 5000/);
+  assert.match(UNSUB, /await handleUnsubscribe\(id, t, async \(rowId\)/);
   assert.match(UNSUB, /\.is\('unsubscribed_at', null\)/);
-  assert.doesNotMatch(UNSUB, /\.delete\(/);
+  assert.doesNotMatch(UNSUB, /export async function GET|\.delete\(/);
   assert.match(UNSUB, /rateLimitGuard\(request, 20, 60_000, 'unsubscribe'\)/);
 });
 

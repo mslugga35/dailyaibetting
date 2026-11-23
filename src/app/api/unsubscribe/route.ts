@@ -9,7 +9,7 @@
  */
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, rateLimitGuard } from '@/lib/api-helpers';
-import { verifyUnsubscribe } from '@/lib/email/unsubscribe-token';
+import { handleUnsubscribe } from '@/lib/email/subscription-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,17 +31,19 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!verifyUnsubscribe(id, t)) {
+  const result = await handleUnsubscribe(id, t, async (rowId) => {
+    const { error } = await getSupabaseAdmin()
+      .from('email_subscribers')
+      .update({ unsubscribed_at: new Date().toISOString() })
+      .eq('id', rowId)
+      .is('unsubscribed_at', null);
+    return { error: error?.message ?? null };
+  });
+  if (result === 'invalid') {
     return NextResponse.json({ success: false, error: 'Invalid or expired unsubscribe link' }, { status: 400 });
   }
-
-  const { error } = await getSupabaseAdmin()
-    .from('email_subscribers')
-    .update({ unsubscribed_at: new Date().toISOString() })
-    .eq('id', id as string)
-    .is('unsubscribed_at', null);
-  if (error) {
-    console.error('[unsubscribe] DB error:', error.message);
+  if (result === 'error') {
+    console.error('[unsubscribe] DB error');
     return NextResponse.json({ success: false, error: 'Could not unsubscribe right now' }, { status: 500 });
   }
 

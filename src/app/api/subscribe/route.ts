@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isRateLimited, isValidEmail, getClientIp, getSupabaseAdmin } from '@/lib/api-helpers';
 import { sendWelcomeEmail } from '@/lib/email/welcome';
+import { handleSignup } from '@/lib/email/subscription-actions';
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 200);
 
@@ -44,38 +45,35 @@ export async function POST(request: Request) {
     const db = getSupabaseAdmin();
 
     // Insert-or-ignore on the unique email. PostgREST returns the row ONLY when this request
-    // created it, so `inserted` is the single source of "new subscriber" (no timing guess, and a
-    // repeat signup no longer errors: maybeSingle, not single).
-    const { data: inserted, error } = await db.from('email_subscribers')
-      .upsert(
-        { email, site: 'dailyaibetting', source: 'banner' },
-        { onConflict: 'email', ignoreDuplicates: true }
-      )
-      .select('id')
-      .maybeSingle();
+    // created it, so that is the single source of "new subscriber" (maybeSingle: a repeat
+    // signup returns no row instead of an error). The rules live in handleSignup (tested).
+    const result = await handleSignup(email, {
+      async insertIfNew(addr) {
+        const { data, error } = await db.from('email_subscribers')
+          .upsert(
+            { email: addr, site: 'dailyaibetting', source: 'banner' },
+            { onConflict: 'email', ignoreDuplicates: true }
+          )
+          .select('id')
+          .maybeSingle();
+        return { id: (data?.id as string | undefined) ?? null, error: error?.message ?? null };
+      },
+      async resubscribe(addr) {
+        const { error } = await db.from('email_subscribers')
+          .update({ unsubscribed_at: null })
+          .eq('email', addr)
+          .not('unsubscribed_at', 'is', null);
+        return { error: error?.message ?? null };
+      },
+      sendWelcome: (sub) => sendWelcomeEmail(sub),
+      log: (m) => console.error(m),
+    });
 
-    if (error) {
-      console.error('[subscribe] DB error:', error.message);
+    if (result === 'error') {
       return NextResponse.json({ error: 'Failed to subscribe' }, { status: 500 });
     }
-
-    if (inserted?.id) {
-      // DAI-26: one transactional welcome email per new row. A send failure is logged (no address
-      // in the log) and never undoes the signup; it is not retried, so it can never duplicate.
-      try {
-        await sendWelcomeEmail({ id: inserted.id, email });
-      } catch (e) {
-        console.error(`[subscribe] welcome email not sent: ${errText(e)}`);
-      }
+    if (result === 'created') {
       appendToGoogleSheet(email).catch((e) => console.error(`[subscribe] Sheet webhook failed: ${errText(e)}`));
-    } else {
-      // Existing address: signing up again re-subscribes after an earlier unsubscribe.
-      // No second welcome email. The response is the same either way (no address probing).
-      const { error: upErr } = await db.from('email_subscribers')
-        .update({ unsubscribed_at: null })
-        .eq('email', email)
-        .not('unsubscribed_at', 'is', null);
-      if (upErr) console.error('[subscribe] re-subscribe error:', upErr.message);
     }
 
     return NextResponse.json({ success: true });
