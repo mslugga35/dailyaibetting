@@ -2,6 +2,8 @@
 
 Goal: prove a real live-mode subscriber can open Manage Subscription, sees the right plan, card and invoices, and can cancel, all **without being charged** and without touching any real member.
 
+**When (updated 2026-11-23):** run it right **after** the DailyAI-only portal is activated, which itself waits on the policies being published and support@ working (`docs/PORTAL-SWITCH-DAILYAI-2026-11-22.md` § Activation gate). The same configuration already passed 10/10 in TEST mode in a real browser (`qa/launch-verify/portal-config-test-probe.mjs`). This live run proves it with a real card and real webhooks.
+
 Who runs it: Matt, with his own card. Claude watches the webhook, database and Stripe objects read-only and records the evidence. Nobody else's subscription is opened.
 
 ## Costs and side effects (read first)
@@ -24,7 +26,7 @@ Who runs it: Matt, with his own card. Claude watches the webhook, database and S
 | 3 | Return to the site | "Your Pro Account", trial end date shown on /account | screenshot |
 | 4 | /account → Manage Subscription | The Stripe portal opens in about 3 s with no "Opening portal…" hang | screenshot |
 | 5 | In the portal check: plan "DailyAI Pro", $9.99/month, trial end date, card ending ••••, invoice list ($0 trial invoice). **No** switch-plan option. Headline "DailyAI Betting: manage your DailyAI Pro subscription". Terms/Privacy links only once the policies are published. No option to change the account email | screenshot |
-| 6 | Cancel → confirm | "Cancels on <trial end>". Back on /account: still Pro until that date, "cancels on …" shown | screenshot |
+| 6 | Cancel → confirm (no reason survey appears) | Portal shows "Cancels <trial end>". Stripe stores this as `cancel_at` = trial end, which the site treats as cancel-at-period-end (TEST-verified 11-23). Back on /account: still Pro until that date, "cancels on …" shown | screenshot |
 | 7 | Optional, **you** do it (Claude never cancels a live subscription): Stripe Dashboard → the test subscription → Cancel → **Immediately**, no refund, no proration. Skip it and the step-6 cancel ends the trial at its end date with $0 charged | Stripe: canceled, amount paid $0. DB: row canceled, account back to Free, founding seat `ended` | Claude's read-only queries |
 
 ## Pass criteria

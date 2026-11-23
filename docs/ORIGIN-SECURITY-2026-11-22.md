@@ -51,3 +51,17 @@ Later options: Authenticated Origin Pulls with a per-zone cert (needs CF token r
 - Live `/etc/caddy/Caddyfile` sha256 `d36b5208…967c` recorded for the before-state.
 
 Apply steps 1–7 above unchanged, with `/etc/caddy/cf-ranges.caddy` copied from `/tmp/cf-candidate/cf-ranges.caddy`.
+
+## 2026-11-23: owner's conditional approval, mandatory prechecks (NOT APPLIED: precheck 1 unverified)
+| # | Precheck | Result | Evidence |
+|---|---|---|---|
+| 1 | Hetzner firewall for mpmmo-prod | **UNVERIFIED → blocker.** A Hetzner Cloud firewall is not visible from inside the server, and no Hetzner API token is within Claude's allowed reach (a credential search was refused by the permission system). | Owner: Hetzner Console → Firewalls; say whether one is attached to mpmmo-prod and paste its inbound rules. |
+| 2 | Caddy config and site blocks | 5 site blocks, no global options; live sha256 `d36b5208…967c` (unchanged since 11-22); only other file `Caddyfile.bak` (May). Reload = `caddy reload --force` (graceful; keeps old config if the new one fails). No Caddy errors in 7 days; 448 certificate maintenance lines. | `cat /etc/caddy/Caddyfile`, `systemctl show caddy`, `journalctl -u caddy -p err` |
+| 3 | How direct-origin requests reach DailyAI | Caddy listens on `*:443`/`*:80` and serves the `dailyaibetting.com, www` block to any client that sends that hostname (SNI/Host); ufw allows 443 from anywhere. Verified 11-22 with `curl --resolve` (200, Let's Encrypt cert). | `ss -ltnp`, ufw status |
+| 4 | Cloudflare traffic keeps working | Cloudflare connects from its published ranges (re-fetch at apply time); the candidate allows exactly those; functional abort test passed 11-22 (non-CF aborted, allowed client served). | `/tmp/cf-candidate/`, throwaway Caddy test |
+| 5 | Not disrupted: other sites, SSH, health checks, certificates, webhooks, deploys | Other 4 blocks untouched (diff = 2 lines, DailyAI block only). SSH is sshd on :22, not Caddy. No cron, monitor or deploy step calls the origin (`crontab`, `/etc/cron.d`, `gh-deploy.sh` have no curl/URLs; `/etc/hosts` has no site names). The app's own internal fetches go to `127.0.0.1:3000`, not through Caddy. Let's Encrypt HTTP-01 is answered by Caddy's challenge handler on :80 before site routes, and those requests arrive via Cloudflare anyway. Stripe webhooks and Supabase sign-in callbacks reach `dailyaibetting.com` through Cloudflare (proxied A record). | commands above |
+| 6 | Proposed config validated | `caddy validate` → "Valid configuration" (11-22, unchanged since) | above |
+| 7 | Immediate rollback | `cp -a /etc/caddy/Caddyfile.pre-cf-<date> /etc/caddy/Caddyfile && caddy validate … && systemctl reload caddy` (≈10 s); the backup is byte-identical to today's running config (sha recorded above). | |
+| 8 | Backup preserved | Created as step 1 of the apply; sha must equal `d36b5208…967c`. | |
+
+**Decision per the owner's rule:** not applied, because precheck 1 can't be verified. Once the owner confirms the Hetzner firewall state, apply steps 1–7 above, then verify through Cloudflare, direct-origin denial, the other 4 sites, a Stripe webhook delivery and a sign-in, the Caddy journal, and two production checks; roll back immediately on any customer-facing failure.
