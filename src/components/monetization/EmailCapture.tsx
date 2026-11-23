@@ -40,7 +40,7 @@ export function EmailCaptureBanner() {
     return (
       <Card className="bg-primary/10 border-primary/30">
         <CardContent className="py-4 text-center">
-          <p className="font-medium text-primary">You&apos;re subscribed! Check your inbox.</p>
+          <p className="font-medium text-primary">You&apos;re on the list. We&apos;ll email you when daily picks by email launch.</p>
         </CardContent>
       </Card>
     );
@@ -51,9 +51,9 @@ export function EmailCaptureBanner() {
       <CardContent className="py-6">
         <div className="flex flex-col md:flex-row items-center gap-4">
           <div className="flex-1 text-center md:text-left">
-            <h3 className="font-bold text-lg mb-1">Get Free Daily Picks</h3>
+            <h3 className="font-bold text-lg mb-1">Join the DailyAI email list</h3>
             <p className="text-sm text-muted-foreground">
-              Top consensus picks delivered to your inbox every morning.
+              Daily picks by email are coming soon. Join to hear first; today&apos;s free picks are always on the site.
             </p>
           </div>
           <div className="flex flex-col gap-1 w-full md:w-auto">
