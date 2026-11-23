@@ -3,8 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
 
 /**
- * DAI-22: newest report date before today (YYYY-MM-DD), so an empty page can say how long the
- * report has been down. null = no earlier report; undefined = the lookup failed (claim nothing).
+ * DAI-22: newest report date with a non-empty report (YYYY-MM-DD, today included), so an empty page
+ * can say how long the report has been down. null = none; undefined = the lookup failed (claim nothing).
  */
 export async function getLastPublishedReportDate(): Promise<string | null | undefined> {
   try {
@@ -12,7 +12,9 @@ export async function getLastPublishedReportDate(): Promise<string | null | unde
     const { data, error } = await supabase
       .from('daily_ai_report')
       .select('report_date')
-      .lt('report_date', getTodayET())
+      .lte('report_date', getTodayET())
+      .not('report_text', 'is', null)
+      .neq('report_text', '')
       .order('report_date', { ascending: false })
       .limit(1)
       .maybeSingle();

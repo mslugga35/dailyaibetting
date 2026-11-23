@@ -24,10 +24,20 @@ export interface AiReportStatusInfo {
 }
 
 /**
- * DAI-22: with no report yesterday either, the job is failing (e.g. AI credits exhausted), not just
- * running late. Saying "scheduled to publish around 10:30" would then be false every morning.
+ * DAI-22: a gap this long means the job is failing (e.g. AI credits exhausted), not a skip day.
+ * The job skips days with no expert picks: real gaps of 2-5 days occurred (Mar-Oct 2026: 176x1,
+ * 3x2, 3x3, 2x4, 1x5 days), so a shorter gap must not be called an outage.
  */
-export const AI_REPORT_OUTAGE_DAYS = 2;
+export const AI_REPORT_OUTAGE_DAYS = 7;
+
+/** ET calendar date (YYYY-MM-DD) of an instant. */
+export function etDateString(now: Date): string {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const v = (t: string) => p.find((x) => x.type === t)?.value;
+  return `${v('year')}-${v('month')}-${v('day')}`;
+}
 
 /** Calendar days between two YYYY-MM-DD dates (b - a); null if either is not a date. */
 export function daysBetween(a: string, b: string): number | null {
@@ -58,21 +68,21 @@ export function minutesSinceMidnightET(now: Date): number {
 }
 
 /**
- * @param todayET today's ET date (YYYY-MM-DD); needed only with lastPublishedDate.
- * @param lastPublishedDate newest report_date before today, or null if there is none / unknown.
- *   `undefined` keeps the old behaviour (no outage detection).
+ * @param lastPublishedDate newest report_date with text (today included), null if none.
+ *   `undefined` = the lookup failed: claim nothing (old behaviour). A date of today while
+ *   hasReport is false means the today-read failed but a report exists: claim nothing either.
  */
 export function getAiReportStatus(
   now: Date,
   hasReport: boolean,
   lastPublishedDate?: string | null,
-  todayET?: string,
 ): AiReportStatusInfo {
   const base = { expectedAt: AI_REPORT_PUBLISH_LABEL };
   if (hasReport) return { status: 'published', ...base };
-  const days = lastPublishedDate && todayET ? daysBetween(lastPublishedDate, todayET) : null;
-  const last = lastPublishedDate === undefined ? {} : { lastPublishedDate: lastPublishedDate ?? null, daysSinceLastReport: days };
-  if (days !== null && days >= AI_REPORT_OUTAGE_DAYS) {
+  const days = lastPublishedDate ? daysBetween(lastPublishedDate, etDateString(now)) : null;
+  const known = lastPublishedDate !== undefined && (days === null || days > 0);
+  const last = known ? { lastPublishedDate: lastPublishedDate ?? null, daysSinceLastReport: days } : {};
+  if (known && days !== null && days >= AI_REPORT_OUTAGE_DAYS) {
     return { status: 'unavailable', reason: 'outage', ...base, ...last };
   }
   if (minutesSinceMidnightET(now) < AI_REPORT_PUBLISH_MINUTES_ET) {

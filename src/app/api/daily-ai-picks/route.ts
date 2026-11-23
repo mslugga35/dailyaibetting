@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       .single();
 
     if (!data?.report_text) {
-      const info = getAiReportStatus(new Date(), false, await getLastPublishedReportDate(), today);
+      const info = getAiReportStatus(new Date(), false, await getLastPublishedReportDate());
       return NextResponse.json(
         {
           success: false,

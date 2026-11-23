@@ -28,7 +28,7 @@ export function DailyAIPicksContent({ result, reportStatus }: Props) {
           <h1 className="text-2xl font-bold mb-2">DailyAI Picks</h1>
           {reportStatus.reason === 'outage' ? (
             <p className="text-muted-foreground" data-testid="ai-report-outage">
-              The daily AI report is temporarily paused and has not published since{' '}
+              The daily AI report is temporarily paused. It has not published since{' '}
               {reportStatus.lastPublishedDate ? formatReportDate(reportStatus.lastPublishedDate) : 'an earlier date'}.
               No older report is shown here as today&apos;s.
             </p>
@@ -46,7 +46,7 @@ export function DailyAIPicksContent({ result, reportStatus }: Props) {
               )}
             </p>
           )}
-          {reportStatus.status === 'unavailable' && isPro && (
+          {reportStatus.status === 'unavailable' && reportStatus.reason !== 'outage' && isPro && (
             <p className="text-muted-foreground mt-2" data-testid="ai-report-pro-notice">
               Pro member notice: this report is part of the site, not a Pro-only feature, and it did not
               publish today. Your Pro consensus picks are unaffected.

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { generateDailyReport } from '@/lib/daily-ai-picks/generate';
 import { getLastPublishedReportDate } from '@/lib/daily-ai-picks/last-published';
-import { getTodayET } from '@/lib/utils/date';
 import { getAiReportStatus } from '@/lib/daily-ai-picks/report-status';
 import { DailyAIPicksContent } from './DailyAIPicksContent';
 
@@ -28,6 +27,6 @@ export default async function DailyAIPicksPage() {
 
   // DAI-22: only look up the last report when today's is missing (says how long it has been down).
   const lastPublished = result ? undefined : await getLastPublishedReportDate();
-  const reportStatus = getAiReportStatus(new Date(), !!result, lastPublished, getTodayET());
+  const reportStatus = getAiReportStatus(new Date(), !!result, lastPublished);
   return <DailyAIPicksContent result={result} reportStatus={reportStatus} />;
 }

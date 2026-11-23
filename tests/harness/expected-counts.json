@@ -44,5 +44,5 @@
   "tests/security/link-lifecycle.test.mjs": 9,
   "tests/security/middleware.test.mjs": 18,
   "tests/security/safe-next.test.mjs": 3,
-  "tests/content/ai-report-freshness.test.mjs": 9
+  "tests/content/ai-report-freshness.test.mjs": 10
 }
