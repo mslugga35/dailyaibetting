@@ -38,8 +38,9 @@ const browser = await chromium.launch();
 try {
   for (const [name, form] of Object.entries(variants)) {
     const s = await api('POST', 'checkout/sessions', form);
-    const page = await browser.newPage();
+    let page;
     try {
+    page = await browser.newPage();
     await page.goto(s.url, { waitUntil: 'load', timeout: 60000 });
     await page.waitForFunction(() => document.title && document.body.innerText.includes('$'), null, { timeout: 45000 });
     await page.waitForTimeout(2000);
@@ -51,7 +52,7 @@ try {
     const ogTitle = await page.evaluate(() => document.querySelector('meta[property="og:title"]')?.content ?? null);
     console.log(`${name}: document.title = ${JSON.stringify(title)} | og:title = ${JSON.stringify(ogTitle)} | top text = ${JSON.stringify(heading)}`);
     } finally {
-    await page.close();
+    await page?.close().catch(() => {});
     const x = await api('POST', `checkout/sessions/${s.id}/expire`);
     console.log(`  session ${s.id.slice(0, 14)}… expired: status=${x.status}`);
     }
