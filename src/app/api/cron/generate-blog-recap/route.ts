@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthGuard, INTERNAL_SSR_HEADER, internalSsrToken } from '@/lib/api-helpers';
 import { internalBaseUrl } from '@/lib/data/server-fetch';
 import { callOpenRouter } from '@/lib/utils/openrouter';
+import { buildRecapRow } from '@/lib/blog/recap-row';
 import { getTodayET } from '@/lib/utils/date';
 import { createClient } from '@supabase/supabase-js';
 
@@ -156,23 +157,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('blog_posts')
-    .insert({
-      slug,
-      title,
-      content,
-      excerpt,
-      category: 'daily-picks',
-      sport: sports.length === 1 ? sports[0] : null,
-      tags,
-      seo_title: `AI Consensus Sports Picks Today (${isoDate}) | DailyAI Betting`,
-      seo_description: excerpt,
-      ai_model: 'claude-haiku-4-5',
-      ai_generated: true,
-      author: 'DailyAI Betting',
-      site: 'dailyaibetting',
-      status: 'published',
-      published_at: new Date().toISOString(),
-    })
+    .insert(buildRecapRow({ slug, title, content, excerpt, tags, isoDate, nowIso: new Date().toISOString() }))
     .select('id, slug')
     .single();
 
