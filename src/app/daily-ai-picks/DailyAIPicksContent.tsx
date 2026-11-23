@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { formatMarkdown } from '@/lib/utils/format-markdown';
 import { useSubscription } from '@/lib/hooks/use-subscription';
 import type { GenerateResult } from '@/lib/daily-ai-picks/generate';
-import type { AiReportStatusInfo } from '@/lib/daily-ai-picks/report-status';
+import { formatReportDate, type AiReportStatusInfo } from '@/lib/daily-ai-picks/report-status';
 
 interface Props {
   result: GenerateResult | null;
@@ -26,7 +26,13 @@ export function DailyAIPicksContent({ result, reportStatus }: Props) {
         <div className="text-center py-20">
           <Brain className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">DailyAI Picks</h1>
-          {reportStatus.status === 'pending' ? (
+          {reportStatus.reason === 'outage' ? (
+            <p className="text-muted-foreground" data-testid="ai-report-outage">
+              The daily AI report is temporarily paused and has not published since{' '}
+              {reportStatus.lastPublishedDate ? formatReportDate(reportStatus.lastPublishedDate) : 'an earlier date'}.
+              No older report is shown here as today&apos;s.
+            </p>
+          ) : reportStatus.status === 'pending' ? (
             <p className="text-muted-foreground" data-testid="ai-report-pending">
               Today&apos;s AI report ({today}) has not been published yet. It is scheduled to publish
               around {reportStatus.expectedAt}.
@@ -35,6 +41,9 @@ export function DailyAIPicksContent({ result, reportStatus }: Props) {
             <p className="text-muted-foreground" data-testid="ai-report-unavailable">
               The AI report for {today} is unavailable. It normally publishes around{' '}
               {reportStatus.expectedAt}, but nothing has been published today.
+              {reportStatus.lastPublishedDate && (
+                <> The last report was published on {formatReportDate(reportStatus.lastPublishedDate)}.</>
+              )}
             </p>
           )}
           {reportStatus.status === 'unavailable' && isPro && (

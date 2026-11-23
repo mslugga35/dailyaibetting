@@ -14,6 +14,7 @@ import { cronAuthGuard, rateLimitGuard } from '@/lib/api-helpers';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getTodayET } from '@/lib/utils/date';
 import { getAiReportStatus } from '@/lib/daily-ai-picks/report-status';
+import { getLastPublishedReportDate } from '@/lib/daily-ai-picks/last-published';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
       .single();
 
     if (!data?.report_text) {
-      const info = getAiReportStatus(new Date(), false);
+      const info = getAiReportStatus(new Date(), false, await getLastPublishedReportDate(), today);
       return NextResponse.json(
         {
           success: false,
@@ -40,6 +41,8 @@ export async function GET(request: Request) {
           status: info.status,
           reason: info.reason,
           expectedAt: info.expectedAt,
+          lastPublishedDate: info.lastPublishedDate ?? null,
+          daysSinceLastReport: info.daysSinceLastReport ?? null,
         },
         { status: 404 },
       );
