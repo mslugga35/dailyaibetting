@@ -17,6 +17,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/api/webhooks/stripe' ||
     pathname === '/auth/callback' ||
     pathname === '/api/subscribe' ||
+    pathname === '/api/unsubscribe' ||
     pathname.startsWith('/api/cron/') ||
     // /api/picks and /api/consensus are tier-gated by the signed-in session, so they
     // are NOT exempt: the session must be refreshed here or an expired access token

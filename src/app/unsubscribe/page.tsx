@@ -15,6 +15,7 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 export default async function UnsubscribePage({ searchParams }: { searchParams: Search }) {
   const sp = await searchParams;
   const done = one(sp.done) === '1';
+  const failed = one(sp.error);
   const id = one(sp.id);
   const t = one(sp.t);
   const valid = !done && verifyUnsubscribe(id, t);
@@ -22,7 +23,11 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
   return (
     <div className="container max-w-xl py-16 px-4 text-center">
       <h1 className="text-2xl font-bold mb-4">Email list</h1>
-      {done ? (
+      {failed === 'error' ? (
+        <p data-testid="unsubscribe-error">
+          Something went wrong and you were not unsubscribed. Please try the link again in a few minutes.
+        </p>
+      ) : done ? (
         <p data-testid="unsubscribe-done">
           You&apos;re unsubscribed. We won&apos;t email you again. If you sign up again later, you&apos;ll be back on the list.
         </p>

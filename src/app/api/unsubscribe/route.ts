@@ -4,34 +4,23 @@
  * POST only (a GET from a link scanner must not unsubscribe anyone):
  *  - RFC 8058 one-click: the mail client POSTs `List-Unsubscribe=One-Click` to
  *    /api/unsubscribe?id=..&t=.. -> 200.
- *  - The /unsubscribe page form posts id + t -> 303 back to /unsubscribe?done=1.
+ *  - The /unsubscribe page form posts id + t -> 303 back to /unsubscribe?done=1 (or ?error=...).
  * The id/token pair is an HMAC over the row id (see lib/email/unsubscribe-token.ts).
  */
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, rateLimitGuard } from '@/lib/api-helpers';
-import { handleUnsubscribe } from '@/lib/email/subscription-actions';
+import { handleUnsubscribe, parseUnsubscribeRequest, unsubscribeResponse } from '@/lib/email/subscription-actions';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
-  const limited = rateLimitGuard(request, 20, 60_000, 'unsubscribe');
-  if (limited) return limited;
-
   const url = new URL(request.url);
-  let id: string | null = url.searchParams.get('id');
-  let t: string | null = url.searchParams.get('t');
-  let fromForm = false;
   const type = request.headers.get('content-type') ?? '';
-  if (type.includes('application/x-www-form-urlencoded') || type.includes('multipart/form-data')) {
-    const form = await request.formData().catch(() => null);
-    if (form?.get('source') === 'page') {
-      fromForm = true;
-      id = String(form.get('id') ?? '');
-      t = String(form.get('t') ?? '');
-    }
-  }
+  const isForm = type.includes('application/x-www-form-urlencoded') || type.includes('multipart/form-data');
+  const form = isForm ? await request.formData().catch(() => null) : null;
+  const req = parseUnsubscribeRequest(url, form);
 
-  const result = await handleUnsubscribe(id, t, async (rowId) => {
+  const result = await handleUnsubscribe(req.id, req.t, async (rowId) => {
     const { error } = await getSupabaseAdmin()
       .from('email_subscribers')
       .update({ unsubscribed_at: new Date().toISOString() })
@@ -39,17 +28,16 @@ export async function POST(request: Request) {
       .is('unsubscribed_at', null);
     return { error: error?.message ?? null };
   });
-  if (result === 'invalid') {
-    return NextResponse.json({ success: false, error: 'Invalid or expired unsubscribe link' }, { status: 400 });
-  }
-  if (result === 'error') {
-    console.error('[unsubscribe] DB error');
-    return NextResponse.json({ success: false, error: 'Could not unsubscribe right now' }, { status: 500 });
-  }
 
-  if (fromForm) {
-    const base = process.env.NEXT_PUBLIC_SITE_URL || url.origin;
-    return NextResponse.redirect(`${base.replace(/\/+$/, '')}/unsubscribe?done=1`, 303);
+  // Only failed verifications count against the IP: valid one-click POSTs from a mail provider's
+  // shared IPs are never throttled (the HMAC token is the gate).
+  if (result === 'invalid') {
+    const limited = rateLimitGuard(request, 20, 60_000, 'unsubscribe-invalid');
+    if (limited) return limited;
   }
-  return NextResponse.json({ success: true });
+  if (result === 'error') console.error('[unsubscribe] DB error');
+
+  const r = unsubscribeResponse(result, req.fromForm);
+  if (r.location) return new NextResponse(null, { status: r.status, headers: { Location: r.location } });
+  return NextResponse.json(r.json, { status: r.status });
 }

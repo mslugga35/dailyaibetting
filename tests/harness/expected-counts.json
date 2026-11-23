@@ -45,6 +45,6 @@
   "tests/security/middleware.test.mjs": 18,
   "tests/security/safe-next.test.mjs": 3,
   "tests/content/ai-report-freshness.test.mjs": 10,
-  "tests/content/welcome-email.test.mjs": 13,
+  "tests/content/welcome-email.test.mjs": 23,
   "tests/content/advertise-claims.test.mjs": 2
 }
