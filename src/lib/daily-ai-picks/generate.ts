@@ -18,14 +18,14 @@ import { buildSystemPrompt, buildUserPrompt } from './prompt';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
-import { callOpenRouter } from '@/lib/utils/openrouter';
+import { callModel } from '@/lib/utils/ai-model';
 import { validateParlayMath } from './parlay-math';
 import { classifyReport } from './report-sanity';
 
 /**
  * Output cap per run. A full in-season-MLB report measured 15–25k chars (~4–7k
  * tokens) on HB; without the MLB sections roughly half the sections remain.
- * The cap also sizes the OpenRouter budget guard's worst-case reservation.
+ * The cap also sizes the AI budget guard's worst-case reservation.
  */
 export function maxTokensFor(inSeasonSports: string[]): number {
   return inSeasonSports.includes('mlb') ? 12000 : 8000;
@@ -164,7 +164,7 @@ export async function generateFreshReport(): Promise<GenerateResult> {
 
   const system = buildSystemPrompt();
   const user = buildUserPrompt(context);
-  const rawReport = await callOpenRouter(system, user, { maxTokens: maxTokensFor(context.inSeasonSports) });
+  const rawReport = await callModel(system, user, { maxTokens: maxTokensFor(context.inSeasonSports) });
 
   // Never store wreckage: an empty reply, an error stub or a truncated tail.
   // The call was paid either way; failing loudly beats publishing it.

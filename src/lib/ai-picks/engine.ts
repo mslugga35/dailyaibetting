@@ -15,7 +15,7 @@ import { collectAllData, type ReportContext } from '@/lib/daily-ai-picks/collect
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getServiceRoleClient } from '@/lib/supabase/service';
 import { getTodayET } from '@/lib/utils/date';
-import { callOpenRouter } from '@/lib/utils/openrouter';
+import { callModel } from '@/lib/utils/ai-model';
 import { consensusSection } from '@/lib/ai-picks/consensus-section';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -322,7 +322,8 @@ export async function generateAIPicks(force = false): Promise<EngineResult> {
   // Build prompts and call Claude
   const system = buildPickSystemPrompt();
   const user = buildPickUserPrompt(context);
-  const raw = await callOpenRouter(system, user, { maxTokens: 6000, temperature: 0.3 });
+  // No temperature: the current API version rejects sampling parameters (2026-10-21).
+  const raw = await callModel(system, user, { maxTokens: 6000 });
 
   // Parse and validate
   const picks = parsePicks(raw);

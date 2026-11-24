@@ -49,7 +49,7 @@ test('the Supabase client the app imports is the in-memory fake', async () => {
 test('credentials are fake: no inherited value can reach a real service', () => {
   assert.match(process.env.STRIPE_SECRET_KEY, /^sk_test_harness/);
   assert.match(process.env.NEXT_PUBLIC_SUPABASE_URL, /\.invalid$/);
-  for (const k of ['OPENAI_API_KEY', 'OPENROUTER_API_KEY', 'DISCORD_WEBHOOK_URL', 'ODDS_API_KEY', 'NEXT_PUBLIC_ADMIN_PASSWORD']) {
+  for (const k of ['OPENAI_API_KEY', 'OPENROUTER_API_KEY', 'ANTHROPIC_API_KEY', 'DISCORD_WEBHOOK_URL', 'ODDS_API_KEY', 'NEXT_PUBLIC_ADMIN_PASSWORD']) {
     assert.equal(process.env[k], undefined, `${k} leaked into the test env`);
   }
 });

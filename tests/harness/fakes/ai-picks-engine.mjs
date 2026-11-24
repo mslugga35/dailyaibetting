@@ -1,4 +1,4 @@
-/** Replaces src/lib/ai-picks/engine.ts: records the call instead of paying OpenRouter / posting to Discord. */
+/** Replaces src/lib/ai-picks/engine.ts: records the call instead of paying for a model call / posting to Discord. */
 import { harness } from '../state.mjs';
 
 export async function generateAIPicks(force) {

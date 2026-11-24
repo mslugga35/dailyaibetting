@@ -1,6 +1,7 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
   "src/lib/consensus/team-mappings.test.ts": 36,
+  "tests/billing/ai-model-budget.test.mjs": 9,
   "tests/billing/billing-hardening.test.mjs": 41,
   "tests/billing/billing-round2.test.mjs": 19,
   "tests/billing/billing-round3.test.mjs": 12,
@@ -8,7 +9,6 @@
   "tests/billing/entitlement-client.test.mjs": 6,
   "tests/billing/entitlement.test.mjs": 15,
   "tests/billing/founding-pricing.test.mjs": 44,
-  "tests/billing/openrouter-budget.test.mjs": 9,
   "tests/billing/portal-button.test.mjs": 3,
   "tests/billing/price-figures.test.mjs": 2,
   "tests/billing/stripe-webhook.test.mjs": 42,

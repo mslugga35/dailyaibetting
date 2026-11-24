@@ -6,7 +6,7 @@
  * 3. A fixed set of modules that would reach the network or the Next runtime are
  *    REDIRECTED to in-memory fakes in tests/harness/fakes/. The list is explicit:
  *    nothing is mocked by accident, and a test can never reach production Stripe,
- *    Supabase, Resend, OpenRouter or Discord through these modules.
+ *    Supabase, Resend, Anthropic or Discord through these modules.
  */
 import { statSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';

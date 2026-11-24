@@ -6,7 +6,7 @@
 #   ./install.sh ai-picks daily-report blog-recap
 #                                        + enable paid timers (they still do nothing until
 #                                          /etc/dailyai-cron/paid-jobs.enabled exists and
-#                                          OPENROUTER_MONTHLY_BUDGET_USD is set: see README)
+#                                          AI_MONTHLY_BUDGET_USD is set: see README)
 #
 # Never creates the paid flag. Re-running is safe (files are replaced, timers re-enabled).
 # DAILYAI_ROOT / SYSTEMCTL exist only so the local validation can run it in a scratch root.
