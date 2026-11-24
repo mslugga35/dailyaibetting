@@ -53,3 +53,36 @@ method and no auto-reload, so requests stop when the credit is gone. No fallback
 3. On Hetzner (owner or Claude on request; never paste the key in chat): add to `/root/apps/dailyaibetting/.env.local`
    `ANTHROPIC_API_KEY=...`, `AI_MONTHLY_BUDGET_USD=15`, `AI_SPEND_LEDGER_PATH=/var/lib/dailyai/ai-spend.json`; create the
    ledger (ops/hetzner-cron/README.md step 1); `pm2 restart dailyaibetting`.
+
+## Shared grader fix (HiddenBag consensus writer) — DEPLOYED 2026-11-24 14:44Z
+- Source of truth: `hiddenbag-v2` branch `fix/consensus-writer-identity` (worktree `~/wt/hb-writer-identity`), commits
+  1eb1def (exact deployed baseline, previously untracked copies) → f8c7126. Deploy ONLY with
+  `scripts/tools/deploy-consensus-writer.sh` (from git blobs, md5-verified, drift guard, backups `*.bak-20261124T144429Z`,
+  manifest `/root/hiddenbag-v2/scripts/CONSENSUS-WRITER-DEPLOYED.txt`). Branch not pushed (a push would start a Vercel preview).
+- Design: one twin resolver for the live cycle and the late re-grade. Proof order: ESPN row `odds_api_id` = this game,
+  then ESPN team id (committed map `scripts/lib/data/espn-teams.json` + reviewed `team-alias-overrides.json`), exact names
+  outside the map. Never fuzzy; ambiguous = held. Reversed home/away graded through a view in the group's own orientation.
+  Hold reasons in `grade_source` as `hold:<reason>` (fixed tokens; DailyAI never selects the column; HB page never renders it).
+  Exact same-orientation matches grade as before; a graded group is never demoted; floor 2026-11-21 unchanged.
+- "Regrade window excludes yesterday": not a gap. Yesterday and today-2 are graded by the live cycle every minute; the
+  late re-grade covers today-16..today-3. The real defect was the live path's loose matcher + orientation rejection.
+- Verification: 82 writer tests, 15 mutations (all caught), Architecture / Data / Breaker / Data-integrity / Verifier agents,
+  production-input replay (live window: 0 graded rows changed), before/after snapshot of all 4,153 rows.
+- Production effect (exactly 5 rows): 4732 LIU -2.5 loss (71-74); 4607 Wyoming +7.5 win and 4748 Wyoming ML win (79-61,
+  ESPN listed Duquesne home); 4908 Arizona -15.5 loss (96-83); 4447 stays pending with `hold:capper_grades_disagree`.
+  Fire record unchanged 1044-951-24 (these are 2-capper groups). Both sites 200.
+- Open (needs owner approval, historical data): 17 pre-floor pending rows; most hold because stored capper grades came
+  from other games (`game_resolved_by: next_game`), i.e. pick-level grading errors in HB, not consensus logic.
+
+## Stripe MCP
+- Stripe docs: from **2027-01-11** (not Nov 30) Stripe MCP rejects full-access `sk_` keys and non-agent restricted keys (401).
+  Only the MCP server is named; app API calls with secret keys are not stated as affected.
+- PC1 Claude Code, Claude Desktop, claude.ai connectors and Hetzner: **no Stripe MCP configured** → nothing breaks.
+  To add it later: `claude mcp add --transport http stripe https://mcp.stripe.com/` then `/mcp` (OAuth, owner signs in;
+  refresh tokens expire after 14 days) or an agent-tagged restricted key via env var. PC2 not checked from here.
+
+## OpenRouter cleanup (prepared; credentials removed only after the Claude API switch is verified)
+- Done locally (commit 25d1874, ships with the next code deploy): `vercel.json` crons removed, `n8n-workflows/daily-ai-blog.json` removed.
+- Remaining: prod `.env.local` `OPENROUTER_API_KEY` + `OPENROUTER_MONTHLY_BUDGET_USD` (+ 2 backups) — no code reads them;
+  HiddenBag `scripts/daily-report/generate.mjs` (orphan OpenRouter writer) and `scripts/daily-ai-report.mjs` (Max-login,
+  retired) — HB repo change; then owner deletes the key in the OpenRouter dashboard. No other process or app on Hetzner uses it.
