@@ -34,7 +34,9 @@ bash /usr/local/lib/dailyai-cron/dailyai-job.sh grade-picks   # run once now, ch
 ```
 
 ### Enable paid jobs (only after the spend is approved)
-1. Add `ANTHROPIC_API_KEY` (dedicated DailyAI key), `AI_MONTHLY_BUDGET_USD=15` and `AI_SPEND_LEDGER_PATH=/var/lib/dailyai/ai-spend.json` to `/root/apps/dailyaibetting/.env.local`, then run `pm2 restart dailyaibetting`.
+1. Add `ANTHROPIC_API_KEY` (dedicated DailyAI key), `AI_MONTHLY_BUDGET_USD=15` and `AI_SPEND_LEDGER_PATH=/var/lib/dailyai/ai-spend.json` to `/root/apps/dailyaibetting/.env.local`. Create the spend ledger once (a missing ledger refuses every paid call):
+   `mkdir -p /var/lib/dailyai && printf '{"month":"%s","spentUsd":0,"calls":0}' "$(date -u +%Y-%m)" > /var/lib/dailyai/ai-spend.json && chmod 600 /var/lib/dailyai/ai-spend.json`
+   Then run `pm2 restart dailyaibetting`.
 2. Check the cap: `bash /usr/local/lib/dailyai-cron/dailyai-job.sh ai-picks`. It must log `paid jobs disabled` (flag not set yet).
 3. Backstop (required): the key's Console organization holds only the included monthly API credit: no payment method, auto-reload off.
 4. Turn the paid timers on:
