@@ -119,7 +119,7 @@ export function DailyBetsContent({ initialData }: { initialData: unknown }) {
           <div>
             <div className="flex items-center gap-2 text-primary mb-2">
               <Zap className="h-5 w-5" />
-              <span className="text-sm font-medium">Daily AI Analysis</span>
+              <span className="text-sm font-medium">Daily Consensus Analysis</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">
               Today&apos;s Best Bets

@@ -29,7 +29,8 @@ test('responsible-gambling is always published: 21+, helpline, no guarantee', ()
   const html = withFlag(null, () => renderToString(rg.default()));
   assert.match(html, /21 or older/);
   assert.match(html, /1-800-GAMBLER/);
-  assert.match(html, /nothing on the site guarantees a profit/);
+  assert.match(html, /Past performance does not guarantee future results/);
+  assert.match(html, /possible loss of the entire amount wagered/);
 });
 
 test('footer links only published policies; disclaimer always shown', () => {
@@ -45,11 +46,26 @@ test('policy text matches the real billing rules and makes no forbidden claims',
   const all = P.ALL_POLICIES.map(text).join('\n');
   const terms = text(P.TERMS); const refunds = text(P.REFUNDS);
   assert.match(terms, /\$9\.99\/mo/); assert.match(terms, /\$19\.99\/mo/);
-  assert.match(terms, /7-day free trial/); assert.match(terms, /One free trial per customer/);
+  assert.match(terms, /seven-day free trial/); assert.match(terms, /Free trials are limited to eligible first-time customers/);
+  assert.match(terms, /automatically renew each month until cancelled/);
+  // DAI_AUTO_CANCEL_DUPLICATE_TRIAL is off in production: never promise an automatic no-charge cancellation.
+  assert.doesNotMatch(all, /cancelled right away without a charge/);
+  assert.match(terms, /may deny or cancel duplicate or ineligible trials/);
+  // The fixed record statement was removed (owner correction 2026-11-24).
+  assert.doesNotMatch(all, /losing slightly at standard -110 odds/);
+  assert.match(terms, /do not accept wagers, hold funds for wagering or operate as a sportsbook/);
+  assert.match(terms, /AI-generated reports and picks are available only when the required systems and data are operational/);
   assert.match(terms, /at least 21/);
-  assert.match(refunds, /not charged/); assert.match(refunds, /Manage Subscription/); assert.match(refunds, /keep Pro until the end of the period/);
-  assert.match(text(P.PRIVACY), /never reach our servers/);
-  assert.match(text(P.PRIVACY), /do not sell/);
+  assert.match(refunds, /Cancel before the trial ends to avoid the first subscription charge/); assert.match(refunds, /Manage Subscription/);
+  assert.match(refunds, /access continues through the applicable paid billing period/); assert.match(refunds, /access continues until the trial ends/);
+  assert.match(text(P.PRIVACY), /do not pass through our application servers/);
+  assert.match(text(P.PRIVACY), /card fingerprints supplied by our payment processor/);
+  assert.match(text(P.PRIVACY), /do not sell account email addresses or payment information for money/);
+  assert.match(text(P.PRIVACY), /Google Ad Settings/);
+  // No on-site consent/privacy control exists: it must not be claimed.
+  assert.doesNotMatch(text(P.PRIVACY), /website privacy controls/i);
+  assert.match(text(P.PRIVACY), /change to your account email address/);
+  assert.match(text(P.PRIVACY), /Marketing emails include an unsubscribe mechanism/);
   assert.doesNotMatch(all, /lawyer|attorney|legal(ly)? review|reviewed by counsel/i);
   assert.doesNotMatch(all, /guaranteed (profit|win|return)|risk[- ]free|sure thing|lock of the/i);
 });
@@ -70,7 +86,7 @@ test('flag alone does not publish: legal name AND governing state are required',
 
 test('owner decisions 2026-11-19: 21+, refunds subject to law, price-change notice, founding price kept', () => {
   const terms = text(P.TERMS); const refunds = text(P.REFUNDS);
-  assert.match(refunds, /Nothing in this policy limits any refund rights you have under applicable law/);
+  assert.match(refunds, /Nothing in this policy limits refund or other consumer rights provided by applicable law/);
   assert.match(terms, /email affected subscribers before the change takes effect/);
   assert.match(terms, /Founding Member pricing is kept for as long as the founding subscription stays active/);
   assert.match(text(P.PRIVACY), /21 and over/);
@@ -78,11 +94,22 @@ test('owner decisions 2026-11-19: 21+, refunds subject to law, price-change noti
 
 test('confirmed operator 2026-11-19: individual trading as DailyAI Betting, DAILYAI descriptor', () => {
   const ind = withEnv({ POLICY_LEGAL_NAME: 'Matthew Morales', POLICY_GOVERNING_STATE: 'Florida', POLICY_OPERATOR_TYPE: 'individual' }, () => text(P.termsPolicy()));
-  assert.match(ind, /operated by Matthew Morales, an individual, under the business name DailyAI Betting/);
-  assert.match(ind, /"We" and "us" in these terms mean Matthew Morales\./);
+  assert.match(ind, /operated by Matthew Morales, an individual doing business as DailyAI Betting/);
+  assert.match(ind, /mean Matthew Morales operating as DailyAI Betting\./);
+  assert.match(ind, /except where applicable law provides consumer rights that cannot be waived/);
   assert.match(ind, /laws of the State of Florida/);
   // Without the type flag the operator is not described as an individual.
   const co = withEnv({ ...OP, POLICY_OPERATOR_TYPE: null }, () => text(P.termsPolicy()));
-  assert.doesNotMatch(co, /, an individual,/);
+  assert.doesNotMatch(co, /an individual doing business/);
   assert.match(text(P.TERMS), /Charges show on your card statement with DAILYAI in the description\./);
+});
+
+test('privacy names the operator and the terms link the responsible-gambling page (owner corrections 2026-11-24)', async () => {
+  const env = { POLICY_PAGES_PUBLISHED: 'true', POLICY_LEGAL_NAME: 'Matthew Morales', POLICY_GOVERNING_STATE: 'Florida', POLICY_OPERATOR_TYPE: 'individual' };
+  const priv = withEnv(env, () => text(P.privacyPolicy()));
+  assert.match(priv, /operated by Matthew Morales, an individual doing business as DailyAI Betting/);
+  const termsHtml = withEnv(env, () => renderToString(pages.terms.default()));
+  assert.match(termsHtml, /href="\/responsible-gambling"/);
+  assert.match(termsHtml, /intended for adults aged 21 and older/);
+  assert.equal(P.POLICY_LAST_UPDATED, 'November 24, 2026');
 });

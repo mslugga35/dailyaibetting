@@ -9,7 +9,7 @@
  */
 import { PLANS, formatMonthly } from '@/lib/pricing/plans';
 
-export const POLICY_LAST_UPDATED = 'November 19, 2026';
+export const POLICY_LAST_UPDATED = 'November 24, 2026';
 export const SUPPORT_EMAIL = 'support@dailyaibetting.com';
 export const HELPLINE = '1-800-GAMBLER';
 
@@ -31,14 +31,18 @@ export function policiesPublished(): boolean {
   return (process.env.POLICY_PAGES_PUBLISHED || '').trim().toLowerCase() === 'true' && legalOperator() !== null;
 }
 
-export interface PolicySection { heading: string; paragraphs: string[] }
+export interface PolicySection { heading: string; paragraphs: string[]; links?: { href: string; label: string }[] }
 export interface Policy { slug: string; title: string; summary: string; sections: PolicySection[] }
 
 const founding = formatMonthly(PLANS.founding.cents);
 const regular = formatMonthly(PLANS.regular.cents);
 
 export const NO_GUARANTEE =
-  'DailyAI Betting publishes sports analysis: consensus counts of what independent handicappers picked, and graded results of those consensus picks. It is information, not betting advice. Past results do not predict future results, nothing on the site guarantees a profit, and you can lose money betting. Our own published record shows the consensus picks losing slightly at standard -110 odds.';
+  'Past performance does not guarantee future results. All wagering involves risk, including the possible loss of the entire amount wagered. Historical win rates and estimated returns should not be interpreted as guarantees of profitability. Where applicable, estimated returns use disclosed assumptions and may not reflect actual sportsbook odds.';
+
+/** Service description (owner correction T3). */
+export const SERVICE_DESCRIPTION =
+  'DailyAI Betting provides sports information, consensus analysis, historical results and other analytical content. We do not accept wagers, hold funds for wagering or operate as a sportsbook. Content is provided for informational and entertainment purposes only and does not constitute financial or professional betting advice.';
 
 export const TERMS: Policy = {
   slug: 'terms',
@@ -46,9 +50,10 @@ export const TERMS: Policy = {
   summary: 'The rules for using DailyAI Betting and the DailyAI Pro subscription.',
   sections: [
     { heading: 'Who can use DailyAI Betting', paragraphs: [
-      'You must be at least 21 years old to create an account or subscribe, and you are responsible for following the gambling laws where you live. DailyAI Betting does not take bets, hold money for betting, or act as a sportsbook.',
+      'You must be at least 21 years old to create an account or subscribe, and you are responsible for following the gambling laws where you live.',
     ] },
     { heading: 'What the service is', paragraphs: [
+      SERVICE_DESCRIPTION,
       NO_GUARANTEE,
       'Picks come from third-party handicappers and public sources. We group them, count how many cappers agree, and grade the consensus picks from final scores. Data can be late, incomplete or wrong; we correct errors when we find them and we do not promise that every pick, line or result is accurate.',
       'Odds and payouts are not shown for most picks because prices differ by sportsbook. Return-on-investment figures on the Stats page are estimates that assume standard -110 odds.',
@@ -58,7 +63,9 @@ export const TERMS: Policy = {
     ] },
     { heading: 'DailyAI Pro subscription', paragraphs: [
       `Pro is a monthly subscription billed through Stripe. The first 100 paying members get the Founding Member price of ${founding}; after those spots are gone, new members pay ${regular}. Members who joined before the founding offer keep the price they signed up at. Charges show on your card statement with DAILYAI in the description.`,
-      'First-time members get a 7-day free trial. Your card is charged at the end of the trial unless you cancel before then, and every month after that until you cancel. One free trial per customer: a payment card that was already used for a DailyAI free trial cannot start another, and that second trial is cancelled right away without a charge.',
+      'Eligible first-time subscribers receive a seven-day free trial. Unless cancelled before the trial ends, the subscription automatically converts into a paid monthly subscription at the price disclosed during checkout.',
+      'Subscriptions automatically renew each month until cancelled. The applicable price, billing frequency and trial terms are disclosed before purchase.',
+      'Free trials are limited to eligible first-time customers. We may deny or cancel duplicate or ineligible trials and take reasonable steps to prevent trial abuse.',
       'The Founding Member price stays the same for as long as your subscription stays active. If the subscription ends (you cancel and the paid period runs out, or a payment cannot be collected after Stripe\'s retries), the founding price ends with it, and rejoining later is at the regular price.',
       'Cancellation and refunds are covered in the Refund and Cancellation Policy.',
     ] },
@@ -66,15 +73,25 @@ export const TERMS: Policy = {
       'Do not copy or resell Pro content in bulk, scrape the site, try to get around access controls, or interfere with the service. Personal use and sharing an individual pick with friends is fine.',
     ] },
     { heading: 'Changes and availability', paragraphs: [
-      'Features can change. Some features depend on outside services and may be unavailable at times (for example, the AI daily report is not published when its data or model provider is unavailable).',
+      'Features and content may change or become temporarily unavailable due to data-provider outages, technical maintenance or other service limitations. AI-generated reports and picks are available only when the required systems and data are operational. Unavailable or outdated content will not be knowingly represented as current.',
       'If we change the price of a subscription, we will email affected subscribers before the change takes effect, and you can cancel before then. Founding Member pricing is kept for as long as the founding subscription stays active.',
     ] },
     { heading: 'Limits on our responsibility', paragraphs: [
       'The service is provided as is. To the extent the law allows, DailyAI Betting is not responsible for betting losses or for decisions you make based on information on the site.',
     ] },
+    { heading: 'Responsible gambling', paragraphs: [
+      'DailyAI Betting is intended for adults aged 21 and older. Never wager more than you can afford to lose. Gambling is not a reliable source of income. If gambling becomes a problem, seek assistance through the responsible gambling resources linked on our website.',
+    ], links: [{ href: '/responsible-gambling', label: 'Responsible gambling resources' }] },
     { heading: 'Contact', paragraphs: [`Questions about these terms: ${SUPPORT_EMAIL}.`] },
   ],
 };
+
+/** Operator statement (owner Q1/Q2: an individual doing business as DailyAI Betting). */
+export function operatorSentence(op: { name: string; individual: boolean }): string {
+  return op.individual
+    ? `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}, an individual doing business as DailyAI Betting. References to "we," "us," and "our" mean ${op.name} operating as DailyAI Betting.`
+    : `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}. References to "we," "us," and "our" mean ${op.name}.`;
+}
 
 /** Terms with the operator and governing-law sections filled from the confirmed values. */
 export function termsPolicy(): Policy {
@@ -83,11 +100,9 @@ export function termsPolicy(): Policy {
   return {
     ...TERMS,
     sections: [
-      { heading: 'Who we are', paragraphs: [op.individual
-        ? `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}, an individual, under the business name DailyAI Betting. "We" and "us" in these terms mean ${op.name}.`
-        : `DailyAI Betting (dailyaibetting.com) is operated by ${op.name}. "We" and "us" in these terms mean ${op.name}.`] },
+      { heading: 'Who we are', paragraphs: [operatorSentence(op)] },
       ...TERMS.sections.slice(0, -1),
-      { heading: 'Governing law', paragraphs: [`These terms are governed by the laws of the State of ${op.state}, except where the law where you live gives you rights that cannot be waived.`] },
+      { heading: 'Governing law', paragraphs: [`These terms are governed by the laws of the State of ${op.state}, except where applicable law provides consumer rights that cannot be waived.`] },
       TERMS.sections[TERMS.sections.length - 1],
     ],
   };
@@ -99,18 +114,19 @@ export const REFUNDS: Policy = {
   summary: 'How to cancel DailyAI Pro, what happens when you do, and how refund requests work.',
   sections: [
     { heading: 'Free trial', paragraphs: [
-      'If you cancel before your 7-day free trial ends, you are not charged. Your account page shows the date of the first charge.',
+      'Cancel before the trial ends to avoid the first subscription charge. Your account and billing portal provide applicable subscription and billing information.',
     ] },
     { heading: 'How to cancel', paragraphs: [
-      'Go to Account, then Manage Subscription. That opens the Stripe billing portal, where you can cancel, update your card and see your invoices. You can also email us and we will cancel for you.',
+      `You may cancel online through Account → Manage Subscription or request assistance by emailing ${SUPPORT_EMAIL}. Manage Subscription opens the Stripe billing portal, where you can also update your card and see your invoices.`,
+      'Cancellation prevents future subscription renewals once processed. Previously incurred charges are not automatically reversed.',
     ] },
     { heading: 'What cancelling does', paragraphs: [
-      'Cancelling stops all future charges. You keep Pro until the end of the period you already paid for, then your account moves to the free plan. Your account and email stay active unless you ask us to delete them.',
+      'For paid subscriptions, access continues through the applicable paid billing period. For trial subscriptions, access continues until the trial ends unless the subscription is terminated earlier under the applicable trial terms. Afterwards your account moves to the free plan. Your account and email stay active unless you ask us to delete them.',
       'If you are a Founding Member, letting the subscription end also ends the Founding Member price; rejoining later is at the regular price.',
     ] },
     { heading: 'Refunds', paragraphs: [
-      `Charges are not refunded automatically for a partly used month. If you were charged by mistake, forgot to cancel a trial, or had a problem with the service, email ${SUPPORT_EMAIL} with the email on your account and we will review your request.`,
-      'Nothing in this policy limits any refund rights you have under applicable law.',
+      `Subscription charges are generally not automatically refunded for partially used billing periods. If you believe a charge was incorrect, unauthorized or resulted from a service issue, contact ${SUPPORT_EMAIL}.`,
+      'Refund requests are reviewed individually. Nothing in this policy limits refund or other consumer rights provided by applicable law.',
     ] },
     { heading: 'Failed payments', paragraphs: [
       'If a renewal payment fails, Pro is paused while Stripe retries the card. Updating your card in the billing portal restores access. If the payment cannot be collected after the retries, the subscription ends.',
@@ -125,28 +141,43 @@ export const PRIVACY: Policy = {
   sections: [
     { heading: 'What we collect', paragraphs: [
       'Account: your email address, and a password if you set one (stored only as a secure hash by our authentication provider). Sign-in links and session cookies keep you signed in.',
-      'Subscription: your plan, subscription status and Stripe customer ID. Card details are entered on Stripe\'s checkout page and never reach our servers. To enforce one free trial per customer we keep a one-way fingerprint of the payment card that Stripe provides, not the card number.',
+      'Subscription: your plan and subscription status. Payment card details are processed by Stripe and do not pass through our application servers. We may retain payment identifiers and card fingerprints supplied by our payment processor to administer subscriptions and prevent duplicate trials and fraud.',
       'Email list and contact form: the email address (and message) you submit.',
       'Usage: standard server logs (IP address, pages requested, time) and analytics about how the site is used.',
     ] },
     { heading: 'How we use it', paragraphs: [
-      'To run your account and subscription, send sign-in links and service emails, prevent fraud and trial abuse, answer your messages, and understand which parts of the site are used. If you joined the email list, to send picks and updates; every email has an unsubscribe link.',
+      'To run your account and subscription, send sign-in links and service emails, prevent fraud and trial abuse, answer your messages, and understand which parts of the site are used. If you joined the email list, to send picks and updates.',
     ] },
     { heading: 'Services that process data for us', paragraphs: [
-      'Supabase (accounts and database), Stripe (payments), Resend (email delivery), Cloudflare (network and security), our hosting provider (servers), Google Analytics (site analytics), Google AdSense (advertising), and HarborSEO (a script that manages site content and search optimization). Google may use cookies to measure and personalize ads; you can manage ad personalization in your Google account settings.',
+      'Supabase (accounts and database), Stripe (payments), Resend (email delivery), Cloudflare (network and security), our hosting provider (servers), Google Analytics (site analytics), Google AdSense (advertising), and HarborSEO (a script that manages site content and search optimization).',
+      'We use analytics and advertising services that may collect information through cookies and similar technologies. These services may use browsing information to measure website usage, deliver advertising and personalize advertisements, subject to applicable law and available privacy choices. You may manage applicable advertising preferences through Google Ad Settings (adssettings.google.com) and your browser\'s cookie settings.',
       'Some links to sportsbooks are affiliate links: if you sign up through one we may earn a commission. The sportsbook may set its own cookies when you click.',
-      'We do not sell your personal information.',
+      'We do not sell account email addresses or payment information for money. Advertising and analytics activities may constitute sharing or targeted advertising under applicable privacy laws. Where required by law, users may exercise applicable access, correction, deletion and opt-out rights by contacting us.',
     ] },
     { heading: 'Cookies', paragraphs: [
       'We use cookies to keep you signed in and to remember basic preferences. Google Analytics and Google AdSense set their own cookies. You can block or delete cookies in your browser; signing in requires them.',
     ] },
+    { heading: 'Account changes', paragraphs: [
+      `To request a change to your account email address, contact ${SUPPORT_EMAIL}. We may require verification of your identity and account ownership before making the change.`,
+    ] },
     { heading: 'Keeping and deleting your data', paragraphs: [
-      `You can ask us to delete your account at ${SUPPORT_EMAIL}. We keep billing records that we are required to keep for tax and accounting, and Stripe keeps its own payment records.`,
+      'We retain personal information only as reasonably necessary to provide our services, administer subscriptions, prevent fraud, resolve disputes and comply with legal obligations.',
+      `Users may request deletion of their accounts and associated personal information at ${SUPPORT_EMAIL}, subject to applicable legal retention requirements. We keep billing records that we are required to keep for tax and accounting, and Stripe keeps its own payment records.`,
+    ] },
+    { heading: 'Email communications', paragraphs: [
+      'Marketing emails include an unsubscribe mechanism. Essential account, security and billing communications may still be sent when necessary to administer your account.',
     ] },
     { heading: 'Age', paragraphs: ['DailyAI Betting is for adults 21 and over. We do not knowingly collect information from anyone under 21.'] },
     { heading: 'Contact', paragraphs: [`Privacy questions or requests: ${SUPPORT_EMAIL}.`] },
   ],
 };
+
+/** Privacy policy with the operator stated (owner Q1/Q2). */
+export function privacyPolicy(): Policy {
+  const op = legalOperator();
+  if (!op) return PRIVACY;
+  return { ...PRIVACY, sections: [{ heading: 'Who we are', paragraphs: [`${operatorSentence(op)} Contact: ${SUPPORT_EMAIL}.`] }, ...PRIVACY.sections] };
+}
 
 export const RESPONSIBLE: Policy = {
   slug: 'responsible-gambling',

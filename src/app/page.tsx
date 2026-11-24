@@ -94,7 +94,7 @@ export default async function HomePage() {
         <div className="relative pt-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary mb-5">
           <Brain className="h-4 w-4" />
-          <span className="font-mono uppercase tracking-[0.2em] text-xs">AI-Powered Picks</span>
+          <span className="font-mono uppercase tracking-[0.2em] text-xs">Expert Consensus Picks</span>
         </div>
         <h1 className="font-display uppercase text-5xl md:text-7xl font-extrabold tracking-tight leading-[0.95] mb-4">
           Daily AI Betting Consensus

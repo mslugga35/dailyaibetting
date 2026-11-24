@@ -15,6 +15,7 @@ export function PolicyPage({ policy }: { policy: Policy }) {
             <h2 className="text-xl font-semibold mb-3">{s.heading}</h2>
             <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
               {s.paragraphs.map((p, i) => <p key={i}><EmailSafeText text={p} /></p>)}
+              {s.links?.map((l) => <p key={l.href}><Link href={l.href} className="text-primary hover:underline">{l.label}</Link></p>)}
             </div>
           </section>
         ))}
