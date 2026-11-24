@@ -1,7 +1,7 @@
 // Cron Endpoint: Auto-Grade Picks
 // Triggered by Vercel Cron or external scheduler.
 // Grades pending consensus picks using ESPN scores.
-// Schedule: Daily at 6 AM UTC (see vercel.json)
+// Schedule: Hetzner systemd timer dailyai-grade-picks, 03:15 ET (ops/hetzner-cron)
 
 import { NextResponse } from 'next/server';
 import { cronAuthGuard } from '@/lib/api-helpers';
