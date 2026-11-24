@@ -7,7 +7,7 @@ Goal (owner): $0 additional recurring AI expense; no OpenRouter; no new paid ser
 | Function | Before | After | Cost |
 |---|---|---|---|
 | Blog recap (10:40 ET) | OpenRouter Haiku 4.5 | Data template (`src/lib/blog/recap-template.ts`), free job in the scheduler | $0 |
-| AI Picks (10:00 ET) | OpenRouter Sonnet 4.6 (402 since 11-17) | Claude API Sonnet 4.6, dedicated DailyAI key, included Max credit (branch `feat/anthropic-provider`, commit 78a3c12) | covered by the credit |
+| AI Picks (10:00 ET) | OpenRouter Sonnet 4.6 (402 since 11-17) | Claude API Sonnet 4.6, dedicated DailyAI key, included Max credit (DEPLOYED d274737; inactive until the key + ledger exist) | covered by the credit |
 | Daily AI Report (10:20 ET) | OpenRouter Sonnet 4.6 (402 since 11-17) | same as AI Picks | covered by the credit |
 | Grading (03:15 ET) | ESPN | unchanged | $0 |
 
@@ -26,7 +26,7 @@ method and no auto-reload, so requests stop when the credit is gone. No fallback
   has no pm2 entry). HiddenBag's site does not read `daily_ai_report`.
 
 ## Retired (legacy)
-- `src/lib/utils/openrouter.ts`, its tests, `scripts/run-ai-picks.mjs` (manual OpenRouter runner): removed in 78a3c12.
+- `src/lib/utils/openrouter.ts`, its tests, `scripts/run-ai-picks.mjs` (manual OpenRouter runner): removed (deployed d274737).
 - Still to retire after the switch is verified (owner-visible, no code effect today): `vercel.json` crons (no
   Vercel project), `n8n-workflows/daily-ai-blog.json` (OpenAI, n8n not running), `hiddenbag-v2/scripts/daily-report/generate.mjs`
   (orphaned OpenRouter writer), the stale Hetzner copy above, `OPENROUTER_API_KEY` + `OPENROUTER_MONTHLY_BUDGET_USD`
@@ -41,3 +41,15 @@ method and no auto-reload, so requests stop when the credit is gone. No fallback
   - 4607, 4748 Wyoming/Duquesne: home/away reversed vs ESPN; twins never matched.
   - 4908 Arizona/Colorado St: "Colorado St" vs "Colorado State" in the live path; the older-pending regrade window ends at yesterday-1.
 - No records were modified. Fix belongs in the HiddenBag writer (`scripts/lib/consensus-core.mjs` / `consensus-store.mjs`), owner approval needed (shared).
+
+## Deploys
+- c3914ed (blog recap template): prod checks 19/19 x2; runner reinstalled (blog-recap free job).
+- d274737 (Claude API client, OpenRouter code removed): prod checks 19/19 x2; runner reinstalled (timeouts 360/420 s,
+  new alert text); budget route answers 503 "AI_MONTHLY_BUDGET_USD is not configured" = fail closed until setup.
+
+## Owner setup to activate (then Claude verifies one real run of each job)
+1. claude.ai > Settings > Billing > API credits > Link organization (new Console org, e.g. "DailyAI"). No card, auto-reload off.
+2. Console > that org > API keys > create "dailyai-prod". Workspace spend limit if offered: $15/month.
+3. On Hetzner (owner or Claude on request; never paste the key in chat): add to `/root/apps/dailyaibetting/.env.local`
+   `ANTHROPIC_API_KEY=...`, `AI_MONTHLY_BUDGET_USD=15`, `AI_SPEND_LEDGER_PATH=/var/lib/dailyai/ai-spend.json`; create the
+   ledger (ops/hetzner-cron/README.md step 1); `pm2 restart dailyaibetting`.
