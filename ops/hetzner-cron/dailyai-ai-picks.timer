@@ -1,5 +1,5 @@
 [Unit]
-Description=DailyAI: generate today's AI picks (10:00 ET daily, PAID: OpenRouter Sonnet)
+Description=DailyAI: generate today's AI picks (10:00 ET daily, PAID: Claude API Sonnet, included credit)
 
 [Timer]
 OnCalendar=*-*-* 10:00:00 America/New_York

@@ -43,7 +43,10 @@ Values are never stored in git. Tick each box after verifying in the dashboard, 
 |---|---|---|
 | `GUEST_CHECKOUT_ENABLED` / `NEXT_PUBLIC_GUEST_CHECKOUT_ENABLED` | off | Set both to `true` only together. |
 | `RESEND_API_KEY`, `EMAIL_FROM` | — | Transactional email. |
-| `OPENROUTER_API_KEY` | — | AI picks / report generation. |
+| `ANTHROPIC_API_KEY` | — | AI picks / report generation (2026-11-24, replaces OpenRouter). Dedicated DailyAI key from a Console org funded only by the Max plan's included API credit: no payment method, auto-reload off. Unset = no paid calls. |
+| `AI_MONTHLY_BUDGET_USD` | — (unset = no paid calls) | App-side cap, 0 < cap <= 100. Plan: 15. |
+| `AI_SPEND_LEDGER_PATH` | — (unset = no paid calls) | e.g. `/var/lib/dailyai/ai-spend.json`, outside the app dir, writable by the pm2 user (root), single app instance. Create once: `{"month":"YYYY-MM","spentUsd":0,"calls":0}`. A missing file refuses paid calls. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_MONTHLY_BUDGET_USD` | — | Retired 2026-11-24: no code reads them. Remove from `.env.local` after the Claude API switch is verified. |
 | `NEXT_PUBLIC_GA_ID` | — | Analytics. |
 | `AI_PICKS_DISCORD_WEBHOOK`, `DISCORD_CONSENSUS_WEBHOOK_URL`, `N8N_*_WEBHOOK`, `GOOGLE_SHEET_WEBHOOK`, `BLOG_API_KEY` | — | Integrations; unchanged by this release. |
 | `LOG_LEVEL` | info | |

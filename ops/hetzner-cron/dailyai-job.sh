@@ -10,7 +10,7 @@
 #   - once a day: a paid job that already succeeded for today's ET date is skipped
 #                 (unless --force). The app is idempotent per ET day as well.
 #   - paid gate:  paid jobs do nothing unless /etc/dailyai-cron/paid-jobs.enabled exists
-#                 AND the app confirms OpenRouter headroom (/api/cron/openrouter-budget).
+#                 AND the app confirms AI budget headroom (/api/cron/openrouter-budget: historical path, Claude API ledger).
 #                 Anything unconfirmable = no paid call (fail closed).
 #   - failures:   logged to /var/log/dailyai-cron/<job>.log + the journal, alerted to the
 #                 ops Telegram chat, and the unit exits non-zero (systemctl --failed).
@@ -30,8 +30,8 @@ TELEGRAM_API="${DAILYAI_TELEGRAM_API:-https://api.telegram.org}"
 
 case "$JOB" in
   grade-picks)  ROUTE=/api/cron/grade-picks;         PAID=0; TIMEOUT=170 ;;
-  ai-picks)     ROUTE=/api/cron/ai-picks;            PAID=1; TIMEOUT=290 ;;
-  daily-report) ROUTE=/api/cron/daily-ai-picks;      PAID=1; TIMEOUT=290 ;;
+  ai-picks)     ROUTE=/api/cron/ai-picks;            PAID=1; TIMEOUT=360 ;;  # model <= 240 s
+  daily-report) ROUTE=/api/cron/daily-ai-picks;      PAID=1; TIMEOUT=420 ;;  # data ~60-120 s + model <= 240 s
   blog-recap)   ROUTE=/api/cron/generate-blog-recap; PAID=0; TIMEOUT=170 ;;  # data template, no model (2026-11-24)
   *) echo "usage: $0 <grade-picks|ai-picks|daily-report|blog-recap> [--force]" >&2; exit 64 ;;
 esac
@@ -41,7 +41,7 @@ TIMEOUT="${DAILYAI_TIMEOUT:-$TIMEOUT}"
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$LOCK_DIR"
 LOG="$LOG_DIR/$JOB.log"
 TODAY_ET="$(TZ=America/New_York date +%F)"
-MONTH_UTC="$(date -u +%Y-%m)"   # OpenRouter's usage_monthly is a UTC month
+MONTH_UTC="$(date -u +%Y-%m)"   # the AI spend ledger counts UTC months
 
 log() {
   local line
@@ -128,7 +128,7 @@ if [ "$PAID" = 1 ]; then
     if python3 -c 'import sys; sys.exit(0 if float(sys.argv[1]) >= float(sys.argv[2]) else 1)' "$PCT" "$t" 2>/dev/null; then
       if [ ! -f "$STATE_DIR/budget-alert-$MONTH_UTC-$t" ]; then
         touch "$STATE_DIR/budget-alert-$MONTH_UTC-$t"
-        alert "OpenRouter spend is ${PCT}% of the \$${BUDGET} monthly cap (\$${USED} used, UTC month $MONTH_UTC)"
+        alert "AI (Claude API) spend is ${PCT}% of the \$${BUDGET} monthly cap (\$${USED} used, UTC month $MONTH_UTC)"
       fi
       break
     fi

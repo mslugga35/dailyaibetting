@@ -1,7 +1,7 @@
 {
   "src/lib/consensus/consensus-builder.test.ts": 11,
   "src/lib/consensus/team-mappings.test.ts": 36,
-  "tests/billing/ai-model-budget.test.mjs": 9,
+  "tests/billing/ai-model-budget.test.mjs": 11,
   "tests/billing/billing-hardening.test.mjs": 41,
   "tests/billing/billing-round2.test.mjs": 19,
   "tests/billing/billing-round3.test.mjs": 12,

@@ -6,7 +6,7 @@
  */
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setup, harness } from '../harness/helpers.mjs';
@@ -28,6 +28,8 @@ function env(over = {}) {
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'dai-ai-ledger-'));
   ledger = join(dir, 'sub', 'ai-spend.json');
+  mkdirSync(join(dir, 'sub'));
+  writeFileSync(ledger, JSON.stringify({ month: new Date().toISOString().slice(0, 7), spentUsd: 0, calls: 0 })); // setup step
   reply = () => Response.json({
     id: 'msg_1', type: 'message', role: 'assistant', model: 'claude-sonnet-4-6', stop_reason: 'end_turn',
     content: [{ type: 'text', text: 'report text' }],
@@ -71,13 +73,14 @@ test('fail closed: unset key, unset/invalid cap, unset ledger path, corrupt ledg
     assert.equal(calls().length, 0, JSON.stringify(over));
   }
   env();
-  await call(); // creates the ledger
+  rmSync(ledger);
+  await refused(call(), /ledger missing/); // a deleted ledger never reads as $0 spent
   writeFileSync(ledger, '{not json');
   await refused(call(), /corrupt/);
   writeFileSync(ledger, JSON.stringify({ month, spentUsd: -5 }));
   await refused(call(), /corrupt/);
   await refused(ai.callModel('s', 'u', { model: 'claude-unknown-9' }), /No price/);
-  assert.equal(calls().length, 1);
+  assert.equal(calls().length, 0);
 });
 
 test('a new UTC month starts from zero', async () => {
@@ -88,19 +91,32 @@ test('a new UTC month starts from zero', async () => {
   assert.ok(readL().spentUsd < 1);
 });
 
-test('credit exhausted (included credit used up) is a budget stop, with the worst case kept', async () => {
-  reply = () => Response.json({ type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low to access the Anthropic API.' } }, { status: 400 });
-  await refused(call(), /credit exhausted/i);
-  assert.equal(calls().length, 1, 'no retry, no other provider');
-  assert.ok(readL().spentUsd >= ai.worstCaseCostUsd('claude-sonnet-4-6', 'system'.length + 'user prompt'.length, 6000) - 1e-9);
+test('credit exhausted / usage limit is a budget stop; a rejected request is not charged', async () => {
+  for (const [status, body] of [
+    [400, { type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low to access the Anthropic API.' } }],
+    [400, { type: 'error', error: { type: 'invalid_request_error', message: 'You have reached your specified API usage limits.' } }],
+    [402, { type: 'error', error: { type: 'billing_error', message: 'Billing problem' } }],
+  ]) {
+    reply = () => Response.json(body, { status });
+    await refused(call(), /credit exhausted/i);
+  }
+  assert.equal(calls().length, 3, 'one request each: no retry, no other provider');
+  assert.equal(readL().spentUsd, 0);
 });
 
-test('server error: not a budget error, worst case stays reserved, never another provider', async () => {
+test('server error: one request (no SDK retry), not a budget error, nothing charged, never another provider', async () => {
   reply = () => Response.json({ type: 'error', error: { type: 'api_error', message: 'boom' } }, { status: 500 });
   await assert.rejects(call(), (e) => e.name !== 'AiBudgetError');
   assert.equal(harness().fetches.filter((f) => !String(f.url).startsWith(MSG_URL)).length, 0);
-  assert.equal(calls().length, 2, 'the SDK retries a 5xx once (maxRetries 1), on Anthropic only');
-  assert.ok(readL().spentUsd > 0);
+  assert.equal(calls().length, 1);
+  assert.equal(readL().spentUsd, 0);
+});
+
+test('connection failure (billing unknown): the worst case stays counted', async () => {
+  reply = () => { throw new TypeError('socket hang up'); };
+  await assert.rejects(call());
+  assert.equal(calls().length, 1);
+  assert.ok(readL().spentUsd >= ai.worstCaseCostUsd('claude-sonnet-4-6', 'system'.length + 'user prompt'.length, 6000) - 1e-9);
 });
 
 test('refusal stop reason is an error, not content', async () => {
@@ -128,9 +144,22 @@ test('budget route: cron-only numbers, 503 when unconfirmable, never the key', a
   assert.equal(j.allowed, true);
   assert.equal(j.budgetUsd, 15);
   assert.doesNotMatch(JSON.stringify(j), /sk-ant/);
+  const before = readFileSync(ledger, 'utf8');
   env({ AI_MONTHLY_BUDGET_USD: undefined });
   const bad = await budgetRoute.GET(req('/api/cron/openrouter-budget', cron()));
   assert.equal(bad.status, 503);
   assert.equal((await bad.json()).allowed, false);
-  assert.equal(existsSync(ledger), false, 'a budget check never creates or writes the ledger');
+  assert.equal(readFileSync(ledger, 'utf8'), before, 'a budget check never writes the ledger');
+  env();
+  rmSync(ledger);
+  assert.equal((await budgetRoute.GET(req('/api/cron/openrouter-budget', cron()))).status, 503, 'missing ledger: not allowed');
+});
+
+test('timeout contract: one request, no retries, model timeout below the scheduler budget', async () => {
+  const src = readFileSync(new URL('../../src/lib/utils/ai-model.ts', import.meta.url), 'utf8');
+  assert.match(src, /new Anthropic\(\{ apiKey, timeout: MODEL_TIMEOUT_MS, maxRetries: 0 \}\)/);
+  const job = readFileSync(new URL('../../ops/hetzner-cron/dailyai-job.sh', import.meta.url), 'utf8');
+  const t = (j) => Number(job.match(new RegExp(`${j}\\)\\s+ROUTE=\\S+\\s+PAID=1; TIMEOUT=(\\d+)`))[1]);
+  assert.ok(ai.MODEL_TIMEOUT_MS / 1000 + 120 <= t('daily-report'), 'report: data + model fits the job timeout');
+  assert.ok(ai.MODEL_TIMEOUT_MS / 1000 + 60 <= t('ai-picks'), 'picks: model fits the job timeout');
 });

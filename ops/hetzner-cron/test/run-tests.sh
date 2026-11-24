@@ -91,7 +91,7 @@ check "... with no extra request"                 [ "$(count /api/cron/ai-picks)
 check "--force runs it again"                     [ "$(run ai-picks --force)" = 0 ]
 check "... one more request"                      [ "$(count /api/cron/ai-picks)" = 2 ]
 
-reset '{"/api/cron/openrouter-budget": {"status":503,"body":{"success":false,"allowed":false,"error":"OPENROUTER_MONTHLY_BUDGET_USD is not configured"}}, "/api/cron/daily-ai-picks": {"status":200,"body":{"success":true}}}'
+reset '{"/api/cron/openrouter-budget": {"status":503,"body":{"success":false,"allowed":false,"error":"AI_MONTHLY_BUDGET_USD is not configured"}}, "/api/cron/daily-ai-picks": {"status":200,"body":{"success":true}}}'
 touch "$T/paid.enabled"
 check "budget unconfirmable: exits 1"             [ "$(run daily-report)" = 1 ]
 check "... the paid route is never called"        [ "$(count /api/cron/daily-ai-picks)" = 0 ]
@@ -127,7 +127,7 @@ echo "== blog-recap is a free job (data template, no model)"
 reset '{"/api/cron/generate-blog-recap": {"status":200,"body":{"success":true,"slug":"x"}}}'
 check "blog-recap runs without the paid flag"      [ "$(run blog-recap)" = 0 ]
 check "... route called once"                      [ "$(count /api/cron/generate-blog-recap)" = 1 ]
-check "... no OpenRouter budget check"             [ "$(count /api/cron/openrouter-budget)" = 0 ]
+check "... no AI budget check"                     [ "$(count /api/cron/openrouter-budget)" = 0 ]
 
 echo "== config errors"
 reset '{"/api/cron/grade-picks": {"status":200,"body":{"success":true}}}'

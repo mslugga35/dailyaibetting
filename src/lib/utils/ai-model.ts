@@ -7,8 +7,11 @@
  * 1. Monthly cap in the app (AI_MONTHLY_BUDGET_USD, 0 < cap <= 100). Before every call the worst-case
  *    cost of that call is reserved against this UTC month's ledger; the call is refused if it could
  *    exceed the cap. After the call the reservation is replaced by the real cost from `usage`.
- *    The ledger is a JSON file (AI_SPEND_LEDGER_PATH) so restarts and deploys keep the month's spend.
- *    Unset cap, unset ledger path, unreadable ledger or unknown model price = no call.
+ *    The ledger is a JSON file (AI_SPEND_LEDGER_PATH, outside the app directory) so restarts and
+ *    deploys keep the month's spend. It must be created once at setup: a MISSING ledger refuses the
+ *    call (a deleted file must never read as "$0 spent"). Unset cap, unset ledger path, missing,
+ *    unreadable or corrupt ledger, or unknown model price = no call.
+ *    One request per call (no SDK retries), so one reservation always covers what can be billed.
  * 2. The Console organization itself: with no payment method and no auto-reload, Anthropic stops
  *    serving requests when the included credit runs out. That answer is treated as a budget stop.
  * 3. No fallback to any other provider, ever. A refused or failed call simply produces no content.
@@ -24,6 +27,9 @@ const PRICES: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3e-6, output: 15e-6 },
   'claude-haiku-4-5': { input: 1e-6, output: 5e-6 },
 };
+
+/** One request, no retries; must stay below the scheduler's per-job timeout minus data collection. */
+export const MODEL_TIMEOUT_MS = 240_000;
 
 /** Sanity ceiling on the configured cap (a typo such as 2000 must not lift it). */
 const MAX_CONFIGURED_BUDGET_USD = 100;
@@ -62,15 +68,17 @@ function ledgerPath(): string {
   return p;
 }
 
-/** Reads this month's ledger. A missing file is a fresh month; an unreadable one refuses the call. */
+/** Reads this month's ledger. Missing, unreadable or corrupt refuses the call (fail closed). */
 function readLedger(now = new Date()): Ledger {
   const month = monthUtc(now);
   let raw: string;
   try {
     raw = readFileSync(ledgerPath(), 'utf8');
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { month, spentUsd: 0, calls: 0 };
     if (e instanceof AiBudgetError) throw e;
+    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new AiBudgetError('AI spend ledger missing (create it once at setup): refusing paid call');
+    }
     throw new AiBudgetError('AI spend ledger unreadable: refusing paid call');
   }
   let j: Partial<Ledger>;
@@ -120,11 +128,25 @@ function serialized<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-/** Anthropic's answer when the organization has no credit left (included credit used up). */
+/** Anthropic's answer when the organization has no credit left or hit a usage/spend limit. */
 function isCreditExhausted(err: unknown): boolean {
   if (!(err instanceof Anthropic.APIError)) return false;
+  const type = String((err as { type?: string | null }).type ?? '');
+  if (type === 'billing_error' || err.status === 402) return true;
   const msg = String((err as { message?: string }).message ?? '').toLowerCase();
-  return (err.status === 400 || err.status === 402 || err.status === 403) && /credit|billing|balance/.test(msg);
+  return (err.status === 400 || err.status === 403 || err.status === 429)
+    && /credit|billing|balance|usage limit|spend limit|api usage limits/.test(msg);
+}
+
+/**
+ * True when Anthropic answered with an HTTP error status: the request was rejected, so nothing was
+ * generated or billed. Timeouts and connection errors have no status: billing is unknown, so the
+ * worst case stays counted.
+ */
+function rejectedWithStatus(err: unknown): boolean {
+  return err instanceof Anthropic.APIError
+    && !(err instanceof Anthropic.APIConnectionError)
+    && typeof err.status === 'number';
 }
 
 let client: Anthropic | null = null;
@@ -155,7 +177,10 @@ export async function callModel(system: string, user: string, opts: CallOptions 
     // Reserve first: if the process dies mid-call, the worst case stays counted.
     writeLedger({ ...before, spentUsd: before.spentUsd + reserve, calls: before.calls + 1 });
 
-    const c = client ?? (client = new Anthropic({ apiKey, timeout: 240_000, maxRetries: 1 }));
+    // maxRetries 0: a retry could bill a second request the reservation does not cover. The timers
+    // run once a day and the next run is the retry. 240 s for the model; the scheduler allows the
+    // daily report 420 s in total (data collection ~60-120 s + this call).
+    const c = client ?? (client = new Anthropic({ apiKey, timeout: MODEL_TIMEOUT_MS, maxRetries: 0 }));
     let charged = reserve;
     try {
       // Non-streaming: max_tokens here is at most ~8k, well inside the request timeout.
@@ -169,14 +194,20 @@ export async function callModel(system: string, user: string, opts: CallOptions 
       if (msg.stop_reason === 'refusal') throw new Error('Model declined the request');
       return msg.content.map((b) => (b.type === 'text' ? b.text : '')).join('');
     } catch (err) {
+      if (rejectedWithStatus(err)) charged = 0;
       if (isCreditExhausted(err)) {
         throw new AiBudgetError('Included API credit exhausted for this billing cycle: paid AI calls stop until it refreshes');
       }
       throw err;
     } finally {
       // Replace the reservation by the real cost (or keep the worst case when it is unknown).
-      const now = readLedger();
-      writeLedger({ ...now, spentUsd: Math.max(0, now.spentUsd - reserve + charged) });
+      // A ledger failure here must not hide the call's own result; the reservation then stays counted.
+      try {
+        const now = readLedger();
+        writeLedger({ ...now, spentUsd: Math.max(0, now.spentUsd - reserve + charged) });
+      } catch (e) {
+        console.error('[ai-model] ledger settle failed; worst case stays counted:', e instanceof Error ? e.message : 'error');
+      }
     }
   });
 }
