@@ -1,4 +1,4 @@
-# DAI-18: support@dailyaibetting.com (prepared 2026-11-22; destination APPROVED 2026-11-23; NOT applied yet)
+# DAI-18: support@ and advertise@dailyaibetting.com → owner Gmail (2026-11-24: DNS done, routing rules NOT active)
 
 ## Current DNS (Cloudflare zone, read 2026-11-22, unchanged)
 | Type | Name | Value | Used by |
@@ -51,3 +51,23 @@ No conflict: Resend lives on `send.` and its DKIM selector, which are left as th
 - Settings → Accounts → "When replying to a message: **Reply from the same address the message was sent to**".
 - Then repeat step 8: the reply must show `From: support@dailyaibetting.com` and no Gmail address (the tool prints EXPOSED or OK).
 The site's own sender is already on `dailyaibetting.com` in Resend, so this needs no DNS change.
+
+## Status 2026-11-24 (verified, not assumed)
+| Check | Result |
+|---|---|
+| Apex MX = route1/2/3.mx.cloudflare.net | PASS |
+| Apex SPF `v=spf1 include:_spf.mx.cloudflare.net ~all` | PASS |
+| Cloudflare DKIM `cf2024-1._domainkey` | PASS |
+| Resend intact: `resend._domainkey`, `send.` MX + SPF; send-only key (read calls return `restricted_api_key`) | PASS |
+| DMARC `_dmarc.dailyaibetting.com` | **MISSING** |
+| Inbound: SMTP RCPT to route1.mx.cloudflare.net for support@ and advertise@ | **FAIL: `550 5.1.1 Address does not exist`** (same answer as a made-up address = no active rule) |
+| Inbound: test emails sent 15:43Z via Resend to support@ and advertise@ | **not delivered** (no Gmail match, spam/trash included) |
+| No Cloudflare verification email in Gmail in the last 7 days | destination may never have been added/verified |
+| Replies as support@ | **owner setup** (Gmail "Send mail as" via Resend SMTP, below) |
+
+### Owner steps (about 5 minutes)
+1. dash.cloudflare.com → dailyaibetting.com → **Email → Email Routing → Destination addresses**: mpm.morales@gmail.com must say **Verified**. If not: Add / Resend verification → open the Cloudflare email in Gmail → **Verify email address**.
+2. **Routing rules → Custom addresses → Create address**: `support` → *Send to an email* → mpm.morales@gmail.com → Save. Repeat for `advertise`. Both rules must show **Active**. Catch-all stays disabled.
+3. **DNS → Records → Add record**: Type `TXT`, Name `_dmarc`, Content `v=DMARC1; p=none; rua=mailto:support@dailyaibetting.com` → Save. (`p=none` only monitors; nothing is rejected.)
+4. Replies as support@ (optional for launch, recommended): resend.com → API Keys → Create → permission *Sending access*, domain *dailyaibetting.com*. Gmail → Settings → Accounts and Import → **Send mail as → Add another email address**: name `DailyAI Betting Support`, email `support@dailyaibetting.com`, untick *Treat as an alias* → SMTP server `smtp.resend.com`, port `465`, username `resend`, password = that key, SSL → Gmail sends a confirmation code to support@ (arrives in Gmail once step 2 works) → enter it. Reply from support@ by choosing it in the From field.
+5. Tell Claude "email done": Claude re-runs the RCPT probe, sends a test to each address and confirms arrival + headers in Gmail, then marks DAI-18 verified.
