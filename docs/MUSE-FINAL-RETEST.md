@@ -1,34 +1,43 @@
-# Muse final regression: DailyAI production, build 413a3b5 (= 2265871 billing release + one Harbor blog post)
+# Muse final regression: DailyAI production (launch build, 2026-11-24)
 
-Short and focused: only what changed in this release. Read-only: **no payments, no card entry, no subscription changes, no "Run Auto-Grader".** Matt gives you the passwords directly.
+Run this ONCE, after Matt says the legal pages are published (that deploy is the launch build).
+Read-only: **no payments, no card entry, no subscription changes, no "Run Auto-Grader".** Matt gives you the passwords directly.
 Accounts: FREE `+daifree` · PRO `+daipaid` · ADMIN `+daiadmin` (same Gmail as before).
 
-**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json must show `413a3b5…` (or a later commit whose only change since 2265871 is a Harbor blog post; tell us the hash). If it shows anything else, stop and report.
+**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json shows the hash Matt sends you with this checklist. If it shows anything else, stop and report.
 
-## 1. Checkout entry (signed-in, verified email only)
-- [ ] Signed out: /pricing → Founding button. Expected: you're asked to sign in; no Stripe page opens.
-- [ ] Signed in as FREE: /pricing → Founding → the Stripe Checkout page opens. Expected: the name at the top reads **"DailyAI Betting"**. (Known and accepted for launch, DAI-20: the browser **tab title** still reads "Matthew Morales"; note it, don't fail it.) $0.00 due today, 7-day trial, then $9.99/month. **Close the tab. Do not enter a card.**
-- [ ] Back on the site as FREE, open /pricing again and start Checkout a second time. Expected: a new Checkout page opens normally (the first one stops working). Close it. Each opened Checkout holds one founding seat until that Checkout expires (31 minutes, released by Stripe's expiry event; at most 90 minutes if that event is late). That is expected and releases itself, so open Checkout only the two times listed.
-- [ ] Signed in as PRO: /pricing. Expected: you're told you already have Pro / sent to Account to manage it; no second Checkout.
+## 1. Legal pages (new in this build)
+- [ ] /terms, /privacy, /refund-policy, /responsible-gambling all load (200) and show "Last updated November 24, 2026" (or the date Matt gives).
+- [ ] /terms "Who we are": operated by **Matthew Morales, an individual doing business as DailyAI Betting**; "Governing law": **State of Florida**.
+- [ ] /terms has a **Responsible gambling** section with a working link to /responsible-gambling.
+- [ ] /privacy starts with "Who we are" and the support address; it mentions Google Ad Settings and has an "Account changes" section.
+- [ ] Footer on any page links all four policies.
+- [ ] Nowhere does the text say a second trial is "cancelled right away without a charge", or that the record "loses slightly at -110".
 
-## 2. Account (PRO, look only)
-- [ ] /account as PRO. The PRO tester is complimentary Pro (no Stripe subscription). Expected: the page shows a Pro account with no renewal or charge date and **no** Manage Subscription button. The real paid-member portal is Matt's own live test, not yours.
+## 2. Pricing and checkout entry (signed-in, verified email only)
+- [ ] /pricing: Founding **$9.99/month** for the first 100 paying members, regular **$19.99/month**, 7-day trial for first-time customers, seats-left counter. No $20 or $24.99 anywhere.
+- [ ] Signed out: /pricing → Founding button → asked to sign in; no Stripe page opens.
+- [ ] Signed in as FREE: Founding → Stripe Checkout opens; the name at the top reads **"DailyAI Betting"** (the tab title still reads "Matthew Morales": known, accepted DAI-20, note it, don't fail it). $0.00 due today, 7-day trial, then $9.99/month. **Close the tab. Do not enter a card.** Open Checkout only once.
+- [ ] Signed in as PRO: /pricing tells you that you already have Pro / sends you to Account; no second Checkout.
 
-## 3. Pricing page accuracy
-- [ ] /pricing still shows the Founding offer at $9.99/month, the regular price, the 7-day trial and the seats-left counter. No "regular price" checkout button was added.
+## 3. Account (PRO, look only)
+- [ ] /account as PRO: complimentary Pro (no Stripe subscription), no renewal date and **no** Manage Subscription button. The paid-member portal is Matt's own live test.
 
-## 4. Regression spot checks (unchanged areas)
+## 4. Feature accuracy (AI generation is paused at launch)
+- [ ] /daily-ai-picks says the daily AI report is **temporarily paused** (with the last published date). It must not show an old report as today's and must not promise a time it will appear.
+- [ ] The home page badge reads "Expert Consensus Picks" (not "AI-Powered Picks"); /daily-bets header reads "Daily Consensus Analysis".
+- [ ] /blog: today's recap "Consensus Picks Today (Nov 24, 2026)…" loads; its note at the bottom says it is generated automatically from tracked picks (no "written with AI").
+- [ ] /advertise: no newsletter sponsorship offered.
+
+## 5. Regression spot checks (unchanged areas)
 - [ ] Sign-in link for FREE works (one email, its own conversation, the sent time shown).
-- [ ] /, /results, /stats load; the disclosure box wording is unchanged from your 11-20 run.
-- [ ] /props loads.
+- [ ] /, /results, /stats load; the disclosure box wording is unchanged from your 11-20 run; /props loads.
+- [ ] Footer "Contact" / support address reads support@dailyaibetting.com.
 
 ## Not in scope
-- Mobile menu (Matt's real-phone check), live paid-portal test (Matt), grader (Nov 24), legal pages (unpublished until Matt approves), support email (pending DNS).
+Mobile menu (Matt's real-phone check), live paid-portal test (Matt), grader (verified 11-24), welcome-email delivery (deferred), support inbox delivery (Matt/Claude verify).
 
 Report each box PASS / FAIL with URL + screenshot for any FAIL.
 
-## 5. Evidence request: the $24.99 note from your 11-22 run (DAI-21)
-Your 11-22 report said $19.99/month in the trial and price-lock text, but one step note said **$24.99/month**. We found no $24.99 anywhere: not in the code, the server, 13 live pages, or Stripe prices. Please send:
-- [ ] The exact URL (or the Stripe Checkout step) where you saw $24.99, and a screenshot if you have one.
-- [ ] If you can't find it again, say so: we'll close it as a note typo.
-- [ ] While on /pricing, /pro and the Checkout page: confirm every regular-price mention reads **$19.99/month**.
+## 6. Evidence request: the $24.99 note from your 11-22 run (DAI-21)
+We found no $24.99 anywhere (code, server, 13 live pages, Stripe prices). Send the exact URL/step and a screenshot if you have one, or say you can't find it again (we'll close it as a note typo).
