@@ -23,6 +23,9 @@ export interface RecapRowInput {
   tags: string[];
   isoDate: string;
   nowIso: string;
+  /** SEO title; defaults to a generic one for the date */
+  seoTitle?: string;
+  readTime?: string;
 }
 
 export function buildRecapRow(i: RecapRowInput) {
@@ -33,10 +36,13 @@ export function buildRecapRow(i: RecapRowInput) {
     excerpt: i.excerpt,
     category: 'daily-picks',
     tags: i.tags,
-    seo_title: `AI Consensus Sports Picks Today (${i.isoDate}) | DailyAI Betting`,
+    seo_title: i.seoTitle ?? `Consensus Picks Today (${i.isoDate}) | DailyAI Betting`,
     seo_description: i.excerpt,
-    ai_model: 'claude-haiku-4-5',
-    ai_generated: true,
+    // Built from data by a template (recap-template.ts): no model wrote it, so it is not labelled AI.
+    ai_model: null,
+    ai_generated: false,
+    ai_prompt: null,
+    read_time: i.readTime ?? null,
     author: 'DailyAI Betting',
     site: 'dailyaibetting',
     status: 'published',

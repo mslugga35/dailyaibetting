@@ -1,20 +1,21 @@
 /**
  * Daily Blog Recap Generator
  *
- * Generates an SEO-optimized blog post from today's consensus fire picks.
- * Runs once daily (Hetzner systemd timer, see ops/hetzner-cron).
- *
- * Post targets keywords: "AI sports picks today [date]", "consensus picks today",
- * "best bets today", sport-specific terms based on what's in the picks.
+ * Builds the daily recap post from data only (src/lib/blog/recap-template.ts): today's free fire
+ * picks, yesterday's graded fire picks and the verified record. No language model, so $0 per post.
+ * Runs once daily (Hetzner systemd timer, see ops/hetzner-cron). One post per ET date: the slug is
+ * checked first and is unique in blog_posts, so a second run or a race never creates a duplicate.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthGuard, INTERNAL_SSR_HEADER, internalSsrToken } from '@/lib/api-helpers';
 import { internalBaseUrl } from '@/lib/data/server-fetch';
-import { callOpenRouter } from '@/lib/utils/openrouter';
 import { buildRecapRow } from '@/lib/blog/recap-row';
-import { getTodayET } from '@/lib/utils/date';
-import { createClient } from '@supabase/supabase-js';
+import { buildRecapArticle, type RecapFirePick, type RecapGradedPick } from '@/lib/blog/recap-template';
+import { getVerifiedPerformance } from '@/lib/data/performance';
+import { recordTable, cleanRecordRows } from '@/lib/data/record-source';
+import { getTodayET, getYesterdayET } from '@/lib/utils/date';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -26,17 +27,8 @@ function getSupabaseAdmin() {
   );
 }
 
-interface ConsensusPick {
-  team: string;
-  pick_type: string;
-  line: string;
-  sport: string;
-  capper_count: number;
-  cappers: string[];
-  is_fire: boolean;
-}
-
-async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
+/** Today's fire picks as the FREE tier sees them, plus the board's total fire count (aggregate only). */
+async function getTodaysFirePicks(): Promise<{ picks: RecapFirePick[]; total: number } | null> {
   try {
     // Loopback + rate-limit marker only. Deliberately NO cron bearer: this becomes a
     // public blog post, so it must only ever see the free tier.
@@ -45,53 +37,32 @@ async function getTodaysFirePicks(): Promise<ConsensusPick[]> {
       cache: 'no-store',
       headers: ssr ? { [INTERNAL_SSR_HEADER]: ssr } : {},
     });
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     const data = await res.json();
     // /api/consensus returns camelCase picks; isFire already applies the opposite-sides rule.
-    type ApiPick = { bet: string; betType: string; line?: string; sport: string; capperCount: number; cappers: string[]; isFire: boolean };
-    return (data.consensus || [])
+    type ApiPick = { bet: string; matchup?: string; sport: string; capperCount: number; isFire: boolean };
+    const picks = ((data.consensus || []) as ApiPick[])
       .filter((p: ApiPick) => p.isFire === true)
-      .map((p: ApiPick): ConsensusPick => ({
-        team: p.line && p.bet.endsWith(p.line) ? p.bet.slice(0, -p.line.length).trim() : p.bet,
-        pick_type: p.betType, line: p.line ?? '', sport: p.sport, capper_count: p.capperCount, cappers: p.cappers || [], is_fire: true,
-      }));
+      .map((p: ApiPick): RecapFirePick => ({ bet: p.bet, sport: p.sport, matchup: p.matchup ?? null, capperCount: p.capperCount }));
+    const total = typeof data.firePickCount === 'number' ? data.firePickCount : picks.length;
+    return { picks, total };
   } catch {
-    return [];
+    return null;
   }
 }
 
-async function generateRecapPost(picks: ConsensusPick[], dateStr: string): Promise<string> {
-
-  const sports = [...new Set(picks.map((p) => p.sport))].join(', ');
-  const fireCount = picks.filter((p) => p.is_fire).length;
-  const topPicks = picks.slice(0, 8);
-
-  const picksText = topPicks
-    .map(
-      (p) =>
-        `- ${p.team} ${p.pick_type}${p.line ? ' ' + p.line : ''} (${p.sport}, ${p.capper_count} cappers: ${p.cappers.slice(0, 3).join(', ')}${p.cappers.length > 3 ? '...' : ''})`,
-    )
-    .join('\n');
-
-  const systemPrompt = `You are an expert sports betting analyst writing SEO-optimized blog content for DailyAI Betting (dailyaibetting.com). Write in an engaging, informative style. Always include a responsible gambling disclaimer. Target keywords: "AI sports picks today", "consensus picks today", "best bets today", "fire picks", "expert consensus picks".`;
-
-  const userPrompt = `Write a detailed HTML blog post about today's (${dateStr}) top consensus sports betting picks. We have ${picks.length} total consensus picks across ${sports}, with ${fireCount} fire picks (3+ experts agree).
-
-Top picks:
-${picksText}
-
-Requirements:
-- Title (H1): Include the date and target "AI sports picks today" or "consensus picks today"
-- 400-600 words total
-- Include sections: intro paragraph, fire picks highlight, sport breakdown, betting tips
-- Use <h2> for section headers, <p> for paragraphs, <ul><li> for pick lists
-- Bold fire picks (🔥) using <strong>
-- End with a responsible gambling disclaimer in a <p class="disclaimer"> tag
-- Include natural mentions of "expert consensus", "AI-powered analysis", "free sports picks"
-- Do NOT include <html>, <head>, or <body> tags — just the article content starting with <h1>`;
-
-  // Budget-guarded (fails closed when the monthly cap is not configured or reached).
-  return callOpenRouter(systemPrompt, userPrompt, { model: 'anthropic/claude-haiku-4-5', maxTokens: 1500 });
+/** Yesterday's graded fire picks from the public record (same rows the /results page lists). */
+async function getGradedFirePicks(db: SupabaseClient, isoDate: string): Promise<RecapGradedPick[]> {
+  const { data, error } = await db
+    .from(recordTable())
+    .select('sport, bet, capper_count, result, final_score')
+    .eq('is_fire', true)
+    .eq('pick_date', isoDate)
+    .in('result', ['WIN', 'LOSS', 'PUSH'])
+    .order('id', { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return cleanRecordRows((data ?? []) as RecapGradedPick[]);
 }
 
 export async function GET(req: NextRequest) {
@@ -99,16 +70,9 @@ export async function GET(req: NextRequest) {
   const denied = cronAuthGuard(req);
   if (denied) return denied;
 
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'America/New_York',
-  });
   // ET calendar date (the UTC date is already tomorrow after 7/8 PM ET)
   const isoDate = getTodayET();
+  const yesterdayIso = getYesterdayET();
   const slug = `ai-consensus-picks-today-${isoDate}`;
 
   const supabase = getSupabaseAdmin();
@@ -120,7 +84,7 @@ export async function GET(req: NextRequest) {
     .eq('slug', slug)
     .eq('site', 'dailyaibetting')
     .maybeSingle();
-  // Unknown = do not pay for a possible duplicate post.
+  // Unknown = do not risk a duplicate post.
   if (existingError) {
     return NextResponse.json({ success: false, error: 'Could not check for an existing post' }, { status: 500 });
   }
@@ -130,38 +94,53 @@ export async function GET(req: NextRequest) {
   }
 
   // Get today's fire picks
-  const picks = await getTodaysFirePicks();
-
-  if (picks.length === 0) {
+  const board = await getTodaysFirePicks();
+  if (!board) {
+    return NextResponse.json({ success: false, error: 'Consensus unavailable' }, { status: 503 });
+  }
+  if (board.picks.length === 0) {
     return NextResponse.json({ success: false, error: 'No consensus picks available yet' }, { status: 404 });
   }
 
-  // Generate the post
-  const content = await generateRecapPost(picks, dateStr);
-
-  if (!content) {
-    return NextResponse.json({ success: false, error: 'Failed to generate content' }, { status: 500 });
+  // Every number in the post comes from graded rows. If they cannot be read, publish nothing
+  // rather than a post with missing or guessed figures.
+  let yesterday: RecapGradedPick[];
+  let perf: Awaited<ReturnType<typeof getVerifiedPerformance>>;
+  try {
+    [yesterday, perf] = await Promise.all([getGradedFirePicks(supabase, yesterdayIso), getVerifiedPerformance(supabase)]);
+  } catch (e) {
+    console.error('Blog recap: record unavailable:', (e as { message?: string })?.message ?? String(e));
+    return NextResponse.json({ success: false, error: 'Record unavailable' }, { status: 503 });
   }
 
-  const sports = [...new Set(picks.map((p) => p.sport))];
-  const fireCount = picks.filter((p) => p.is_fire).length;
-  const title = `AI Sports Picks Today (${dateStr}) — ${fireCount} Fire Consensus Picks`;
-  const excerpt = `Today's AI-powered consensus picks: ${fireCount} fire picks where 3+ expert cappers agree across ${sports.join(', ')}. Updated ${dateStr}.`;
-  const tags = [
-    'consensus picks',
-    'AI picks',
-    'best bets today',
-    'free sports picks',
-    ...sports.map((s) => `${s} picks`),
-  ];
+  const article = buildRecapArticle({
+    isoDate,
+    yesterdayIso,
+    firePicks: board.picks,
+    totalFireCount: board.total,
+    yesterday,
+    record: { last7: perf.last7, last30: perf.last30, allTime: perf.allTime, bySport: perf.bySport },
+  });
+  if (!article) {
+    return NextResponse.json({ success: false, error: 'No consensus picks available yet' }, { status: 404 });
+  }
 
-  const { data, error } = await supabase
+  const sports = [...new Set(board.picks.map((p) => p.sport))];
+  const fireCount = board.total;
+  const { error } = await supabase
     .from('blog_posts')
-    .insert(buildRecapRow({ slug, title, content, excerpt, tags, isoDate, nowIso: new Date().toISOString() }))
+    .insert(buildRecapRow({
+      slug, title: article.title, content: article.content, excerpt: article.excerpt, tags: article.tags,
+      isoDate, nowIso: new Date().toISOString(), seoTitle: article.seoTitle, readTime: article.readTime,
+    }))
     .select('id, slug')
     .single();
 
   if (error) {
+    // The slug is unique: a concurrent run already saved today's post.
+    if ((error as { code?: string }).code === '23505') {
+      return NextResponse.json({ success: true, skipped: true, slug, reason: 'Already generated today' });
+    }
     console.error('Blog insert error:', error);
     return NextResponse.json({ success: false, error: 'Failed to save post' }, { status: 500 });
   }
@@ -170,7 +149,7 @@ export async function GET(req: NextRequest) {
     success: true,
     slug,
     url: `/blog/${slug}`,
-    picks: picks.length,
+    picks: board.picks.length,
     fireCount,
     sports,
   });

@@ -20,6 +20,9 @@ test('recap row uses only real blog_posts columns (no sport) and fills every req
   assert.equal(row.site, 'dailyaibetting');
   assert.equal(row.status, 'published');
   assert.deepEqual(row.tags, ['nba picks']);
+  // Template-built posts (2026-11-24) are not labelled AI.
+  assert.equal(row.ai_generated, false);
+  assert.equal(row.ai_model, null);
 });
 
 test('the recap route inserts the built row, not an inline object', () => {
