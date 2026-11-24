@@ -106,9 +106,9 @@ touch "$T/paid.enabled"
 check "malformed budget answer fails closed"      [ "$(run daily-report)" = 1 ]
 check "... route not called"                      [ "$(count /api/cron/daily-ai-picks)" = 0 ]
 
-reset '{"/api/cron/openrouter-budget": {"status":200,"body":{"success":true,"allowed":true,"pct":85,"usedMonthUsd":17,"budgetUsd":20}}, "/api/cron/blog-recap-x": {}, "/api/cron/generate-blog-recap": {"status":200,"body":{"success":true}}, "/api/cron/ai-picks": {"status":200,"body":{"success":true}}}'
+reset '{"/api/cron/openrouter-budget": {"status":200,"body":{"success":true,"allowed":true,"pct":85,"usedMonthUsd":17,"budgetUsd":20}}, "/api/cron/daily-ai-picks": {"status":200,"body":{"success":true}}, "/api/cron/ai-picks": {"status":200,"body":{"success":true}}}'
 touch "$T/paid.enabled"
-run blog-recap > /dev/null
+run daily-report > /dev/null
 check "85% spend: one 80% alert"                  [ "$(alerts)" = 1 ]
 run ai-picks > /dev/null
 check "... not repeated the same month"           [ "$(alerts)" = 1 ]
@@ -119,10 +119,15 @@ touch "$T/paid.enabled"
 check "skipped run (no paid call) exits 0"        [ "$(run ai-picks)" = 0 ]
 check "... is not stamped as today's success"     [ ! -f "$T/state/ai-picks.last-success" ]
 
-reset "{$BUDGET_OK, \"/api/cron/generate-blog-recap\": {\"status\":404,\"body\":{\"success\":false,\"error\":\"No consensus picks available yet\"}}}"
-touch "$T/paid.enabled"
+reset "{\"/api/cron/generate-blog-recap\": {\"status\":404,\"body\":{\"success\":false,\"error\":\"No consensus picks available yet\"}}}"
 check "blog-recap with no picks yet is not an error" [ "$(run blog-recap)" = 0 ]
 check "... and not stamped (can run again today)" [ ! -f "$T/state/blog-recap.last-success" ]
+
+echo "== blog-recap is a free job (data template, no model)"
+reset '{"/api/cron/generate-blog-recap": {"status":200,"body":{"success":true,"slug":"x"}}}'
+check "blog-recap runs without the paid flag"      [ "$(run blog-recap)" = 0 ]
+check "... route called once"                      [ "$(count /api/cron/generate-blog-recap)" = 1 ]
+check "... no OpenRouter budget check"             [ "$(count /api/cron/openrouter-budget)" = 0 ]
 
 echo "== config errors"
 reset '{"/api/cron/grade-picks": {"status":200,"body":{"success":true}}}'

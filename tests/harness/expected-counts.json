@@ -17,7 +17,7 @@
   "tests/content/ai-report-status.test.mjs": 6,
   "tests/content/blog-content.test.mjs": 9,
   "tests/content/blog-recap-row.test.mjs": 3,
-  "tests/content/blog-recap-template.test.mjs": 9,
+  "tests/content/blog-recap-template.test.mjs": 12,
   "tests/content/email-capture-claims.test.mjs": 3,
   "tests/content/email-safe-text.test.mjs": 1,
   "tests/content/launch-fixes-nov19b.test.mjs": 10,

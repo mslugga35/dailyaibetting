@@ -32,7 +32,7 @@ case "$JOB" in
   grade-picks)  ROUTE=/api/cron/grade-picks;         PAID=0; TIMEOUT=170 ;;
   ai-picks)     ROUTE=/api/cron/ai-picks;            PAID=1; TIMEOUT=290 ;;
   daily-report) ROUTE=/api/cron/daily-ai-picks;      PAID=1; TIMEOUT=290 ;;
-  blog-recap)   ROUTE=/api/cron/generate-blog-recap; PAID=1; TIMEOUT=170 ;;
+  blog-recap)   ROUTE=/api/cron/generate-blog-recap; PAID=0; TIMEOUT=170 ;;  # data template, no model (2026-11-24)
   *) echo "usage: $0 <grade-picks|ai-picks|daily-report|blog-recap> [--force]" >&2; exit 64 ;;
 esac
 if [ -n "$FORCE" ] && [ "$FORCE" != "--force" ]; then echo "unknown option: $FORCE" >&2; exit 64; fi

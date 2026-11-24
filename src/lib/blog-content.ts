@@ -76,5 +76,17 @@ export function displayTitle(slug: string, title: string): string {
 export const AI_ATTRIBUTION =
   'This article was written with AI assistance from consensus data and may contain errors. It is for entertainment and information only, not betting advice. Past results do not guarantee future results.';
 
+/** Daily recap posts built by the data template (src/lib/blog/recap-template.ts): no model wrote them. */
+export const TEMPLATE_ATTRIBUTION =
+  'This recap is generated automatically from tracked capper picks and graded results. It is for entertainment and information only, not betting advice. Past results do not guarantee future results.';
+
+/**
+ * Provenance line for a post. Only a daily recap explicitly stored as not AI-generated gets the
+ * template line; anything else (including unknown provenance) keeps the AI disclosure.
+ */
+export function attributionFor(post: { category?: string | null; ai_generated?: boolean | null; ai_model?: string | null }): string {
+  return post.category === 'daily-picks' && post.ai_generated === false && !post.ai_model ? TEMPLATE_ATTRIBUTION : AI_ATTRIBUTION;
+}
+
 export const BLOG_UPDATE_NOTE =
   'AI-assisted analysis, pick previews, and betting strategy articles. New articles are published as they are written.';

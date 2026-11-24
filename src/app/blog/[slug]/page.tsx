@@ -10,7 +10,7 @@ import { EmailCaptureBanner } from '@/components/monetization/EmailCapture';
 import { BlogPostingJsonLd } from '@/components/seo/JsonLd';
 import harborPosts from '@/lib/harbor-posts.json';
 import DOMPurify from 'isomorphic-dompurify';
-import { resolveBlogContent, toDisplayHtml, displayTitle, AI_ATTRIBUTION } from '@/lib/blog-content';
+import { resolveBlogContent, toDisplayHtml, displayTitle, attributionFor } from '@/lib/blog-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +32,7 @@ interface BlogPost {
   published_at: string;
   view_count: number;
   ai_model: string | null;
+  ai_generated?: boolean | null;
   author: string | null;
   read_time: string | null;
 }
@@ -55,7 +56,7 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('blog_posts')
-      .select('id, slug, title, excerpt, content, category, tags, featured_image, published_at, view_count, ai_model, author, seo_title, seo_description, read_time')
+      .select('id, slug, title, excerpt, content, category, tags, featured_image, published_at, view_count, ai_model, ai_generated, author, seo_title, seo_description, read_time')
       .eq('slug', slug)
       .eq('status', 'published')
       .single();
@@ -212,11 +213,11 @@ export default async function BlogPostPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* AI Attribution */}
+        {/* Provenance: AI disclosure, or the data-template line for template-built recaps */}
         <Card className="mb-8 bg-muted/30">
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">
-              {AI_ATTRIBUTION}
+              {attributionFor(post)}
             </p>
           </CardContent>
         </Card>

@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs';
 
 const { buildRecapArticle, recordText, longDate } = await import('../../src/lib/blog/recap-template.ts');
 const { buildRecapRow } = await import('../../src/lib/blog/recap-row.ts');
+const { attributionFor, AI_ATTRIBUTION, TEMPLATE_ATTRIBUTION } = await import('../../src/lib/blog-content.ts');
+const PAGE = readFileSync(new URL('../../src/app/blog/[slug]/page.tsx', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const ROUTE = readFileSync(new URL('../../src/app/api/cron/generate-blog-recap/route.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 const rec = (wins, losses, pushes) => {
@@ -30,6 +32,7 @@ const base = () => ({
     { sport: 'NCAAB', bet: 'Providence ML', capper_count: 3, result: 'WIN', final_score: null },
     { sport: 'NBA', bet: 'Knicks -4', capper_count: 4, result: 'PUSH', final_score: 'Knicks 110 Bulls 106' },
   ],
+  yesterdayUngraded: 0,
   record: {
     last7: rec(12, 9, 1),
     last30: rec(219, 189, 4),
@@ -94,10 +97,40 @@ test('nothing to publish without fire picks (also drops blank rows)', () => {
   assert.equal(buildRecapArticle({ ...base(), firePicks: [{ bet: ' ', sport: 'NBA', capperCount: 5 }, { bet: null, sport: 'NBA', capperCount: 4 }] }), null);
 });
 
-test('no graded picks yesterday says so instead of inventing a record', () => {
-  const t = text(buildRecapArticle({ ...base(), yesterday: [] }).content);
-  assert.match(t, /No fire picks from Nov 23, 2026 have been graded yet/);
-  assert.doesNotMatch(t, /went\s+0-0/);
+test('no graded picks yesterday says so instead of inventing a record (none vs not graded yet)', () => {
+  const none = text(buildRecapArticle({ ...base(), yesterday: [] }).content);
+  assert.match(none, /There were no graded fire picks on Nov 23, 2026/);
+  assert.doesNotMatch(none, /went\s+0-0/);
+  const pending = text(buildRecapArticle({ ...base(), yesterday: [], yesterdayUngraded: 3 }).content);
+  assert.match(pending, /None of the 3 fire picks from Nov 23, 2026 has been graded yet/);
+});
+
+test('a partly graded day says how many picks are not counted', () => {
+  const t = text(buildRecapArticle({ ...base(), yesterdayUngraded: 2 }).content);
+  assert.match(t, /went\s+2-1-1\s+\(66\.7% of decided picks\)\. 2 more fire picks from that day are not graded yet and are not counted\./);
+  assert.doesNotMatch(text(buildRecapArticle(base()).content), /not graded yet/);
+});
+
+test('no duplicate H1 (the page renders the title), sentences are spaced, SEO lengths', () => {
+  const a = buildRecapArticle(base());
+  assert.doesNotMatch(a.content, /<h1/i);
+  assert.doesNotMatch(text(a.content), /\.[A-Z]/, 'missing space after a full stop');
+  assert.ok(a.excerpt.length <= 155, `excerpt ${a.excerpt.length} chars`);
+  assert.ok(a.seoTitle.length <= 60, `seo title ${a.seoTitle.length} chars`);
+  const many = { ...base(), yesterday: Array.from({ length: 18 }, () => base().yesterday[0]) };
+  assert.match(text(buildRecapArticle(many).content), /3 more graded picks from that day are not listed here/);
+  assert.doesNotMatch(text(buildRecapArticle(many).content), /Every graded pick/);
+});
+
+test('blog page: template recaps get the template line, everything else keeps the AI disclosure', () => {
+  assert.equal(attributionFor({ category: 'daily-picks', ai_generated: false, ai_model: null }), TEMPLATE_ATTRIBUTION);
+  assert.equal(attributionFor({ category: 'daily-picks', ai_generated: true, ai_model: 'claude-haiku-4-5' }), AI_ATTRIBUTION);
+  assert.equal(attributionFor({ category: 'daily-picks', ai_generated: null, ai_model: null }), AI_ATTRIBUTION);
+  assert.equal(attributionFor({ category: 'Guides', ai_generated: false, ai_model: null }), AI_ATTRIBUTION);
+  assert.doesNotMatch(TEMPLATE_ATTRIBUTION, /AI/);
+  assert.match(TEMPLATE_ATTRIBUTION, /not betting advice/);
+  assert.match(PAGE, /\{attributionFor\(post\)\}/);
+  assert.match(PAGE, /ai_model, ai_generated, author/);
 });
 
 test('helpers: recordText and ET date formatting', () => {
@@ -114,4 +147,5 @@ test('route: no model call, free-tier data only, record read errors publish noth
   assert.match(ROUTE, /\{ status: 503 \}/);
   assert.match(ROUTE, /code === '23505'/);
   assert.match(ROUTE, /\.eq\('slug', slug\)/);
+  assert.match(ROUTE, /countUngradedFirePicks\(supabase, yesterdayIso\)/);
 });

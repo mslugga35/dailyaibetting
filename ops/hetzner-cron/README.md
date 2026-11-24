@@ -9,7 +9,7 @@ Each timer calls one cron route on the app over loopback (`127.0.0.1:3103`) with
 | `dailyai-grade-picks` | 03:15 daily | `/api/cron/grade-picks` | free (ESPN scores) |
 | `dailyai-ai-picks` | 10:00 daily | `/api/cron/ai-picks` | paid: OpenRouter Sonnet 4.6 |
 | `dailyai-daily-report` | 10:20 daily | `/api/cron/daily-ai-picks` | paid: OpenRouter Sonnet 4.6 (+ posts to Discord if `DISCORD_CONSENSUS_WEBHOOK_URL` is set) |
-| `dailyai-blog-recap` | 10:40 daily | `/api/cron/generate-blog-recap` | paid: OpenRouter Haiku 4.5 |
+| `dailyai-blog-recap` | 10:40 daily | `/api/cron/generate-blog-recap` | free (data template, no model; since 2026-11-24) |
 
 03:15 avoids the hour DST skips (spring) or repeats (fall).
 

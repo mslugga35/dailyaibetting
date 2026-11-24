@@ -65,6 +65,18 @@ async function getGradedFirePicks(db: SupabaseClient, isoDate: string): Promise<
   return cleanRecordRows((data ?? []) as RecapGradedPick[]);
 }
 
+/** Yesterday's fire picks that are not graded (pending, void, null), so the tally never reads as the full day. */
+async function countUngradedFirePicks(db: SupabaseClient, isoDate: string): Promise<number> {
+  const { count, error } = await db
+    .from(recordTable())
+    .select('id', { count: 'exact', head: true })
+    .eq('is_fire', true)
+    .eq('pick_date', isoDate)
+    .or('result.is.null,result.not.in.(WIN,LOSS,PUSH)');
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function GET(req: NextRequest) {
   // Auth check
   const denied = cronAuthGuard(req);
@@ -105,9 +117,14 @@ export async function GET(req: NextRequest) {
   // Every number in the post comes from graded rows. If they cannot be read, publish nothing
   // rather than a post with missing or guessed figures.
   let yesterday: RecapGradedPick[];
+  let yesterdayUngraded: number;
   let perf: Awaited<ReturnType<typeof getVerifiedPerformance>>;
   try {
-    [yesterday, perf] = await Promise.all([getGradedFirePicks(supabase, yesterdayIso), getVerifiedPerformance(supabase)]);
+    [yesterday, yesterdayUngraded, perf] = await Promise.all([
+      getGradedFirePicks(supabase, yesterdayIso),
+      countUngradedFirePicks(supabase, yesterdayIso),
+      getVerifiedPerformance(supabase),
+    ]);
   } catch (e) {
     console.error('Blog recap: record unavailable:', (e as { message?: string })?.message ?? String(e));
     return NextResponse.json({ success: false, error: 'Record unavailable' }, { status: 503 });
@@ -119,6 +136,7 @@ export async function GET(req: NextRequest) {
     firePicks: board.picks,
     totalFireCount: board.total,
     yesterday,
+    yesterdayUngraded,
     record: { last7: perf.last7, last30: perf.last30, allTime: perf.allTime, bySport: perf.bySport },
   });
   if (!article) {
