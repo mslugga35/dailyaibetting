@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Free Consensus Picks Today - Where Experts Agree',
   description:
-    'See where multiple expert cappers agree on today\'s sports picks. AI-powered consensus highlights fire picks (3+ experts agree) across NFL, NBA, MLB, NHL, and college sports. Picks update throughout the day.',
+    'See where multiple expert cappers agree on today\'s sports picks. Our consensus highlights fire picks (3+ experts agree) across NFL, NBA, MLB, NHL, and college sports. Picks update throughout the day.',
   keywords: [
     'consensus picks today',
     'expert consensus picks',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Free Consensus Picks Today - Where Experts Agree',
     description:
-      'AI-powered consensus from multiple expert cappers. Fire picks where 3+ experts agree, updated throughout the day.',
+      'Consensus from multiple expert cappers. Fire picks where 3+ experts agree, updated throughout the day.',
     type: 'website',
   },
   twitter: {
@@ -37,7 +37,7 @@ const jsonLd = {
   '@type': 'WebPage',
   name: 'Free Consensus Picks Today',
   description:
-    'AI-powered consensus picks from expert cappers across all major sports',
+    'Consensus picks from expert cappers across all major sports',
   url: 'https://dailyaibetting.com/consensus',
   publisher: {
     '@type': 'Organization',

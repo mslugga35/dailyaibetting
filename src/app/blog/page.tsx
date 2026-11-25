@@ -184,7 +184,7 @@ export default function BlogPage() {
           <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h2 className="text-xl font-semibold mb-2">Coming Soon</h2>
           <p className="text-muted-foreground mb-6">
-            Our AI-powered daily sports blog launches soon. Subscribe to get notified!
+            Our daily sports blog launches soon. Subscribe to get notified!
           </p>
         </Card>
       )}
@@ -217,11 +217,12 @@ export default function BlogPage() {
 
       {/* SEO Content */}
       <section className="mt-12 prose prose-invert max-w-none">
-        <h2 className="text-xl font-semibold mb-3">About Our AI Sports Blog</h2>
+        <h2 className="text-xl font-semibold mb-3">About Our Sports Blog</h2>
         <p className="text-muted-foreground">
-          Our AI-powered sports betting blog provides daily analysis, game previews, and betting insights
-          written with the help of language models. New articles are published as they are written and
-          draw on expert consensus data. They are for entertainment and information only.
+          Our sports betting blog publishes a daily consensus recap that is generated automatically from
+          tracked picks and graded results, plus analysis and betting guides. Some earlier articles were
+          written with AI assistance. Articles draw on expert consensus data and are for entertainment and
+          information only.
         </p>
         <p className="text-muted-foreground mt-4">
           Articles cover NFL, NBA, MLB, NHL, college football, and college basketball betting,

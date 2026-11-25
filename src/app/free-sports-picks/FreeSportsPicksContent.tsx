@@ -56,7 +56,7 @@ export function FreeSportsPicksContent({ initialData }: { initialData: unknown }
               Free Sports Picks Today
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              {today} &middot; AI-powered consensus picks across NFL, NBA, MLB, NHL, and college sports.
+              {today} &middot; Consensus picks across NFL, NBA, MLB, NHL, and college sports.
               Our algorithm identifies bets where multiple expert cappers agree.
             </p>
           </div>

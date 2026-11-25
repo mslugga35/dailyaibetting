@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     template: "%s | DailyAI Betting",
   },
   description:
-    "Free daily AI-powered sports betting picks with consensus from multiple expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Picks update throughout the day.",
+    "Free daily sports betting picks with consensus from multiple expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Picks update throughout the day.",
   keywords: [
     "free sports betting picks",
     "AI betting predictions",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     siteName: "DailyAI Betting",
     title: "DailyAI Betting - Free AI Sports Betting Picks Today",
-    description: "Free daily AI-analyzed consensus picks from multiple expert cappers. NFL, NBA, MLB, NHL picks updated throughout the day.",
+    description: "Free daily consensus picks from multiple expert cappers. NFL, NBA, MLB, NHL picks updated throughout the day.",
     images: [
       {
         url: "https://dailyaibetting.com/opengraph-image",
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
     site: "@dailyaibetting",
     creator: "@dailyaibetting",
     title: "DailyAI Betting - Free AI Sports Picks Today",
-    description: "Free daily AI-analyzed consensus picks from expert cappers. Updated throughout the day.",
+    description: "Free daily consensus picks from expert cappers. Updated throughout the day.",
     images: ["https://dailyaibetting.com/opengraph-image"],
   },
   robots: {

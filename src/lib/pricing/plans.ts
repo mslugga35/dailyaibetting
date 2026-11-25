@@ -115,7 +115,7 @@ export function offerCopy(offer: PublicOffer | null, now: Date = new Date()): Of
   const trialRule = t > 0
     ? offer.mode === 'legacy'
       ? 'One free trial per customer: first-time members only.'
-      : 'One free trial per customer: first-time members only. A payment card that was already used for a DailyAI free trial cannot start another: that trial is cancelled right away and nothing is charged.'
+      : 'One free trial per customer: free trials are limited to eligible first-time customers. We may deny or cancel duplicate or ineligible trials.'
     : null;
   const f = offer.founding;
   const seats = f ? foundingSeatsCopy(f) : null;

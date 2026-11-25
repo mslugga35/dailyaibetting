@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
-export const alt = 'DailyAI Betting - AI-Powered Sports Picks Consensus';
+export const alt = 'DailyAI Betting - Expert Sports Picks Consensus';
 export const size = {
   width: 1200,
   height: 630,
@@ -55,7 +55,7 @@ export default async function Image() {
             maxWidth: 800,
           }}
         >
-          AI-Powered Sports Picks Consensus
+          Expert Sports Picks Consensus
         </div>
 
         {/* Features */}

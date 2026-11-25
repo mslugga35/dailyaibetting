@@ -156,7 +156,7 @@ export default function SportsbooksPage() {
       <section className="bg-primary/5 border border-primary/20 rounded-lg p-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Ready to start betting?</h2>
         <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-          Sign up with any of our featured sportsbooks and start using our AI-powered consensus
+          Sign up with any of our featured sportsbooks and start using our expert consensus
           picks to find value bets.
         </p>
         <SportsbookLinks variant="compact" className="justify-center" />

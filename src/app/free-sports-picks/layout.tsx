@@ -8,7 +8,7 @@ const currentDate = new Date().toLocaleDateString('en-US', {
 
 export const metadata: Metadata = {
   title: `Free Sports Picks Today (${currentDate}) - Expert Consensus | DailyAI`,
-  description: `Get today's best free sports picks from our AI-powered consensus of professional cappers. NFL, NBA, MLB, NHL, and college sports. Fire picks where 3+ experts agree.`,
+  description: `Get today's best free sports picks from our consensus of professional cappers. NFL, NBA, MLB, NHL, and college sports. Fire picks where 3+ experts agree.`,
   keywords: [
     'free sports picks',
     'free picks today',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: 'Free Sports Picks Today - Expert Consensus',
-    description: 'AI-powered consensus picks from professional cappers. NFL, NBA, MLB, NHL, and college sports.',
+    description: 'Consensus picks from professional cappers. NFL, NBA, MLB, NHL, and college sports.',
     type: 'website',
   },
   twitter: {
@@ -73,7 +73,7 @@ export default function FreeSportsPicksLayout({
         <div className="max-w-4xl mx-auto prose prose-invert">
           <h2 className="text-2xl font-bold mb-4">About Our Free Sports Picks</h2>
           <p className="text-muted-foreground mb-4">
-            DailyAI Betting provides free sports picks generated using an AI-powered consensus system.
+            DailyAI Betting provides free sports picks generated using an automated consensus system.
             We analyze predictions from professional handicappers across NFL, NBA, MLB, NHL, and college sports
             to find high-confidence plays where multiple experts agree.
           </p>

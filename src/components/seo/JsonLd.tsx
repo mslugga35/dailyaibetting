@@ -5,7 +5,7 @@ export function WebsiteJsonLd() {
     name: 'DailyAI Betting',
     alternateName: 'Daily AI Betting Picks',
     url: 'https://dailyaibetting.com',
-    description: 'Free daily AI-powered sports betting picks with expert consensus',
+    description: 'Free daily sports betting picks with expert consensus',
     publisher: {
       '@type': 'Organization',
       name: 'DailyAI Betting',

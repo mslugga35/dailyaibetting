@@ -9,8 +9,8 @@ import { DailyAIPicksContent } from './DailyAIPicksContent';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'DailyAI Picks — AI Best Bets Today',
-  description: 'Free daily AI picks from expert consensus, PrizePicks lines and live schedules. Parlays and best bets for the sports in season today.',
+  title: 'Daily AI Picks Report (Paused) | DailyAI Betting',
+  description: 'The daily AI picks report is temporarily paused. Free expert consensus picks for today are available on DailyAI Betting.',
   keywords: [
     'daily AI picks', 'best bets today', 'AI sports picks',
     'parlays today', 'free sports picks',

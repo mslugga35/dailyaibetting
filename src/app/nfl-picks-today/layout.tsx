@@ -65,7 +65,7 @@ export default function NFLPicksLayout({
         <div className="max-w-4xl mx-auto prose prose-invert">
           <h2 className="text-2xl font-bold mb-4">About Our NFL Picks</h2>
           <p className="text-muted-foreground mb-4">
-            Our free NFL picks are built by an AI-powered consensus system that collects picks
+            Our free NFL picks are built by an automated consensus system that collects picks
             from multiple expert cappers each day. When 3 or more cappers agree on a pick,
             we flag it as a &quot;fire pick&quot; 🔥. Consensus means several cappers chose the same pick; no outcome is guaranteed.
           </p>

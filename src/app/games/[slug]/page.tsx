@@ -267,7 +267,7 @@ export default async function GamePage({ params }: PageProps) {
         </h2>
         <p className="text-muted-foreground">
           Get expert capper picks and predictions for the {gameInfo.team1} vs {gameInfo.team2} matchup.
-          Our AI-powered consensus system collects picks from multiple expert cappers to identify
+          Our automated consensus system collects picks from multiple expert cappers to identify
           where several cappers agree. When 3 or more cappers pick the same bet, we flag it as a
           &quot;fire pick&quot; 🔥. Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>

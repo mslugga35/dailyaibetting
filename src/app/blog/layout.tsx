@@ -1,12 +1,12 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'AI Sports Betting Blog | Daily Picks & Analysis',
+  title: 'Sports Betting Blog | Daily Picks & Analysis',
   description: 'AI-assisted sports betting analysis, game previews, and expert consensus picks.',
   keywords: ['sports betting blog', 'betting analysis', 'AI picks', 'sports predictions', 'betting tips', 'consensus picks'],
   openGraph: {
-    title: 'AI Sports Betting Blog | DailyAI Betting',
-    description: 'AI-generated daily sports betting analysis and expert consensus picks.',
+    title: 'Sports Betting Blog | DailyAI Betting',
+    description: 'Daily consensus recaps, betting analysis and expert consensus picks.',
     type: 'website',
     url: 'https://dailyaibetting.com/blog',
     siteName: 'DailyAI Betting',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Sports Betting Blog | DailyAI Betting',
-    description: 'AI-powered betting analysis, strategy guides, and expert consensus picks.',
+    description: 'Daily consensus recaps, betting strategy guides and expert consensus picks.',
   },
   alternates: {
     canonical: 'https://dailyaibetting.com/blog',

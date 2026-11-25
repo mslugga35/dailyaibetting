@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Daily Bets - AI Consensus Sports Picks Today',
+  title: 'Daily Bets - Consensus Sports Picks Today',
   description:
     'Today\'s daily bets from AI consensus across multiple expert cappers. Picks for NFL, NBA, MLB, NHL, and college sports update throughout the day. Spreads, moneylines, and totals.',
   keywords: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     'daily free bets',
   ],
   openGraph: {
-    title: 'Daily Bets - AI Consensus Sports Picks Today',
+    title: 'Daily Bets - Consensus Sports Picks Today',
     description:
       'Daily bets from multiple expert cappers, updated throughout the day. Spreads, moneylines, and totals across all sports.',
     type: 'website',
@@ -35,7 +35,7 @@ const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebPage',
   name: 'Daily Bets',
-  description: 'AI-powered daily sports betting picks updated throughout the day',
+  description: 'Daily consensus sports betting picks updated throughout the day',
   url: 'https://dailyaibetting.com/daily-bets',
   publisher: {
     '@type': 'Organization',
