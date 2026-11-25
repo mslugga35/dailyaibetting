@@ -25,7 +25,7 @@
   "tests/content/launch-tracker.test.mjs": 12,
   "tests/content/marketing-claims.test.mjs": 19,
   "tests/content/muse-b3eacc4.test.mjs": 6,
-  "tests/content/policies.test.mjs": 9,
+  "tests/content/policies.test.mjs": 11,
   "tests/content/qa-nov19-fixes.test.mjs": 7,
   "tests/content/upstream-error.test.mjs": 11,
   "tests/content/welcome-email.test.mjs": 23,

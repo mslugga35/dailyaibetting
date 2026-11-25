@@ -129,7 +129,7 @@ export const REFUNDS: Policy = {
       'Refund requests are reviewed individually. Nothing in this policy limits refund or other consumer rights provided by applicable law.',
     ] },
     { heading: 'Failed payments', paragraphs: [
-      'If a renewal payment fails, Pro is paused while Stripe retries the card. Updating your card in the billing portal restores access. If the payment cannot be collected after the retries, the subscription ends.',
+      'If a renewal payment fails, Pro is paused while Stripe retries the payment. Pro access is restored once the outstanding payment is successfully collected; updating your card in the billing portal lets the next attempt succeed. If the payment cannot be collected after the retries, the subscription ends.',
     ] },
   ],
 };

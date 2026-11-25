@@ -113,3 +113,24 @@ test('privacy names the operator and the terms link the responsible-gambling pag
   assert.match(termsHtml, /intended for adults aged 21 and older/);
   assert.equal(P.POLICY_LAST_UPDATED, 'November 24, 2026');
 });
+
+test('failed payments: access returns when the outstanding payment is collected (owner correction 2026-11-24)', () => {
+  const refunds = text(P.REFUNDS);
+  assert.match(refunds, /Pro access is restored once the outstanding payment is successfully collected/);
+  assert.doesNotMatch(refunds, /Updating your card in the billing portal restores access/);
+});
+
+test('Google consent defaults: non-personalized ads everywhere, no Google storage in EEA/UK/CH, inlined first in <head>', async () => {
+  const C = await import('../../src/lib/ads/consent-defaults.ts');
+  const s = C.CONSENT_DEFAULTS_SCRIPT;
+  assert.match(s, /requestNonPersonalizedAds=1/);
+  assert.match(s, /gtag\('consent','default',\{ad_user_data:'denied',ad_personalization:'denied'\}\)/);
+  assert.match(s, /ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',region:\[/);
+  for (const r of ['DE', 'FR', 'GB', 'CH', 'NO']) assert.ok(C.CONSENT_REGIONS_STRICT.includes(r), r);
+  assert.ok(!C.CONSENT_REGIONS_STRICT.includes('US'));
+  const { readFileSync } = await import('node:fs');
+  const layout = readFileSync(new URL('../../src/app/layout.tsx', import.meta.url), 'utf8');
+  const head = layout.slice(layout.indexOf('<head>'));
+  const consentAt = head.indexOf('google-consent-defaults');
+  assert.ok(consentAt > 0 && consentAt < head.indexOf('<GoogleAnalytics') && consentAt < head.indexOf('adsbygoogle.js'));
+});

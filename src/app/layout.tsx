@@ -7,6 +7,7 @@ import { WebsiteJsonLd, FAQJsonLd } from "@/components/seo/JsonLd";
 import { ProPopup } from "@/components/monetization/ProPopup";
 import { SubscriptionProvider } from "@/lib/context/subscription-context";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { CONSENT_DEFAULTS_SCRIPT } from "@/lib/ads/consent-defaults";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import "./globals.css";
 
@@ -112,6 +113,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        {/* Must stay first: Google consent defaults (non-personalized ads; no Google cookies in EEA/UK/CH) */}
+        <script id="google-consent-defaults" dangerouslySetInnerHTML={{ __html: CONSENT_DEFAULTS_SCRIPT }} />
         <WebsiteJsonLd />
         <FAQJsonLd />
         <GoogleAnalytics />
