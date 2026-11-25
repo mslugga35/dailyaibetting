@@ -4,7 +4,7 @@ Run this ONCE, after Matt says the legal pages are published (that deploy is the
 Read-only: **no payments, no card entry, no subscription changes, no "Run Auto-Grader".** Matt gives you the passwords directly.
 Accounts: FREE `+daifree` · PRO `+daipaid` · ADMIN `+daiadmin` (same Gmail as before).
 
-**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json shows the hash Matt sends you with this checklist. If it shows anything else, stop and report.
+**Step 0:** https://dailyaibetting.com/.well-known/commit-info.json shows **5c4f0ef** (launch build, deployed 2026-11-24 ~21:55 ET). If it shows anything else, stop and report.
 
 ## 1. Legal pages (new in this build)
 - [ ] /terms, /privacy, /refund-policy, /responsible-gambling all load (200) and show "Last updated November 24, 2026" (or the date Matt gives).
@@ -12,6 +12,7 @@ Accounts: FREE `+daifree` · PRO `+daipaid` · ADMIN `+daiadmin` (same Gmail as 
 - [ ] /terms has a **Responsible gambling** section with a working link to /responsible-gambling.
 - [ ] /privacy starts with "Who we are" and the support address; it mentions Google Ad Settings and has an "Account changes" section.
 - [ ] Footer on any page links all four policies.
+- [ ] /refund-policy "Failed payments": Pro access is restored once the outstanding payment is successfully collected.
 - [ ] Nowhere does the text say a second trial is "cancelled right away without a charge", or that the record "loses slightly at -110".
 
 ## 2. Pricing and checkout entry (signed-in, verified email only)
@@ -35,7 +36,7 @@ Accounts: FREE `+daifree` · PRO `+daipaid` · ADMIN `+daiadmin` (same Gmail as 
 - [ ] Footer "Contact" / support address reads support@dailyaibetting.com.
 
 ## Not in scope
-Mobile menu (Matt's real-phone check), live paid-portal test (Matt), grader (verified 11-24), welcome-email delivery (deferred), support inbox delivery (Matt/Claude verify).
+Mobile menu (Matt's real-phone check), live paid-portal test (Matt), grader (verified 11-24), welcome-email delivery (deferred), support inbox delivery (verified 11-24), non-personalized ads/consent defaults (not visible on the page), Gmail "Send mail as" (deferred).
 
 Report each box PASS / FAIL with URL + screenshot for any FAIL.
 
