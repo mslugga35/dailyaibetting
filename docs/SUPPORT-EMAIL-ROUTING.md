@@ -71,3 +71,11 @@ The site's own sender is already on `dailyaibetting.com` in Resend, so this need
 3. **DNS → Records → Add record**: Type `TXT`, Name `_dmarc`, Content `v=DMARC1; p=none; rua=mailto:support@dailyaibetting.com` → Save. (`p=none` only monitors; nothing is rejected.)
 4. Replies as support@ (optional for launch, recommended): resend.com → API Keys → Create → permission *Sending access*, domain *dailyaibetting.com*. Gmail → Settings → Accounts and Import → **Send mail as → Add another email address**: name `DailyAI Betting Support`, email `support@dailyaibetting.com`, untick *Treat as an alias* → SMTP server `smtp.resend.com`, port `465`, username `resend`, password = that key, SSL → Gmail sends a confirmation code to support@ (arrives in Gmail once step 2 works) → enter it. Reply from support@ by choosing it in the From field.
 5. Tell Claude "email done": Claude re-runs the RCPT probe, sends a test to each address and confirms arrival + headers in Gmail, then marks DAI-18 verified.
+
+## Status 2026-11-24 evening: VERIFIED (DAI-18 closed)
+- Destination mpm.morales@gmail.com verified. Rules `support@` and `advertise@` → that destination, both **Active**.
+- DMARC TXT `_dmarc` = `v=DMARC1; p=none;` (TTL Auto) added; public DNS returns it. Resend DKIM (`resend._domainkey`), `send.` SPF/MX, website records: unchanged.
+- RCPT probe (route2.mx.cloudflare.net): support@ 250, advertise@ 250, unknown address 550.
+- Real external delivery (Cloudflare activity log, Result **Forwarded**): Yahoo → support@ (also confirmed in the Gmail inbox, 21:45 ET); Gmail → advertise@.
+- Unauthenticated test mail from a host without SPF/DKIM is rejected (550 5.7.26): expected, not a defect.
+- **Outstanding (deferred post-launch): Gmail "Send mail as" support@.** Needs a domain-restricted Resend sending key from the Resend account that owns dailyaibetting.com. That account was not located: the Google and GitHub logins hold only larshomes.net, debtfreelifestylehub@ holds none. Every Resend email goes to the no-dot spelling `mpmmorales@gmail.com`, so try an email (not Google) login with that address. Until then, replies sent from Gmail show the personal address; reply from Gmail only with that understood.
