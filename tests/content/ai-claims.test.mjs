@@ -34,9 +34,9 @@ const SURFACES = ['src/app', 'src/components'].flatMap((d) => walk(join(rootPath
 
 test('no page or metadata presents the paused AI features as active', () => {
   const BAD = [/AI-powered/i, /AI-analyzed/i, /AI-assisted/i, /written with the help of language models/i, /PrizePicks lines/i,
-    /AI[- ](consensus|system|collects)/i, /Our AI/, /Free AI /, /AI (Sports Betting|Sports Picks|Consensus Sports Picks|Best Bets)/];
-  // Report-only surfaces render AI text only when an AI report exists (historical/accurate).
-  const REPORT_ONLY = /daily-ai-picks[\\/]DailyAIPicksContent\.tsx$/;
+    /AI[- ](consensus|system|collects)/i, /Our AI/, /Free AI /, /AI (Sports Betting|Sports Picks|Sports Blog|Consensus Sports Picks|Best Bets)/, /(?<!Daily )AI (betting|sports) (predictions|analysis|picks)/i];
+  // The AI report page itself (paused; says so) and its report-only content are exempt; "Daily AI Betting" is the brand.
+  const REPORT_ONLY = /daily-ai-picks[\\/](DailyAIPicksContent|page)\.tsx$/;
   const hits = [];
   for (const f of SURFACES.filter((x) => !REPORT_ONLY.test(x))) {
     const s = readFileSync(f, 'utf8');

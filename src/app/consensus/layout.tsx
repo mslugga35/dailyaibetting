@@ -12,7 +12,6 @@ export const metadata: Metadata = {
     'where experts agree',
     'consensus bets today',
     'capper consensus picks',
-    'AI sports picks',
     'free consensus picks',
   ],
   openGraph: {

@@ -41,7 +41,6 @@ export const metadata: Metadata = {
     "Free daily sports betting picks with consensus from multiple expert cappers. Get NFL picks, NBA picks, MLB picks, NHL picks today. Find fire picks where 3+ experts agree. Picks update throughout the day.",
   keywords: [
     "free sports betting picks",
-    "AI betting predictions",
     "consensus picks today",
     "consensus bets today",
     "free NFL picks",
@@ -55,7 +54,6 @@ export const metadata: Metadata = {
     "parlay picks",
     "sports betting tips",
     "daily consensus picks",
-    "AI sports predictions",
   ],
   authors: [{ name: "DailyAI Betting" }],
   creator: "DailyAI Betting",

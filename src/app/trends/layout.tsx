@@ -11,7 +11,6 @@ export const metadata: Metadata = {
     'capper performance trends',
     'consensus accuracy',
     'betting market trends',
-    'AI betting analysis',
     'sports betting data',
   ],
   openGraph: {

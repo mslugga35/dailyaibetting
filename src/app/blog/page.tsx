@@ -78,7 +78,7 @@ export default function BlogPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 text-primary mb-2">
           <BookOpen className="h-5 w-5" />
-          <span className="text-sm font-medium">AI Sports Blog</span>
+          <span className="text-sm font-medium">Sports Blog</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold mb-2">
           Daily Betting Insights
