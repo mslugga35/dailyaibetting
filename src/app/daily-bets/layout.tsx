@@ -3,14 +3,13 @@ import { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Daily Bets - Consensus Sports Picks Today',
   description:
-    'Today\'s daily bets from AI consensus across multiple expert cappers. Picks for NFL, NBA, MLB, NHL, and college sports update throughout the day. Spreads, moneylines, and totals.',
+    'Today\'s daily bets from the consensus of multiple expert cappers. Picks for NFL, NBA, MLB, NHL, and college sports update throughout the day. Spreads, moneylines, and totals.',
   keywords: [
     'daily bets',
     'daily sports bets',
     'today bets',
     'daily betting picks',
     'consensus picks today',
-    'daily AI picks',
     'sports bets today',
     'daily free bets',
   ],
@@ -24,7 +23,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Daily Bets | DailyAI Betting',
     description:
-      'AI consensus daily bets from multiple expert cappers, updated throughout the day.',
+      'Consensus daily bets from multiple expert cappers, updated throughout the day.',
   },
   alternates: {
     canonical: 'https://dailyaibetting.com/daily-bets',

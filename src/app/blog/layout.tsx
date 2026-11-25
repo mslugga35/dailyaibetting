@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sports Betting Blog | Daily Picks & Analysis',
-  description: 'AI-assisted sports betting analysis, game previews, and expert consensus picks.',
-  keywords: ['sports betting blog', 'betting analysis', 'AI picks', 'sports predictions', 'betting tips', 'consensus picks'],
+  description: 'Daily consensus recaps, betting analysis, game previews and expert consensus picks.',
+  keywords: ['sports betting blog', 'betting analysis', 'sports predictions', 'betting tips', 'consensus picks'],
   openGraph: {
     title: 'Sports Betting Blog | DailyAI Betting',
     description: 'Daily consensus recaps, betting analysis and expert consensus picks.',

@@ -17,7 +17,7 @@ export default function SoccerPicksToday() {
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">🔥 Today&apos;s Soccer Consensus Picks</h2>
         <p className="mb-4">
-          Our AI collects picks from expert cappers and flags plays where 3 or more cappers agree on the same play.
+          Our consensus system collects picks from expert cappers and flags plays where 3 or more cappers agree on the same play.
           Consensus means several cappers chose the same pick; no outcome is guaranteed.
         </p>
         <a

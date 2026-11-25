@@ -84,7 +84,7 @@ export default function BlogPage() {
           Daily Betting Insights
         </h1>
         <p className="text-muted-foreground">
-          AI-assisted analysis, pick previews, and betting strategy articles. New articles are published as they are written.
+          Daily consensus recaps, analysis, pick previews and betting strategy articles. New articles are published as they are written.
         </p>
       </div>
 

@@ -16,7 +16,7 @@ export function ShareButtons({ title, url, pick }: ShareButtonsProps) {
   const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : 'https://dailyaibetting.com');
   const shareText = pick
     ? `${pick} - ${title} | Free picks at DailyAI Betting`
-    : `${title} | Free AI Sports Picks`;
+    : `${title} | Free Sports Picks`;
 
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
   const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
@@ -69,7 +69,7 @@ export function ShareButtons({ title, url, pick }: ShareButtonsProps) {
 export function SharePickButton({ pick, game }: { pick: string; game: string }) {
   const [copied, setCopied] = useState(false);
 
-  const shareText = `🔥 ${pick} - ${game}\n\nFree AI consensus picks at https://dailyaibetting.com`;
+  const shareText = `🔥 ${pick} - ${game}\n\nFree consensus picks at https://dailyaibetting.com`;
 
   const copyToClipboard = async () => {
     try {

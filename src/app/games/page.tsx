@@ -173,7 +173,7 @@ export default function GamesPage() {
         <h2 className="text-xl font-semibold mb-3">About Game-Specific Picks</h2>
         <p className="text-muted-foreground">
           Browse today&apos;s sports matchups and see where cappers agree.
-          Our AI system collects picks from multiple expert cappers and identifies where
+          Our automated consensus system collects picks from multiple expert cappers and identifies where
           several cappers back the same bet.
         </p>
         <p className="text-muted-foreground mt-4">

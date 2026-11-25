@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   // against localhost and link previews on social apps were broken).
   metadataBase: new URL('https://dailyaibetting.com'),
   title: {
-    default: "DailyAI Betting - Free AI Sports Betting Picks & Expert Consensus",
+    default: "DailyAI Betting - Free Sports Betting Picks & Expert Consensus",
     template: "%s | DailyAI Betting",
   },
   description:
@@ -66,14 +66,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "DailyAI Betting",
-    title: "DailyAI Betting - Free AI Sports Betting Picks Today",
+    title: "DailyAI Betting - Free Sports Betting Picks Today",
     description: "Free daily consensus picks from multiple expert cappers. NFL, NBA, MLB, NHL picks updated throughout the day.",
     images: [
       {
         url: "https://dailyaibetting.com/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "DailyAI Betting - Free AI Sports Picks",
+        alt: "DailyAI Betting - Free Sports Picks",
       },
     ],
   },
@@ -81,7 +81,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@dailyaibetting",
     creator: "@dailyaibetting",
-    title: "DailyAI Betting - Free AI Sports Picks Today",
+    title: "DailyAI Betting - Free Sports Picks Today",
     description: "Free daily consensus picks from expert cappers. Updated throughout the day.",
     images: ["https://dailyaibetting.com/opengraph-image"],
   },

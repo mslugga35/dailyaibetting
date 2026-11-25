@@ -33,10 +33,12 @@ const rootPath = decodeURIComponent(ROOT.pathname).replace(/^\/([A-Za-z]:)/, '$1
 const SURFACES = ['src/app', 'src/components'].flatMap((d) => walk(join(rootPath, d)));
 
 test('no page or metadata presents the paused AI features as active', () => {
-  const BAD = [/AI-powered/i, /AI-analyzed/i, /written with the help of language models/i, /PrizePicks lines/i,
-    /AI (Sports Betting Blog|Consensus Sports Picks|Best Bets)/];
+  const BAD = [/AI-powered/i, /AI-analyzed/i, /AI-assisted/i, /written with the help of language models/i, /PrizePicks lines/i,
+    /AI[- ](consensus|system|collects)/i, /Our AI/, /Free AI /, /AI (Sports Betting|Sports Picks|Consensus Sports Picks|Best Bets)/];
+  // Report-only surfaces render AI text only when an AI report exists (historical/accurate).
+  const REPORT_ONLY = /daily-ai-picks[\\/]DailyAIPicksContent\.tsx$/;
   const hits = [];
-  for (const f of SURFACES) {
+  for (const f of SURFACES.filter((x) => !REPORT_ONLY.test(x))) {
     const s = readFileSync(f, 'utf8');
     for (const re of BAD) if (re.test(s)) hits.push(`${f.slice(rootPath.length)}: ${re}`);
   }
