@@ -33,7 +33,7 @@ Accounts: FREE `+daifree` · PRO `+daipaid` · ADMIN `+daiadmin` (same Gmail as 
 ## 5. Regression spot checks (unchanged areas)
 - [ ] Sign-in link for FREE works (one email, its own conversation, the sent time shown).
 - [ ] /, /results, /stats load; the disclosure box wording is unchanged from your 11-20 run; /props loads.
-- [ ] Footer "Contact" / support address reads support@dailyaibetting.com.
+- [ ] Each policy page lists support@dailyaibetting.com as the contact (the footer has no email address; that is expected).
 
 ## Not in scope
 Mobile menu (Matt's real-phone check), live paid-portal test (Matt), grader (verified 11-24), welcome-email delivery (deferred), support inbox delivery (verified 11-24), non-personalized ads/consent defaults (not visible on the page), Gmail "Send mail as" (deferred).
